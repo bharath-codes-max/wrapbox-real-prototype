@@ -6,79 +6,10 @@ import { useAppState, upsertContract, setContractStatus, setAutopilotStatus } fr
 import { PageHead, SectionHead, Stat, Chip, StatusChip, SimNote, Drawer, DecisionChip } from "../ui/kit";
 import { CAPABILITIES } from "../model/registries";
 import { userById } from "../model/org";
-import type { ContractClause, IntentContract } from "../model/types";
+import type { ContractClause } from "../model/types";
+import { draftClauses, coverageRollup } from "../engine/drafter";
 import { FileText, FileCheck2, ShieldCheck, Sparkles, Wand2, ArrowRight } from "lucide-react";
 
-// Deterministic clause extractor for the drafting demo (simulated compiler —
-// pattern-driven, predictable; the real product compiles through the Policy IR).
-function draftClauses(text: string): ContractClause[] {
-  const clauses: ContractClause[] = [];
-  const sentences = text.split(/(?<=\.)\s+/).filter((x) => x.trim().length > 4);
-  let i = 0;
-  for (const sRaw of sentences) {
-    const s = sRaw.toLowerCase();
-    i += 1;
-    const dataClasses: string[] = [];
-    if (s.includes("email")) dataClasses.push("PII.EMAIL");
-    if (s.includes("phone")) dataClasses.push("PII.PHONE");
-    if (s.includes("credential") || s.includes("secret") || s.includes("api key") || s.includes("password")) {
-      dataClasses.push("CREDENTIAL.API_KEY", "CREDENTIAL.PRIVATE_KEY", "CREDENTIAL.PASSWORD");
-    }
-    if (s.includes("source code") || s.includes("code")) dataClasses.push("SOURCE_CODE");
-    if (s.includes("customer id") || s.includes("customer identifier")) dataClasses.push("CUSTOM.CUSTOMER_ID");
-    if (s.includes("compensation") || s.includes("salary")) dataClasses.push("HR.COMPENSATION");
-    if (s.includes("health") || s.includes("phi") || s.includes("patient")) dataClasses.push("HEALTH.PHI");
-    if (s.includes("card")) dataClasses.push("PCI.CARD");
-
-    let effect: ContractClause["effect"] = "ALLOW";
-    let transform: ContractClause["transform"];
-    if (s.includes("tokeniz")) { effect = "CONSTRAIN"; transform = "REVERSIBLE_TOKENIZE"; }
-    else if (s.includes("redact")) { effect = "CONSTRAIN"; transform = "REDACT"; }
-    else if (s.includes("never") || s.includes("must not") || s.includes("forbidden") || s.includes("block")) effect = "BLOCK";
-    else if (s.includes("review") || s.includes("approval") || s.includes("approve")) effect = "REVIEW";
-
-    const destinations: ContractClause["destinations"] =
-      s.includes("external ai") || s.includes("external") ? ["APPROVED_AI", "UNAPPROVED_AI", "GENERIC_EXTERNAL", "UNKNOWN_EXTERNAL", "PARTNER"]
-      : s.includes("approved ai") ? ["APPROVED_AI"]
-      : "ANY";
-
-    const actions: ContractClause["actions"] =
-      s.includes("transmi") || s.includes("upload") || s.includes("send") || s.includes("leave") ? ["NETWORK_SEND", "DATA_EXPORT"]
-      : s.includes("read") ? ["READ", "SECRET_ACCESS"]
-      : s.includes("deploy") ? ["DEPLOY"]
-      : s.includes("delete") || s.includes("destructive") ? ["DELETE"]
-      : "ANY";
-
-    clauses.push({
-      id: `cl-draft-${i}`,
-      text: sRaw.trim().replace(/\.$/, ""),
-      dataClasses,
-      destinations,
-      actions,
-      effect,
-      transform,
-      requiredCapabilities: dataClasses.some((d) => d.startsWith("HEALTH.")) ? ["cap-ocr", "cap-net-file"]
-        : dataClasses.some((d) => d.startsWith("HR.") || d.startsWith("LEGAL.")) ? ["cap-semantic", "cap-net-file"]
-        : ["cap-net-file"],
-      failClosed: effect !== "ALLOW",
-    });
-  }
-  return clauses;
-}
-
-function coverageRollup(clauses: ContractClause[]): IntentContract["coverage"] {
-  const capState = (id: string) => CAPABILITIES.find((c) => c.id === id)?.status ?? "PENDING";
-  let worst: IntentContract["coverage"] = "ENFORCED";
-  const rank = { ENFORCED: 0, DEGRADED: 1, UNDERSTOOD_ONLY: 2, PENDING: 3, UNINSPECTABLE: 3 };
-  for (const cl of clauses) {
-    for (const cap of cl.requiredCapabilities) {
-      const st = capState(cap);
-      const mapped = st === "UNINSPECTABLE" ? "PENDING" : st;
-      if (rank[mapped] > rank[worst]) worst = mapped;
-    }
-  }
-  return worst;
-}
 
 export function IntentStudio({ nav }: { nav: (r: string) => void; route: string }) {
   const s = useAppState();

@@ -97,6 +97,15 @@ export interface MatchedClause {
   contractName: string;
   clauseId: string;
   clauseText: string;
+  effect?: Decision; // what this clause demands (absent on events recorded before this field existed)
+}
+
+/** Which layer of the Core Brain produced the final decision. */
+export interface DecidedBy {
+  layer: "contract" | "safety" | "blast" | "context" | "envelope" | "uninspectable" | "breakglass" | "default";
+  clauseId?: string; // set when layer === "contract"
+  ruleId?: string; // set when layer === "safety"
+  label: string; // human-readable, e.g. the clause text or rule name
 }
 
 export interface SafetyRuleHit {
@@ -143,6 +152,7 @@ export interface SimulationEvent {
   inspection?: InspectionResult;
   matchedContracts: MatchedClause[];
   safetyRules: SafetyRuleHit[];
+  decidedBy?: DecidedBy;
   context: EventContext;
   blastRadius?: BlastRadius;
   capabilityState: CoverageStatus; // enforcement capability at this point

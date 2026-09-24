@@ -199,14 +199,24 @@ export function EventDetail({ e, onClose, onNavigate }: {
           <hr className="divider" />
           <SectionLabel icon={<ScrollText size={15} />}>Matched Intent Contract clauses</SectionLabel>
           <div className="grid" style={{ gap: 10 }}>
-            {e.matchedContracts.map((m) => (
-              <div key={m.clauseId} className="card">
-                <div className="small">“{m.clauseText}”</div>
-                <div className="small faint" style={{ marginTop: 4 }}>
-                  {onNavigate ? <a onClick={() => onNavigate("intent")}>{m.contractName}</a> : m.contractName} · {m.clauseId}
+            {e.matchedContracts.map((m) => {
+              const decided = e.decidedBy?.layer === "contract" && e.decidedBy.clauseId === m.clauseId;
+              return (
+                <div key={m.clauseId} className={`rule-item ${decided ? "decided" : ""}`}>
+                  {m.effect && <DecisionChip d={m.effect} small />}
+                  <div style={{ minWidth: 0 }}>
+                    <div className="rule-text">“{m.clauseText}”</div>
+                    <div className="rule-source">
+                      {onNavigate ? <a onClick={() => onNavigate("intent")}>{m.contractName}</a> : m.contractName} · {m.clauseId}
+                      {decided && <span className="rule-decided"> · this rule decided</span>}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+            {e.decidedBy && e.decidedBy.layer !== "contract" && (
+              <div className="small dim">Final decision came from: <b>{e.decidedBy.label}</b></div>
+            )}
           </div>
         </>
       )}

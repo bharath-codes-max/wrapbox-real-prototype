@@ -2,12 +2,13 @@
 // sees. RIGHT: what Wrapbox sees and does. Scenarios run through the real
 // engine, record real events, and propagate to every other screen.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAppState, simulate } from "../state/store";
+import { useAppState, simulate, shadowEvaluate } from "../state/store";
+import { SEED_CONTRACTS } from "../model/contracts";
 import { PageHead, Chip, DecisionChip, SimNote, Payload, names, Avatar, AgentMark, DestMark, SectionHead } from "../ui/kit";
 import { EventDetail } from "../ui/event-detail";
 import { SCENARIOS, type Scenario } from "../engine/scenarios";
 import { pipelineFor, buildInspection, type PipelineStage } from "../engine/simulate";
-import type { SimulationEvent } from "../model/types";
+import type { Decision, SimulationEvent } from "../model/types";
 import { agentById, userById } from "../model/org";
 import { destById } from "../model/registries";
 import { Network, Server, ShieldCheck, Layers, Cpu, Play, Pause, StepForward, RotateCcw, ArrowRight } from "lucide-react";
@@ -91,6 +92,15 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
 
   const groupScenarios = SCENARIOS.filter((x) => x.group === group);
   const groupLabel = GROUPS.find((g) => g.key === group)?.label ?? "";
+  // What each scenario resolves to under the rules active right now, vs the
+  // original demo policy — a pure what-if through the same Core Brain.
+  const outlook = useMemo(() => {
+    const out: Record<string, { current: Decision; baseline: Decision }> = {};
+    for (const x of SCENARIOS.filter((y) => y.group === group)) {
+      out[x.id] = { current: shadowEvaluate(x, s.contracts), baseline: shadowEvaluate(x, SEED_CONTRACTS) };
+    }
+    return out;
+  }, [group, s.contracts]);
 
   return (
     <div className="page">
@@ -129,7 +139,21 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
                 }}
               >
                 <b className="small">{x.title}</b>
-                <div className="small faint" style={{ marginTop: 3 }}>Expected: {x.expected}</div>
+                {(() => {
+                  const now = outlook[x.id];
+                  if (!now) return null;
+                  const changed = now.current !== now.baseline;
+                  const note = x.expected.includes(" — ") ? x.expected.split(" — ")[1] : "";
+                  return (
+                    <div className="row small" style={{ marginTop: 6, gap: 6 }}>
+                      <span className="faint">With your rules:</span>
+                      <DecisionChip d={now.current} small />
+                      {changed
+                        ? <span style={{ color: "var(--review)" }}>changed by your rules (was {now.baseline})</span>
+                        : note && <span className="faint">{note}</span>}
+                    </div>
+                  );
+                })()}
               </div>
             ))}
             {group === "GATEWAY" && (
@@ -294,6 +318,22 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
                       <div className="pipe-body">
                         <div className="pipe-label">{st.label}</div>
                         <div className="pipe-detail">{st.detail}</div>
+                        {st.items && (
+                          <div className="rule-list">
+                            {st.items.map((it, k) => (
+                              <div key={k} className={`rule-item ${it.decided ? "decided" : ""}`}>
+                                <DecisionChip d={it.effect} small />
+                                <div style={{ minWidth: 0 }}>
+                                  <div className="rule-text">“{it.text}”</div>
+                                  <div className="rule-source">
+                                    {it.source}
+                                    {it.decided && <span className="rule-decided"> · this rule decided</span>}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

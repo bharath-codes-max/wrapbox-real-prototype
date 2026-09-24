@@ -11,7 +11,7 @@ import type {
 } from "../model/types";
 import { SEED_CONTRACTS } from "../model/contracts";
 import { SCENARIOS, TASK_SCENARIO, scenarioById, type Scenario } from "../engine/scenarios";
-import { runScenario, setSeq, getSeq, setTokenCounter } from "../engine/simulate";
+import { runScenario, setSeq, getSeq, setTokenCounter, getTokenCounter } from "../engine/simulate";
 import { decide } from "../engine/brain";
 
 export interface AppState {
@@ -161,7 +161,9 @@ function load(): AppState {
     if (raw) {
       const parsed = JSON.parse(raw) as AppState & { _seq?: number; _tok?: number };
       setSeq(parsed._seq ?? parsed.events.length);
-      setTokenCounter(parsed._tok ?? parsed.tokens.length);
+      // Never restore below the highest token id already issued.
+      const maxIssued = Math.max(0, ...parsed.tokens.map((t) => Number(t.id.match(/_(\d+)$/)?.[1] ?? 0)));
+      setTokenCounter(Math.max(parsed._tok ?? 0, maxIssued));
       return { ...parsed, demoStep: -1 }; // demo mode never persists across reloads
     }
   } catch {
@@ -174,7 +176,7 @@ function persist() {
   try {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ ...state, _seq: getSeq(), _tok: state.tokens.length })
+      JSON.stringify({ ...state, _seq: getSeq(), _tok: getTokenCounter() })
     );
   } catch {
     /* storage unavailable — session-only state is fine */
@@ -236,9 +238,13 @@ export function simulateById(id: string): SimulationEvent | undefined {
 
 // What-if evaluation that does NOT record an event (Policy Simulator).
 export function shadowEvaluate(sc: Scenario, contracts: IntentContract[]): Decision {
+  // Pure what-if: restore the event sequence and token counter so a preview
+  // never consumes ids that a real run will later show.
   const seqBefore = getSeq();
+  const tokBefore = getTokenCounter();
   const out = runScenario(sc, contracts, "shadow", { timestamp: Date.now() });
   setSeq(seqBefore);
+  setTokenCounter(tokBefore);
   return out.event.decision;
 }
 

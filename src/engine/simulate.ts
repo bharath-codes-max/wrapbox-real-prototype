@@ -7,7 +7,7 @@
 import { decide, type ActionRequest } from "./brain";
 import type { Scenario } from "./scenarios";
 import type {
-  DetectorFinding, EvidenceRecord, IntentContract, InspectionResult,
+  Decision, DetectorFinding, EvidenceRecord, IntentContract, InspectionResult,
   SimulationEvent, TransformStep, VaultToken,
 } from "../model/types";
 import { detectorFor, destById } from "../model/registries";
@@ -15,6 +15,7 @@ import { agentById, resourceById, userById } from "../model/org";
 
 let tokenCounter = 0;
 export function setTokenCounter(n: number) { tokenCounter = n; }
+export function getTokenCounter() { return tokenCounter; }
 
 function nextToken(dataClass: string): string {
   tokenCounter += 1;
@@ -182,8 +183,9 @@ export function runScenario(
       ? [{ label: "Safety Kernel", detail: result.safetyRules.map((s) => s.name).join(", ") }]
       : []),
     ...(result.matchedContracts.length > 0
-      ? [{ label: "Policy", detail: result.matchedContracts[0].clauseText }]
+      ? [{ label: "Rules matched", detail: `${result.matchedContracts.length} Intent Contract rule(s)` }]
       : []),
+    { label: "Decided by", detail: result.decidedBy.label },
     { label: "Decision", detail: result.decision },
     ...(transformation && transformation.length > 0
       ? [{ label: "Transform", detail: `${transformation.length} value(s) ${transformation[0].kind.toLowerCase().replaceAll("_", " ")}d` }]
@@ -214,6 +216,7 @@ export function runScenario(
     inspection,
     matchedContracts: result.matchedContracts,
     safetyRules: result.safetyRules,
+    decidedBy: result.decidedBy,
     context: req.context,
     blastRadius: req.blastRadius,
     capabilityState: inspection && !inspection.inspectable ? "UNINSPECTABLE" : "ENFORCED",
@@ -245,11 +248,19 @@ export function runScenario(
 }
 
 // Pipeline trace for animated Simulation Lab rendering.
+export interface PipelineRuleItem {
+  text: string;
+  source: string; // contract name, or "Safety Kernel"
+  effect: Decision;
+  decided: boolean; // true for the rule that produced the final decision
+}
+
 export interface PipelineStage {
   key: string;
   label: string;
   detail: string;
   tone: "neutral" | "info" | "good" | "warn" | "bad";
+  items?: PipelineRuleItem[]; // every rule the Core Brain checked (brain stage only)
 }
 
 export function pipelineFor(sc: Scenario, ev: SimulationEvent): PipelineStage[] {
@@ -305,21 +316,37 @@ export function pipelineFor(sc: Scenario, ev: SimulationEvent): PipelineStage[] 
   if (ev.blastRadius) {
     stages.push({ key: "blast", label: "Blast-radius assessment", detail: ev.blastRadius.label, tone: ev.blastRadius.severity === "low" ? "info" : "warn" });
   }
+  // Every rule the brain checked, with the one that decided marked.
+  const d = ev.decidedBy;
+  const items: PipelineRuleItem[] = [
+    ...ev.matchedContracts.map((m) => ({
+      text: m.clauseText,
+      source: m.contractName,
+      effect: m.effect ?? "ALLOW",
+      decided: d?.layer === "contract" && d.clauseId === m.clauseId,
+    })),
+    ...ev.safetyRules.map((r) => ({
+      text: r.name,
+      source: "Safety Kernel",
+      effect: "BLOCK" as Decision,
+      decided: d?.layer === "safety" && d.ruleId === r.ruleId,
+    })),
+  ];
+  const ruleCount = items.length;
   stages.push({
     key: "brain",
     label: "Core Brain evaluation",
     detail:
-      ev.safetyRules.length > 0
-        ? `Safety Kernel: ${ev.safetyRules.map((s) => s.name).join(", ")}`
-        : ev.matchedContracts.length > 0
-          ? `Matched: "${ev.matchedContracts[0].clauseText}"`
-          : "No contract matched; default + safety evaluation",
+      ruleCount === 0
+        ? "No Intent Contract rule or safety rule applies to this action"
+        : `Checked ${ruleCount} matching rule${ruleCount === 1 ? "" : "s"} — the strictest one wins`,
     tone: "info",
+    items: ruleCount > 0 ? items : undefined,
   });
   stages.push({
     key: "decision",
     label: `Decision: ${ev.decision}`,
-    detail: ev.decisionReasons[0] ?? "",
+    detail: d ? `Decided by ${d.label}` : ev.decisionReasons[0] ?? "",
     tone: ev.decision === "ALLOW" ? "good" : ev.decision === "CONSTRAIN" ? "info" : ev.decision === "REVIEW" ? "warn" : "bad",
   });
   if (ev.transformation && ev.transformation.length > 0) {

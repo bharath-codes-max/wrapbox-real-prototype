@@ -15,7 +15,7 @@
 
 import type {
   ActionVerb, BlastRadius, ContractClause, Decision, DestinationClass,
-  Environment, EventContext, IntentContract, InspectionResult, MatchedClause,
+  DecidedBy, Environment, EventContext, IntentContract, InspectionResult, MatchedClause,
   SafetyRuleHit, TaskEnvelope, TransformKind,
 } from "../model/types";
 
@@ -40,6 +40,7 @@ export interface BrainResult {
   reasons: string[];
   matchedContracts: MatchedClause[];
   safetyRules: SafetyRuleHit[];
+  decidedBy: DecidedBy;
   transform?: TransformKind;
   transformClasses: string[];
   safeAlternative?: string;
@@ -237,13 +238,14 @@ export function decide(req: ActionRequest, contracts: IntentContract[]): BrainRe
     );
     if (applicable.length > 0) {
       for (const { c, cl } of applicable) {
-        matched.push({ contractId: c.id, contractName: c.name, clauseId: cl.id, clauseText: cl.text });
+        matched.push({ contractId: c.id, contractName: c.name, clauseId: cl.id, clauseText: cl.text, effect: cl.effect });
       }
       reasons.push(
         `Content is UNINSPECTABLE (${req.inspection.reason ?? "unknown format"}) and a protected requirement applies — failing closed.`
       );
       return finish(req, {
         decision: "BLOCK", reasons, matchedContracts: matched, safetyRules: [],
+        decidedBy: { layer: "uninspectable", label: `Fail closed — content could not be inspected (${req.inspection.reason ?? "unknown format"})` },
         transformClasses: [], risk: "high",
         safeAlternative: "Provide the content in an inspectable format, or request a scoped exception.",
       });
@@ -260,7 +262,7 @@ export function decide(req: ActionRequest, contracts: IntentContract[]): BrainRe
   for (const c of active) {
     for (const cl of c.clauses) {
       if (!clauseMatches(cl, req, classes)) continue;
-      matched.push({ contractId: c.id, contractName: c.name, clauseId: cl.id, clauseText: cl.text });
+      matched.push({ contractId: c.id, contractName: c.name, clauseId: cl.id, clauseText: cl.text, effect: cl.effect });
       if (DECISION_RANK[cl.effect] > DECISION_RANK[contractDecision]) {
         contractDecision = cl.effect;
       }
@@ -278,20 +280,30 @@ export function decide(req: ActionRequest, contracts: IntentContract[]): BrainRe
     }
   }
 
+  // Which contract clause produced contractDecision: the first matched clause
+  // carrying the highest-ranked effect (matching the max() above).
+  const topClause = matched.find((m) => m.effect === contractDecision);
+  let decidedBy: DecidedBy = topClause
+    ? { layer: "contract", clauseId: topClause.clauseId, label: `"${topClause.clauseText}" (${topClause.contractName})` }
+    : { layer: "default", label: "No rule restricts this action" };
+
   // 3. Safety Kernel.
   const safety = safetyKernel(req);
   for (const s of safety) reasons.push(`Safety Kernel: ${s.name} — ${s.description}`);
 
   // 4. Combine per precedence: explicit forbid > safety invariant > constrain > review.
+  //    An explicit enterprise BLOCK keeps the credit when both apply.
   let decision: Decision = contractDecision;
   if (safety.length > 0 && decision !== "BLOCK") {
     decision = "BLOCK";
+    decidedBy = { layer: "safety", ruleId: safety[0].ruleId, label: `Safety Kernel — ${safety[0].name}` };
   }
 
   // 5. Blast-Radius Governor (cannot downgrade, only escalate).
   const blast = blastGovernor(req);
   if (blast.escalate && DECISION_RANK[blast.escalate] > DECISION_RANK[decision]) {
     decision = blast.escalate;
+    decidedBy = { layer: "blast", label: `Blast-Radius Governor — ${blast.reason}` };
     reasons.push(`Blast-Radius Governor: ${blast.reason}`);
   } else if (blast.reason) {
     reasons.push(`Blast-Radius Governor noted: ${blast.reason}`);
@@ -305,6 +317,7 @@ export function decide(req: ActionRequest, contracts: IntentContract[]): BrainRe
     (req.action === "DELETE" || req.action === "DEPLOY" || req.action === "PERMISSION_CHANGE")
   ) {
     decision = "REVIEW";
+    decidedBy = { layer: "context", label: `Context Engine — ${req.action} in production requires authorization` };
     reasons.push(
       `Context Engine: ${req.action} in production against ${req.context.resourceSensitivity} resource requires authorization.`
     );
@@ -317,18 +330,23 @@ export function decide(req: ActionRequest, contracts: IntentContract[]): BrainRe
     const actionAllowed = env.allowedActions.includes(req.action);
     const forbidden = env.forbidden.some((f) => req.resource.toLowerCase().includes(f.toLowerCase()) || req.environment === f);
     if (forbidden) {
+      if (DECISION_RANK[decision] < DECISION_RANK.REVIEW) {
+        decision = "REVIEW";
+        decidedBy = { layer: "envelope", label: `Task Envelope — "${req.resource}" is in forbidden scope` };
+      }
       if (DECISION_RANK[decision] < DECISION_RANK.BLOCK) {
-        decision = DECISION_RANK[decision] < DECISION_RANK.REVIEW ? "REVIEW" : decision;
         reasons.push(`Task Envelope: "${req.resource}" is outside the envelope for task "${env.title}" (forbidden scope).`);
       }
     } else if (!resourceAllowed || !actionAllowed) {
       if (decision === "ALLOW") {
         decision = "REVIEW";
+        decidedBy = { layer: "envelope", label: `Task Envelope — ${req.action} on ${req.resource} is outside the envelope` };
         reasons.push(`Task Envelope: ${req.action} on ${req.resource} exceeds envelope scope for "${env.title}" — re-authorization required.`);
       }
     }
     if (env.filesUsed >= env.fileBudget && req.action === "WRITE" && decision === "ALLOW") {
       decision = "REVIEW";
+      decidedBy = { layer: "envelope", label: `Task Envelope — file budget (${env.fileBudget}) exhausted` };
       reasons.push(`Task Envelope: file-change budget (${env.fileBudget}) exhausted — re-authorization required.`);
     }
   }
@@ -355,10 +373,11 @@ export function decide(req: ActionRequest, contracts: IntentContract[]): BrainRe
   if (req.breakGlass && (decision === "REVIEW" || decision === "BLOCK") && safety.every((s) => s.ruleId !== "sk-cred-exfil")) {
     reasons.push("BREAK-GLASS override active: decision executed under emergency authority with high-visibility evidence and automatic expiry.");
     decision = "ALLOW";
+    decidedBy = { layer: "breakglass", label: "Break-glass emergency override" };
   }
 
   return finish(req, {
-    decision, reasons, matchedContracts: matched, safetyRules: safety,
+    decision, reasons, matchedContracts: matched, safetyRules: safety, decidedBy,
     transform, transformClasses, safeAlternative,
     risk: riskOf(req, decision, safety.length > 0),
   });
