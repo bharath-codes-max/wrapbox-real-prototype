@@ -100,6 +100,7 @@ export const CAPABILITIES: CapabilityDef[] = [
   { id: "cap-gw-github", label: "GitHub gateway", plane: "GATEWAY", status: "ENFORCED", note: "Push/PR/branch operations governed" },
   { id: "cap-gw-sql", label: "SQL gateway", plane: "GATEWAY", status: "ENFORCED", note: "Query preflight + row estimates" },
   { id: "cap-gw-cloud", label: "Cloud (AWS) gateway", plane: "GATEWAY", status: "DEGRADED", note: "IAM + S3 governed; other services understood only" },
+  { id: "cap-gw-saas", label: "SaaS API gateway", plane: "GATEWAY", status: "ENFORCED", note: "Stripe refunds and support-desk calls pass through the gateway" },
   { id: "cap-gw-mcp", label: "MCP gateway", plane: "GATEWAY", status: "UNDERSTOOD_ONLY", note: "MCP calls observed and classified; enforcement rolling out" },
 ];
 
