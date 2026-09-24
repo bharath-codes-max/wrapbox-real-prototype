@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useAppState, resolveReview } from "../state/store";
 import { PageHead, SectionHead, Stat, DecisionChip, Chip, RiskChip, SimNote, names, timeAgo, StatusChip } from "../ui/kit";
+import { describe } from "../ui/describe";
+import { userById } from "../model/org";
 import { EventDetail } from "../ui/event-detail";
 import type { SimulationEvent } from "../model/types";
 import { Hand, Layers, CheckCircle2, XCircle, ArrowRight } from "lucide-react";
@@ -81,8 +83,11 @@ export function ReviewCenter({ nav }: { nav: (r: string) => void }) {
                       <div key={e.id} className="card" style={{ marginTop: 12, background: "var(--bg-inset)" }}>
                         <div className="spread">
                           <div>
-                            <span className="mono small">{e.actionRaw ?? e.action}</span>
-                            <span className="dim small"> → {en.resource} · {e.environment}</span>
+                            <div className="stream-sentence">{describe(e)}</div>
+                            <div className="stream-meta">
+                              <span className="mono">{e.actionRaw ?? e.action}</span>
+                              <span className="sep">·</span>{en.user}<span className="sep">·</span>{e.environment}
+                            </div>
                           </div>
                           <DecisionChip d="REVIEW" small />
                         </div>
@@ -138,10 +143,10 @@ export function ReviewCenter({ nav }: { nav: (r: string) => void }) {
                   const n = names(e);
                   return (
                     <tr key={e.id} className="rowlink" onClick={() => setOpen(e)}>
-                      <td className="mono small">{e.actionRaw ?? e.action} → {n.resource}</td>
+                      <td><div className="small" style={{ fontWeight: 550 }}>{describe(e)}</div><div className="mono faint" style={{ fontSize: 11, marginTop: 2 }}>{e.action}</div></td>
                       <td className="small">{n.user}</td>
                       <td><StatusChip s={e.reviewState!.status} /></td>
-                      <td className="small">{e.reviewState!.reviewer === "u-alex" ? "Alex Morgan" : e.reviewState!.reviewer === "u-maya" ? "Maya Chen" : e.reviewState!.reviewer ?? "—"}</td>
+                      <td className="small">{e.reviewState!.reviewer ? userById(e.reviewState!.reviewer)?.name ?? e.reviewState!.reviewer : "—"}</td>
                       <td className="small dim">{e.reviewState!.scope ?? e.reviewState!.note ?? "—"}</td>
                     </tr>
                   );

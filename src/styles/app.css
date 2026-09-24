@@ -561,3 +561,9 @@ textarea.input { resize: vertical; line-height: 1.6; }
 .stream-time { font-family: var(--mono); font-size: 11px; color: var(--fg-3); width: 60px; flex-shrink: 0; }
 .stream-text { flex: 1; min-width: 0; font-size: 13px; line-height: 1.5; }
 .stream-text .sep { color: var(--fg-4); margin: 0 6px; }
+.stream-sentence { display: block; font-size: 13.5px; font-weight: 550; color: var(--fg); line-height: 1.4; }
+.stream-meta { display: flex; align-items: center; flex-wrap: wrap; margin-top: 4px; font-size: 12px; color: var(--fg-3); }
+.stream-meta .mono { font-size: 11px; color: var(--fg-3); }
+.stream-who { display: inline-flex; align-items: center; gap: 5px; }
+.stream-item { align-items: flex-start; }
+.stream-item .chip { margin-top: 2px; }

@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import type { SimulationEvent } from "../model/types";
 import { Avatar, AgentMark, DecisionChip, names, clock, RiskChip } from "./kit";
 import { EventDetail } from "./event-detail";
+import { describe } from "./describe";
 import { AGENTS, USERS } from "../model/org";
 
 export function EventStream({
@@ -75,19 +76,15 @@ export function EventStream({
             <div className="stream-item rowlink" key={e.id} onClick={() => setOpen(e)} style={{ cursor: "pointer" }}>
               <span className="stream-time">{clock(e.timestamp)}</span>
               <span className="stream-text">
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, verticalAlign: "middle" }}>
-                  <Avatar userId={e.user} size={17} /><b>{n.user}</b>
+                <span className="stream-sentence">{describe(e)}</span>
+                <span className="stream-meta">
+                  <span className="stream-who"><Avatar userId={e.user} size={16} />{n.user}</span>
+                  <span className="sep">·</span>
+                  <span className="stream-who"><AgentMark agentId={e.agent} size={13} />{n.agent}</span>
+                  {e.application && <><span className="sep">·</span>{e.application}</>}
+                  <span className="sep">·</span>
+                  <span className="mono">{e.action}</span>
                 </span>
-                <span className="sep">→</span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, verticalAlign: "middle" }}>
-                  <AgentMark agentId={e.agent} size={14} /><b>{n.agent}</b>
-                </span>
-                {e.application && <><span className="sep">→</span>{e.application}</>}
-                <span className="sep">→</span>
-                <span className="mono">{e.actionRaw ?? e.action}</span>
-                <span className="sep">→</span>
-                {n.resource}
-                {n.destination && <><span className="sep">→</span><span className="dim">{n.destination}</span></>}
               </span>
               {!compact && <RiskChip r={e.risk} />}
               <DecisionChip d={e.decision} small />

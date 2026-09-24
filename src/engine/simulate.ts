@@ -11,7 +11,7 @@ import type {
   SimulationEvent, TransformStep, VaultToken,
 } from "../model/types";
 import { detectorFor, destById } from "../model/registries";
-import { agentById, resourceById, userById } from "../model/org";
+import { agentById, deviceOfUser, resourceById, userById } from "../model/org";
 
 let tokenCounter = 0;
 export function setTokenCounter(n: number) { tokenCounter = n; }
@@ -202,7 +202,8 @@ export function runScenario(
     timestamp: ts,
     scenario: sc.id,
     user: sc.user,
-    device: agentById(sc.agent)?.device ?? "d-daniel-mbp",
+    // The action happens on the person's own laptop (identity: user + their device + agent).
+    device: deviceOfUser(sc.user)?.id ?? agentById(sc.agent)?.device ?? "unknown-device",
     agent: sc.agent,
     application: sc.application,
     plane: sc.plane,

@@ -1,5 +1,6 @@
 // Shared event detail drawer — the single inspection view every screen opens.
 import { Drawer, DecisionChip, Payload, EvidenceChain, names, RiskChip, StatusChip, Chip } from "./kit";
+import { describe } from "./describe";
 import type { ReactNode } from "react";
 import type { SimulationEvent } from "../model/types";
 import { resolveReview } from "../state/store";
@@ -37,8 +38,9 @@ export function EventDetail({ e, onClose, onNavigate }: {
         <div style={{ minWidth: 0 }}>
           <div className="eyebrow" style={{ marginBottom: 7 }}>{e.plane} event</div>
           <h2 style={{ fontSize: 20, fontWeight: 650, margin: 0, letterSpacing: "-0.02em", lineHeight: 1.2 }}>
-            {e.action} · {n.resource}
+            {describe(e)}
           </h2>
+          <div className="mono faint" style={{ fontSize: 11.5, marginTop: 6 }}>{e.action} · {n.resource}</div>
         </div>
         <DecisionChip d={e.decision} />
       </div>

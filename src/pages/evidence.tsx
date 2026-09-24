@@ -3,9 +3,11 @@
 import { useMemo, useState } from "react";
 import { useAppState } from "../state/store";
 import { PageHead, SectionHead, Stat, DecisionChip, Chip, SimNote, names, EvidenceChain, RiskChip } from "../ui/kit";
+import { describe } from "../ui/describe";
 import { EventDetail } from "../ui/event-detail";
 import type { SimulationEvent } from "../model/types";
 import { userById } from "../model/org";
+import { FileClock, Ban, Hand, KeyRound, Table2, GitBranch, Search } from "lucide-react";
 
 // The human's answer to a REVIEW, kept separate from Wrapbox's own decision.
 const REVIEW_OUTCOME: Record<string, [string, string]> = {
@@ -28,7 +30,6 @@ function HumanReview({ e }: { e: SimulationEvent }) {
     </div>
   );
 }
-import { FileClock, Ban, Hand, KeyRound, Table2, GitBranch, Search } from "lucide-react";
 
 export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: string }) {
   const s = useAppState();
@@ -41,7 +42,7 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
     if (q) {
       const t = q.toLowerCase();
       l = l.filter((e) =>
-        [e.id, e.action, e.actionRaw, e.resource, e.decision, ...(e.dataClasses),
+        [e.id, describe(e), e.action, e.actionRaw, e.resource, e.decision, ...(e.dataClasses),
          ...e.matchedContracts.map((m) => m.clauseText), ...e.safetyRules.map((r) => r.name)]
           .join(" ").toLowerCase().includes(t)
       );
@@ -94,7 +95,7 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
         {view === "table" ? (
           <div className="card card-pad-0">
             <table className="tbl tbl-wide">
-              <thead><tr><th>Event</th><th>Chain</th><th>Actor</th><th>Action → Resource</th><th>Data</th><th>Wrapbox decision</th><th>Human review</th><th>Risk</th></tr></thead>
+              <thead><tr><th>Event</th><th>Chain</th><th>Actor</th><th>What happened</th><th>Data</th><th>Wrapbox decision</th><th>Human review</th><th>Risk</th></tr></thead>
               <tbody>
                 {list.map((e) => {
                   const n = names(e);
@@ -103,7 +104,7 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
                       <td className="mono small">{e.id}<div className="faint">{new Date(e.timestamp).toLocaleTimeString()}</div></td>
                       <td className="mono small faint">{e.evidence.hash}<div>← {e.evidence.prevHash}</div></td>
                       <td className="small">{n.user}<div className="faint">{n.agent}{e.application ? ` · ${e.application}` : ""}</div></td>
-                      <td className="small"><span className="mono">{e.actionRaw ?? e.action}</span><div className="faint">{n.resource}{n.destination ? ` → ${n.destination}` : ""}</div></td>
+                      <td><div className="small" style={{ fontWeight: 550 }}>{describe(e)}</div><div className="mono faint" style={{ fontSize: 11, marginTop: 2 }}>{e.actionRaw ?? e.action}</div></td>
                       <td>{e.dataClasses.slice(0, 2).map((c) => <div key={c}><Chip tone="violet">{c}</Chip></div>)}{e.dataClasses.length > 2 && <span className="faint small">+{e.dataClasses.length - 2}</span>}</td>
                       <td><DecisionChip d={e.decision} small />{e.breakGlass && <div><Chip tone="critical">BREAK-GLASS</Chip></div>}</td>
                       <td><HumanReview e={e} /></td>

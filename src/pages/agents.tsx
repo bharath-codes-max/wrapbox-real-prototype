@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAppState } from "../state/store";
 import { PageHead, SectionHead, Stat, Chip, RiskChip, SimNote, Drawer, DecisionChip, timeAgo, AgentMark, Avatar } from "../ui/kit";
 import { EventStream } from "../ui/event-stream";
+import { describe } from "../ui/describe";
 import { AGENTS, deviceById, userById, type OrgAgent } from "../model/org";
 import { destById } from "../model/registries";
 import { Bot, ShieldAlert, ShieldCheck, Activity, ArrowRight } from "lucide-react";
@@ -23,6 +24,13 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
       blocked: evs.filter((e) => e.decision === "BLOCK").length,
       reviewed: evs.filter((e) => e.decision === "REVIEW").length,
     };
+  };
+
+  // Who actually used each agent, and on which laptop — derived from events.
+  const usersOf = (id: string) => {
+    const seen = new Map<string, string>();
+    for (const e of s.events) if (e.agent === id && !seen.has(e.user)) seen.set(e.user, e.device);
+    return [...seen.entries()].map(([user, device]) => ({ user, device }));
   };
 
   const registered = AGENTS.filter((a) => !a.discovered).length;
@@ -52,7 +60,7 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
           <table className="tbl">
             <thead>
               <tr>
-                <th>Agent</th><th>Provider</th><th>Owner / Device</th><th>Tools</th>
+                <th>Agent</th><th>Provider</th><th>Owner</th><th>Used by</th><th>Tools</th>
                 <th>Destinations</th><th>Activity</th><th>Trust</th><th>Risk</th>
               </tr>
             </thead>
@@ -76,6 +84,17 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
                         </span>
                       ) : <span className="faint">unknown</span>}
                       <div className="faint">{a.device ? deviceById(a.device)?.name : "—"}</div>
+                    </td>
+                    <td className="small">
+                      {usersOf(a.id).length === 0 ? <span className="faint">nobody yet</span> : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          {usersOf(a.id).map((u) => (
+                            <span key={u.user} className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                              <Avatar userId={u.user} size={18} />{userById(u.user)?.name ?? u.user}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="small dim">{a.tools.join(", ")}</td>
                     <td className="small dim">{a.destinations.map((x) => destById(x)?.label ?? x).join(", ")}</td>
@@ -104,8 +123,17 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
             {open.discovered && <Chip tone="critical">SHADOW AGENT — discovered by traffic analysis</Chip>}
           </div>
           <dl className="kv">
-            <dt>Owner</dt><dd>{open.owner ? userById(open.owner)?.name : "unknown — no registered owner"}</dd>
-            <dt>Device</dt><dd>{open.device ? deviceById(open.device)?.name : "—"}</dd>
+            <dt>Owner</dt><dd>{open.owner ? `${userById(open.owner)?.name} (registered it, accountable)` : "unknown — no registered owner"}</dd>
+            <dt>Registered on</dt><dd>{open.device ? deviceById(open.device)?.name : "—"}</dd>
+            <dt>Used by</dt>
+            <dd>
+              {usersOf(open.id).length === 0 ? "nobody yet" : usersOf(open.id).map((u) => (
+                <div key={u.user} className="row" style={{ gap: 6 }}>
+                  <Avatar userId={u.user} size={18} />{userById(u.user)?.name ?? u.user}
+                  <span className="faint">on {deviceById(u.device)?.name ?? u.device}</span>
+                </div>
+              ))}
+            </dd>
             <dt>Environment</dt><dd>{open.environment}</dd>
             <dt>Tools</dt><dd>{open.tools.join(", ")}</dd>
             <dt>Destinations</dt><dd>{open.destinations.map((x) => destById(x)?.label ?? x).join(", ")}</dd>
@@ -127,7 +155,14 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
           <div className="small">
             {s.events.filter((e) => e.agent === open.id).slice(-6).reverse().map((e) => (
               <div key={e.id} className="stream-item">
-                <span className="stream-text mono small">{e.actionRaw ?? e.action} → {e.resource}</span>
+                <span className="stream-text">
+                  <span className="stream-sentence">{describe(e)}</span>
+                  <span className="stream-meta">
+                    <span className="stream-who"><Avatar userId={e.user} size={16} />{userById(e.user)?.name ?? e.user}</span>
+                    <span className="sep">·</span>{timeAgo(e.timestamp)}
+                    <span className="sep">·</span><span className="mono">{e.action}</span>
+                  </span>
+                </span>
                 <DecisionChip d={e.decision} small />
               </div>
             ))}

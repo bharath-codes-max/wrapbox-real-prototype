@@ -122,5 +122,7 @@ export const RESOURCES: OrgResource[] = [
 
 export function userById(id: string) { return USERS.find((u) => u.id === id); }
 export function deviceById(id: string) { return DEVICES.find((d) => d.id === id); }
+/** The laptop a person works on — actions happen on the user's device, not the agent's. */
+export function deviceOfUser(userId: string) { return DEVICES.find((d) => d.owner === userId); }
 export function agentById(id: string) { return AGENTS.find((a) => a.id === id); }
 export function resourceById(id: string) { return RESOURCES.find((r) => r.id === id); }

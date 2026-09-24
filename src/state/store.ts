@@ -10,7 +10,7 @@ import type {
   StandingPermission, TaskEnvelope, VaultToken, Decision,
 } from "../model/types";
 import { SEED_CONTRACTS } from "../model/contracts";
-import { userById } from "../model/org";
+import { deviceOfUser, userById } from "../model/org";
 import { canActivate, contractCoverage } from "../engine/coverage";
 import { SCENARIOS, TASK_SCENARIO, scenarioById, type Scenario } from "../engine/scenarios";
 import { runScenario, setSeq, getSeq, setTokenCounter, getTokenCounter } from "../engine/simulate";
@@ -166,7 +166,13 @@ function load(): AppState {
       // Never restore below the highest token id already issued.
       const maxIssued = Math.max(0, ...parsed.tokens.map((t) => Number(t.id.match(/_(\d+)$/)?.[1] ?? 0)));
       setTokenCounter(Math.max(parsed._tok ?? 0, maxIssued));
-      return { ...parsed, demoStep: -1 }; // demo mode never persists across reloads
+      // Older saved events took the laptop from the agent; re-attach each one to
+      // the person's own device so user + device always agree.
+      const events = parsed.events.map((e) => {
+        const d = deviceOfUser(e.user);
+        return d && e.device !== d.id ? { ...e, device: d.id } : e;
+      });
+      return { ...parsed, events, demoStep: -1 }; // demo mode never persists across reloads
     }
   } catch {
     /* corrupted state → reseed */
