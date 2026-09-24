@@ -240,7 +240,7 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
                           <div className="chat-bubble" style={{ borderColor: "var(--bad)" }}>
                             <b className="small" style={{ color: "var(--bad)" }}>⛔ Blocked by Wrapbox before transmission</b>
                             <div className="small dim">
-                              {liveEvent.decisionReasons[0]}
+                              {liveEvent.decidedBy ? `Decided by ${liveEvent.decidedBy.label}` : liveEvent.decisionReasons[0]}
                               {liveEvent.safeAlternative && <div style={{ marginTop: 4 }}><b>Safe next step:</b> {liveEvent.safeAlternative}</div>}
                             </div>
                           </div>
@@ -273,7 +273,7 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
                       {liveEvent.decision === "BLOCK" && (
                         <span style={{ color: "var(--bad)" }}>
                           {"⛔ wrapbox: action blocked\n"}
-                          <span className="dim">{"   reason: "}{liveEvent.decisionReasons[0]}{"\n"}</span>
+                          <span className="dim">{"   reason: "}{liveEvent.decidedBy?.label ?? liveEvent.decisionReasons[0]}{"\n"}</span>
                           {liveEvent.safeAlternative && <span className="dim">{"   hint: "}{liveEvent.safeAlternative}</span>}
                         </span>
                       )}
