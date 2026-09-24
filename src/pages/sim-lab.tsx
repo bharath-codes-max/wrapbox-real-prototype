@@ -3,13 +3,14 @@
 // engine, record real events, and propagate to every other screen.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppState, simulate } from "../state/store";
-import { PageHead, Chip, DecisionChip, SimNote, Payload, names, Avatar, AgentMark, DestMark } from "../ui/kit";
+import { PageHead, Chip, DecisionChip, SimNote, Payload, names, Avatar, AgentMark, DestMark, SectionHead } from "../ui/kit";
 import { EventDetail } from "../ui/event-detail";
 import { SCENARIOS, type Scenario } from "../engine/scenarios";
 import { pipelineFor, buildInspection, type PipelineStage } from "../engine/simulate";
 import type { SimulationEvent } from "../model/types";
 import { agentById, userById } from "../model/org";
 import { destById } from "../model/registries";
+import { Network, Server, ShieldCheck, Layers, Cpu, Play, Pause, StepForward, RotateCcw, ArrowRight } from "lucide-react";
 
 const GROUPS = [
   { key: "NETWORK", label: "Network" },
@@ -18,6 +19,14 @@ const GROUPS = [
   { key: "CONTEXT", label: "Context" },
   { key: "SAFETY", label: "Safety Kernel" },
 ] as const;
+
+const GROUP_ICON = {
+  NETWORK: <Network size={13} />,
+  ENDPOINT: <Server size={13} />,
+  GATEWAY: <ShieldCheck size={13} />,
+  CONTEXT: <Layers size={13} />,
+  SAFETY: <Cpu size={13} />,
+};
 
 export function SimulationLab({ nav, route }: { nav: (r: string) => void; route: string }) {
   const s = useAppState();
@@ -80,49 +89,60 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
   const liveEvent = event ? s.events.find((e) => e.id === event.id) ?? event : null;
   const inspectionPreview = useMemo(() => buildInspection(sc), [sc]);
 
+  const groupScenarios = SCENARIOS.filter((x) => x.group === group);
+  const groupLabel = GROUPS.find((g) => g.key === group)?.label ?? "";
+
   return (
     <div className="page">
       <PageHead
+        eyebrow="Simulation"
         title="Simulation Lab"
         sub="What the person or agent is doing — versus what Wrapbox sees and does. Every run records a real event that propagates to the Control Room, Live Actions, Review Center and Evidence."
         right={<SimNote>Environments simulated · decisions & state real</SimNote>}
       />
 
-      <div className="row" style={{ marginBottom: 10 }}>
-        {GROUPS.map((g) => (
-          <button key={g.key} className={`btn btn-sm ${group === g.key ? "btn-primary" : ""}`} onClick={() => pick(g.key)}>
-            {g.label}
-          </button>
-        ))}
+      <div className="section">
+        <SectionHead title="Enforcement plane" sub="Choose the plane to simulate, then pick a scenario within it." />
+        <div className="row" style={{ flexWrap: "wrap" }}>
+          {GROUPS.map((g) => (
+            <button key={g.key} className={`btn btn-sm ${group === g.key ? "btn-primary" : ""}`} onClick={() => pick(g.key)}>
+              {GROUP_ICON[g.key]} {g.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: "270px 1fr", gap: 12 }}>
+      <div className="grid" style={{ gridTemplateColumns: "280px 1fr", gap: 16, alignItems: "start" }}>
         {/* Scenario picker */}
-        <div>
-          {SCENARIOS.filter((x) => x.group === group).map((x) => (
-            <div
-              key={x.id}
-              className="card rowlink"
-              onClick={() => { setScenarioId(x.id); reset(); }}
-              style={{
-                cursor: "pointer", padding: "10px 12px", marginBottom: 8,
-                borderColor: x.id === scenarioId ? "var(--accent)" : "var(--border)",
-              }}
-            >
-              <b className="small">{x.title}</b>
-              <div className="small faint" style={{ marginTop: 2 }}>Expected: {x.expected}</div>
-            </div>
-          ))}
-          {group === "GATEWAY" && (
-            <div className="small faint" style={{ padding: "0 4px" }}>
-              The 10-step park/resume task lives in <a onClick={() => nav("tasks")}>Tasks</a>.
-            </div>
-          )}
+        <div className="section">
+          <SectionHead title="Scenarios" sub={`${groupScenarios.length} in the ${groupLabel} plane`} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {groupScenarios.map((x) => (
+              <div
+                key={x.id}
+                className="card rowlink"
+                onClick={() => { setScenarioId(x.id); reset(); }}
+                style={{
+                  cursor: "pointer", padding: "12px 14px",
+                  borderColor: x.id === scenarioId ? "var(--accent)" : "var(--border)",
+                  boxShadow: x.id === scenarioId ? "0 0 0 1px var(--accent)" : undefined,
+                }}
+              >
+                <b className="small">{x.title}</b>
+                <div className="small faint" style={{ marginTop: 3 }}>Expected: {x.expected}</div>
+              </div>
+            ))}
+            {group === "GATEWAY" && (
+              <div className="small faint" style={{ padding: "4px 4px 0" }}>
+                The 10-step park/resume task lives in <a onClick={() => nav("tasks")}>Tasks</a>.
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Stage */}
-        <div>
-          <div className="card" style={{ marginBottom: 12 }}>
+        <div className="section">
+          <div className="card">
             <div className="spread">
               <div>
                 <b>{sc.title}</b>
@@ -130,12 +150,12 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
               </div>
               <div className="row">
                 {mode === "idle" && <>
-                  <button className="btn btn-primary btn-sm" onClick={() => start(true)}>▶ Run</button>
+                  <button className="btn btn-primary btn-sm" onClick={() => start(true)}><Play size={13} /> Run</button>
                   <button className="btn btn-sm" onClick={() => start(false)}>Step through</button>
                 </>}
-                {mode === "auto" && <button className="btn btn-sm" onClick={pause}>❚❚ Pause</button>}
-                {mode === "step" && !finished && <button className="btn btn-primary btn-sm" onClick={stepOnce}>Next step →</button>}
-                {(finished || mode !== "idle") && <button className="btn btn-ghost btn-sm" onClick={reset}>↺ Reset</button>}
+                {mode === "auto" && <button className="btn btn-sm" onClick={pause}><Pause size={13} /> Pause</button>}
+                {mode === "step" && !finished && <button className="btn btn-primary btn-sm" onClick={stepOnce}><StepForward size={13} /> Next step</button>}
+                {(finished || mode !== "idle") && <button className="btn btn-ghost btn-sm" onClick={reset}><RotateCcw size={13} /> Reset</button>}
               </div>
             </div>
           </div>
@@ -246,7 +266,7 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
 
               {/* Before payload preview for content scenarios */}
               {sc.payload && (
-                <div style={{ marginTop: 10 }}>
+                <div style={{ marginTop: 12 }}>
                   <Payload title={`ORIGINAL — ${sc.fileName ?? "content"}`} text={sc.payload} highlight="sensitive" />
                   {inspectionPreview && !inspectionPreview.inspectable && (
                     <div className="small faint" style={{ marginTop: 4 }}>Encrypted content — Wrapbox cannot read it, and says so.</div>
@@ -281,20 +301,20 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
               </div>
 
               {finished && liveEvent && (
-                <div className="card" style={{ marginTop: 10 }}>
+                <div className="card" style={{ marginTop: 12 }}>
                   <div className="spread">
                     <div className="row">
                       <DecisionChip d={liveEvent.decision} />
                       <span className="small dim">{names(liveEvent).agent} · {liveEvent.plane}</span>
                     </div>
                     <div className="row">
-                      <button className="btn btn-sm" onClick={() => setOpenDetail(true)}>Evidence →</button>
+                      <button className="btn btn-sm" onClick={() => setOpenDetail(true)}>Evidence <ArrowRight size={13} /></button>
                       {liveEvent.reviewState?.status === "pending" && (
                         <button className="btn btn-warn btn-sm" onClick={() => nav("reviews")}>Open review</button>
                       )}
                     </div>
                   </div>
-                  <div className="small faint" style={{ marginTop: 6 }}>
+                  <div className="small faint" style={{ marginTop: 8 }}>
                     This event is now visible in Control Room, Live Actions, Agent Inventory{liveEvent.transformation?.length ? ", Token Vault" : ""} and Evidence.
                   </div>
                 </div>

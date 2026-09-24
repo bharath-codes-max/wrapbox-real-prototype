@@ -6,13 +6,14 @@ import { EventDetail } from "./event-detail";
 import { AGENTS, USERS } from "../model/org";
 
 export function EventStream({
-  events, nav, compact, limit, filters = true,
+  events, nav, compact, limit, filters = true, bare,
 }: {
   events: SimulationEvent[];
   nav: (r: string) => void;
   compact?: boolean;
   limit?: number;
   filters?: boolean;
+  bare?: boolean;
 }) {
   const [fAgent, setFAgent] = useState("");
   const [fUser, setFUser] = useState("");
@@ -66,7 +67,7 @@ export function EventStream({
           </select>
         </div>
       )}
-      <div className="card" style={{ padding: compact ? "4px 12px" : "6px 14px" }}>
+      <div className={bare ? "" : "card"} style={bare ? { padding: "6px 22px" } : { padding: compact ? "6px 20px" : "8px 22px" }}>
         {filtered.length === 0 && <div className="empty">No events match the current filters.</div>}
         {filtered.map((e) => {
           const n = names(e);

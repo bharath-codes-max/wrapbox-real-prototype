@@ -2,9 +2,10 @@
 // resources/destinations, with new/risky edges highlighted. Pure SVG.
 import { useMemo, useState } from "react";
 import { useAppState } from "../state/store";
-import { PageHead, Chip, SimNote } from "../ui/kit";
+import { PageHead, Chip, SimNote, Stat, SectionHead } from "../ui/kit";
 import { AGENTS, USERS, resourceById, userById } from "../model/org";
 import { destById } from "../model/registries";
+import { Users, Bot, Boxes, ShieldAlert } from "lucide-react";
 
 interface Node { id: string; label: string; kind: "user" | "agent" | "resource" | "dest"; x: number; y: number; risky?: boolean }
 interface Edge { from: string; to: string; label?: string; risky?: boolean; count: number }
@@ -54,59 +55,92 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const selEdges = selected ? edges.filter((e) => e.from === selected || e.to === selected) : edges;
 
+  // Derived summary — counts read straight from the graph, never typed in.
+  const userCount = nodes.filter((n) => n.kind === "user").length;
+  const agentCount = nodes.filter((n) => n.kind === "agent").length;
+  const targetCount = nodes.filter((n) => n.kind === "resource" || n.kind === "dest").length;
+  const riskyEdges = edges.filter((e) => e.risky).length;
+  const riskyNodes = nodes.filter((n) => n.risky).length;
+
   return (
-    <div className="page">
+    <div className="page page-wide">
       <PageHead
+        eyebrow="Visibility"
         title="Trust Graph"
         sub="Who talks to what: users → agents → tools → resources and destinations, built from observed events. Red edges carry high-risk activity; amber nodes are unknown/unclassified."
         right={<SimNote />}
       />
-      <div className="row" style={{ marginBottom: 10 }}>
-        <Chip tone="constrain">● users</Chip><Chip tone="violet">● agents</Chip>
-        <Chip tone="allow">● resources</Chip><Chip tone="review">● destinations</Chip>
-        <Chip tone="block">— high-risk edge</Chip>
-        {selected && <button className="btn btn-sm btn-ghost" onClick={() => setSelected(null)}>clear focus</button>}
+
+      <div className="grid g4">
+        <Stat icon={<Users size={17} />} label="Identities" value={userCount} note="human principals observed" />
+        <Stat icon={<Bot size={17} />} label="Agents" value={agentCount} tone={riskyNodes > 0 ? "warn" : undefined} note={riskyNodes > 0 ? `${riskyNodes} unregistered / risky` : "all registered"} onClick={() => nav("agents")} />
+        <Stat icon={<Boxes size={17} />} label="Resources & destinations" value={targetCount} note="tools, files and endpoints reached" />
+        <Stat icon={<ShieldAlert size={17} />} label="High-risk edges" value={riskyEdges} tone={riskyEdges > 0 ? "bad" : "good"} note="relationships carrying high/critical activity" onClick={() => nav("evidence")} />
       </div>
-      <div className="card">
-        <svg className="tg-svg" viewBox={`0 0 800 ${height}`}>
-          {selEdges.map((e, i) => {
-            const a = byId.get(e.from); const b = byId.get(e.to);
-            if (!a || !b) return null;
-            const mx = (a.x + b.x) / 2;
-            return (
-              <g key={i}>
-                <path
-                  d={`M ${a.x + 8} ${a.y} C ${mx} ${a.y}, ${mx} ${b.y}, ${b.x - 8} ${b.y}`}
-                  fill="none"
-                  stroke={e.risky ? "#ef5f74" : "#2f3950"}
-                  strokeWidth={Math.min(4, 1 + e.count * 0.4)}
-                  opacity={selected && !(e.from === selected || e.to === selected) ? 0.15 : 0.85}
-                />
+
+      <div className="section">
+        <SectionHead
+          title="Relationship map"
+          sub="Every edge is an observed event; thicker lines carry more traffic. Click any node to focus its neighbourhood."
+          right={
+            <div className="row">
+              <Chip tone="constrain">● users</Chip><Chip tone="violet">● agents</Chip>
+              <Chip tone="allow">● resources</Chip><Chip tone="review">● destinations</Chip>
+              <Chip tone="block">— high-risk edge</Chip>
+              {selected && <button className="btn btn-sm btn-ghost" onClick={() => setSelected(null)}>clear focus</button>}
+            </div>
+          }
+        />
+        <div className="card">
+          <svg className="tg-svg" viewBox={`0 0 800 ${height}`}>
+            {selEdges.map((e, i) => {
+              const a = byId.get(e.from); const b = byId.get(e.to);
+              if (!a || !b) return null;
+              const mx = (a.x + b.x) / 2;
+              return (
+                <g key={i}>
+                  <path
+                    d={`M ${a.x + 8} ${a.y} C ${mx} ${a.y}, ${mx} ${b.y}, ${b.x - 8} ${b.y}`}
+                    fill="none"
+                    stroke={e.risky ? "#ef5f74" : "#2f3950"}
+                    strokeWidth={Math.min(4, 1 + e.count * 0.4)}
+                    opacity={selected && !(e.from === selected || e.to === selected) ? 0.15 : 0.85}
+                  />
+                </g>
+              );
+            })}
+            {nodes.map((n) => (
+              <g key={n.id} className="tg-node" onClick={() => setSelected(selected === n.id ? null : n.id)}
+                 opacity={selected && n.id !== selected && !edges.some((e) => (e.from === selected && e.to === n.id) || (e.to === selected && e.from === n.id)) ? 0.3 : 1}>
+                <circle cx={n.x} cy={n.y} r={n.id === selected ? 10 : 7}
+                  fill={n.risky ? "#ef5f74" : colors[n.kind]}
+                  stroke={n.risky ? "#ef5f74" : "none"} strokeWidth={n.risky ? 6 : 0} strokeOpacity={0.25} />
+                <text className="tg-label" x={n.kind === "user" ? n.x - 12 : n.x + 12} y={n.y + 3}
+                  textAnchor={n.kind === "user" ? "end" : "start"}
+                  style={{ fill: n.risky ? "#ef5f74" : undefined, fontWeight: n.risky ? 700 : 400 }}>
+                  {n.label}
+                </text>
               </g>
-            );
-          })}
-          {nodes.map((n) => (
-            <g key={n.id} className="tg-node" onClick={() => setSelected(selected === n.id ? null : n.id)}
-               opacity={selected && n.id !== selected && !edges.some((e) => (e.from === selected && e.to === n.id) || (e.to === selected && e.from === n.id)) ? 0.3 : 1}>
-              <circle cx={n.x} cy={n.y} r={n.id === selected ? 10 : 7}
-                fill={n.risky ? "#ef5f74" : colors[n.kind]}
-                stroke={n.risky ? "#ef5f74" : "none"} strokeWidth={n.risky ? 6 : 0} strokeOpacity={0.25} />
-              <text className="tg-label" x={n.kind === "user" ? n.x - 12 : n.x + 12} y={n.y + 3}
-                textAnchor={n.kind === "user" ? "end" : "start"}
-                style={{ fill: n.risky ? "#ef5f74" : undefined, fontWeight: n.risky ? 700 : 400 }}>
-                {n.label}
-              </text>
-            </g>
-          ))}
-        </svg>
+            ))}
+          </svg>
+        </div>
       </div>
+
       {nodes.some((n) => n.risky) && (
-        <div className="card" style={{ marginTop: 10, borderColor: "var(--bad)" }}>
-          <b className="small">Risky relationship detected:</b>{" "}
-          <span className="small dim">
-            an unregistered MCP agent on Finance-Laptop-07 holds edges to an unknown external endpoint. Its transfers were
-            blocked by the Safety Kernel — inspect it in <a onClick={() => nav("agents")}>Agent Inventory</a>.
-          </span>
+        <div className="section">
+          <SectionHead title="Flagged relationship" sub="Edges the Safety Kernel is watching" />
+          <div className="card" style={{ borderColor: "var(--bad)" }}>
+            <div className="row" style={{ alignItems: "flex-start", gap: 12 }}>
+              <div className="stat-icon" style={{ color: "var(--bad)", background: "var(--bad-soft)" }}><ShieldAlert size={17} /></div>
+              <div style={{ minWidth: 0 }}>
+                <b className="small">Risky relationship detected</b>
+                <div className="small dim" style={{ marginTop: 4, lineHeight: 1.5 }}>
+                  An unregistered MCP agent on Finance-Laptop-07 holds edges to an unknown external endpoint. Its transfers were
+                  blocked by the Safety Kernel — inspect it in <a onClick={() => nav("agents")}>Agent Inventory</a>.
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

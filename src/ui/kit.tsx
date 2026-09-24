@@ -50,23 +50,44 @@ export function StatusChip({ s }: { s: string }) {
 }
 
 export function Stat({
-  label, value, note, tone, onClick,
-}: { label: string; value: React.ReactNode; note?: string; tone?: string; onClick?: () => void }) {
+  label, value, note, tone, onClick, icon,
+}: { label: string; value: React.ReactNode; note?: string; tone?: string; onClick?: () => void; icon?: React.ReactNode }) {
   return (
     <div className={`card stat ${onClick ? "clickable" : ""}`} onClick={onClick}>
-      <div className="stat-label">{label}</div>
+      {icon ? (
+        <div className="stat-top">
+          <div className="stat-label">{label}</div>
+          <div className="stat-icon" style={tone ? { color: `var(--${tone})`, background: `var(--${tone}-soft)` } : undefined}>{icon}</div>
+        </div>
+      ) : (
+        <div className="stat-label">{label}</div>
+      )}
       <div className="stat-value" style={tone ? { color: `var(--${tone})` } : undefined}>{value}</div>
       {note && <div className="stat-note">{note}</div>}
     </div>
   );
 }
 
-export function PageHead({ title, sub, right }: { title: string; sub?: string; right?: React.ReactNode }) {
+export function PageHead({ title, sub, right, eyebrow }: { title: string; sub?: string; right?: React.ReactNode; eyebrow?: string }) {
   return (
     <div className="page-head">
-      <div>
+      <div style={{ minWidth: 0 }}>
+        {eyebrow && <div className="page-eyebrow">{eyebrow}</div>}
         <h1 className="page-title">{title}</h1>
         {sub && <div className="page-sub">{sub}</div>}
+      </div>
+      {right && <div className="row" style={{ flexShrink: 0 }}>{right}</div>}
+    </div>
+  );
+}
+
+/** A titled section with optional action on the right. */
+export function SectionHead({ title, sub, right }: { title: string; sub?: string; right?: React.ReactNode }) {
+  return (
+    <div className="section-head">
+      <div>
+        <div className="section-title">{title}</div>
+        {sub && <div className="section-sub">{sub}</div>}
       </div>
       {right && <div className="row">{right}</div>}
     </div>

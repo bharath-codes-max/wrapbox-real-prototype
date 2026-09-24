@@ -1,8 +1,28 @@
 // Shared event detail drawer — the single inspection view every screen opens.
 import { Drawer, DecisionChip, Payload, EvidenceChain, names, RiskChip, StatusChip, Chip } from "./kit";
+import type { ReactNode } from "react";
 import type { SimulationEvent } from "../model/types";
 import { resolveReview } from "../state/store";
 import { deviceById } from "../model/org";
+import {
+  Info, Lightbulb, ScanSearch, FileDiff, ArrowLeftRight, UserCheck,
+  ScrollText, ShieldAlert, Link2, ShieldCheck, Ban, AlertTriangle,
+} from "lucide-react";
+
+/** Consistent, spacious section label used throughout the drawer. */
+function SectionLabel({ icon, children, meta }: {
+  icon: ReactNode;
+  children: ReactNode;
+  meta?: ReactNode;
+}) {
+  return (
+    <div className="row" style={{ gap: 9, marginBottom: 14 }}>
+      <span style={{ display: "inline-flex", color: "var(--fg-3)", flexShrink: 0 }}>{icon}</span>
+      <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0, letterSpacing: "-0.01em" }}>{children}</h3>
+      {meta && <span className="faint small" style={{ marginLeft: "auto", textAlign: "right" }}>{meta}</span>}
+    </div>
+  );
+}
 
 export function EventDetail({ e, onClose, onNavigate }: {
   e: SimulationEvent;
@@ -13,19 +33,24 @@ export function EventDetail({ e, onClose, onNavigate }: {
   const pending = e.reviewState?.status === "pending";
   return (
     <Drawer onClose={onClose}>
-      <div className="spread" style={{ marginBottom: 6 }}>
-        <h2 style={{ fontSize: 16 }}>{e.action} · {n.resource}</h2>
+      <div className="spread" style={{ marginBottom: 12, alignItems: "flex-start" }}>
+        <div style={{ minWidth: 0 }}>
+          <div className="eyebrow" style={{ marginBottom: 7 }}>{e.plane} event</div>
+          <h2 style={{ fontSize: 20, fontWeight: 650, margin: 0, letterSpacing: "-0.02em", lineHeight: 1.2 }}>
+            {e.action} · {n.resource}
+          </h2>
+        </div>
         <DecisionChip d={e.decision} />
       </div>
-      <div className="row small dim" style={{ marginBottom: 12 }}>
+      <div className="row small dim" style={{ marginBottom: 24, gap: 9 }}>
         <span className="mono">{e.id}</span>
-        <span>·</span>
+        <span className="faint">·</span>
         <span>{new Date(e.timestamp).toLocaleString()}</span>
-        <span>·</span>
         <RiskChip r={e.risk} />
         {e.breakGlass && <Chip tone="critical">BREAK-GLASS</Chip>}
       </div>
 
+      <SectionLabel icon={<Info size={15} />}>Request context</SectionLabel>
       <dl className="kv">
         <dt>User</dt><dd>{n.user}</dd>
         <dt>Device</dt><dd>{deviceById(e.device)?.name ?? e.device}</dd>
@@ -34,51 +59,63 @@ export function EventDetail({ e, onClose, onNavigate }: {
         <dt>Plane</dt><dd>{e.plane}</dd>
         <dt>Action</dt><dd className="mono">{e.actionRaw ?? e.action} <span className="faint">→ {e.action}</span></dd>
         <dt>Environment</dt><dd>{e.environment}</dd>
-        {n.destination && <><dt>Destination</dt><dd>{n.destination} <Chip tone="neutral">{e.destinationClass}</Chip></dd></>}
+        {n.destination && <><dt>Destination</dt><dd className="row" style={{ gap: 8 }}>{n.destination} <Chip tone="neutral">{e.destinationClass}</Chip></dd></>}
         {e.dataClasses.length > 0 && (
           <><dt>Data classes</dt><dd className="row">{e.dataClasses.map((c) => <Chip key={c} tone="violet">{c}</Chip>)}</dd></>
         )}
-        {e.blastRadius && <><dt>Blast radius</dt><dd>{e.blastRadius.label} <Chip tone={e.blastRadius.severity}>{e.blastRadius.severity}</Chip></dd></>}
+        {e.blastRadius && <><dt>Blast radius</dt><dd className="row" style={{ gap: 8 }}>{e.blastRadius.label} <Chip tone={e.blastRadius.severity}>{e.blastRadius.severity}</Chip></dd></>}
         <dt>Capability</dt><dd><StatusChip s={e.capabilityState} /></dd>
       </dl>
 
       <hr className="divider" />
-      <h3 style={{ fontSize: 13, marginBottom: 6 }}>Why</h3>
-      <ul style={{ margin: 0, paddingLeft: 18 }} className="small">
-        {e.decisionReasons.map((r, i) => <li key={i} style={{ marginBottom: 3 }}>{r}</li>)}
+      <SectionLabel icon={<Lightbulb size={15} />}>Why this decision</SectionLabel>
+      <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.65 }} className="small">
+        {e.decisionReasons.map((r, i) => <li key={i} style={{ marginBottom: 5 }}>{r}</li>)}
       </ul>
       {e.safeAlternative && (
-        <div className="card" style={{ marginTop: 10, borderColor: "var(--border-strong)", background: "var(--bg-inset)" }}>
-          <span className="small"><b>Safe alternative:</b> {e.safeAlternative}</span>
+        <div className="card" style={{ marginTop: 14, borderColor: "var(--border-strong)", background: "var(--bg-inset)" }}>
+          <div className="row" style={{ gap: 9, alignItems: "flex-start" }}>
+            <ShieldCheck size={16} style={{ color: "var(--good)", flexShrink: 0, marginTop: 1 }} />
+            <span className="small"><b>Safe alternative:</b> {e.safeAlternative}</span>
+          </div>
         </div>
       )}
 
       {e.inspection && e.inspection.inspectable && e.inspection.findings.length > 0 && (
         <>
           <hr className="divider" />
-          <h3 style={{ fontSize: 13, marginBottom: 8 }}>Detector findings <span className="faint small">({e.inspection.parser})</span></h3>
-          <table className="tbl">
-            <thead><tr><th>Data class</th><th>Detector</th><th>Conf.</th><th>Count</th><th>Sample</th></tr></thead>
-            <tbody>
-              {e.inspection.findings.map((f) => (
-                <tr key={f.dataClass}>
-                  <td><Chip tone="violet">{f.dataClass}</Chip></td>
-                  <td className="mono small">{f.detector} v{f.detectorVersion}</td>
-                  <td className="mono">{f.confidence.toFixed(2)}</td>
-                  <td className="mono">{f.count.toLocaleString()}</td>
-                  <td className="mono small dim">{f.sample}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <SectionLabel icon={<ScanSearch size={15} />} meta={<span className="mono">{e.inspection.parser}</span>}>
+            Detector findings
+          </SectionLabel>
+          <div className="card card-pad-0">
+            <table className="tbl">
+              <thead><tr><th>Data class</th><th>Detector</th><th>Conf.</th><th>Count</th><th>Sample</th></tr></thead>
+              <tbody>
+                {e.inspection.findings.map((f) => (
+                  <tr key={f.dataClass}>
+                    <td><Chip tone="violet">{f.dataClass}</Chip></td>
+                    <td className="mono small">{f.detector} v{f.detectorVersion}</td>
+                    <td className="mono">{f.confidence.toFixed(2)}</td>
+                    <td className="mono">{f.count.toLocaleString()}</td>
+                    <td className="mono small dim">{f.sample}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
       {e.inspection && !e.inspection.inspectable && (
         <>
           <hr className="divider" />
           <div className="card" style={{ borderColor: "var(--bad)", background: "var(--bad-soft)" }}>
-            <b className="small">UNINSPECTABLE</b>
-            <div className="small dim">{e.inspection.reason}. Inability to inspect is never treated as clean — protected requirements fail closed.</div>
+            <div className="row" style={{ gap: 9, alignItems: "flex-start" }}>
+              <AlertTriangle size={16} style={{ color: "var(--bad)", flexShrink: 0, marginTop: 1 }} />
+              <div>
+                <b className="small">UNINSPECTABLE</b>
+                <div className="small dim" style={{ marginTop: 2 }}>{e.inspection.reason}. Inability to inspect is never treated as clean — protected requirements fail closed.</div>
+              </div>
+            </div>
           </div>
         </>
       )}
@@ -86,15 +123,16 @@ export function EventDetail({ e, onClose, onNavigate }: {
       {e.payloadBefore && (
         <>
           <hr className="divider" />
-          <h3 style={{ fontSize: 13, marginBottom: 8 }}>
+          <SectionLabel icon={<FileDiff size={15} />}>
             {e.payloadAfter ? "Original vs what left the device" : e.decision === "BLOCK" ? "Original (never transmitted)" : "Payload"}
-          </h3>
-          <div className="grid" style={{ gridTemplateColumns: e.payloadAfter ? "1fr" : "1fr" }}>
+          </SectionLabel>
+          <div className="grid">
             <Payload title="ORIGINAL" text={e.payloadBefore} highlight="sensitive" />
             {e.payloadAfter && <Payload title="WHAT LEFT THE DEVICE" text={e.payloadAfter} highlight="tokens" />}
             {!e.payloadAfter && e.decision === "BLOCK" && (
-              <div className="small" style={{ color: "var(--bad)", fontWeight: 600 }}>
-                ⛔ Blocked before transmission — the destination did not receive this content.
+              <div className="row small" style={{ gap: 8, color: "var(--bad)", fontWeight: 600 }}>
+                <Ban size={15} style={{ flexShrink: 0 }} />
+                Blocked before transmission — the destination did not receive this content.
               </div>
             )}
           </div>
@@ -104,21 +142,25 @@ export function EventDetail({ e, onClose, onNavigate }: {
       {e.transformation && e.transformation.length > 0 && (
         <>
           <hr className="divider" />
-          <h3 style={{ fontSize: 13, marginBottom: 8 }}>Transformations ({e.transformation[0].kind})</h3>
-          <table className="tbl">
-            <thead><tr><th>Class</th><th>Before</th><th>After</th></tr></thead>
-            <tbody>
-              {e.transformation.map((t, i) => (
-                <tr key={i}>
-                  <td className="small">{t.dataClass}</td>
-                  <td className="mono small">{t.before}</td>
-                  <td className="mono small"><span className="hl-tok">{t.after}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <SectionLabel icon={<ArrowLeftRight size={15} />} meta={e.transformation[0].kind}>
+            Transformations
+          </SectionLabel>
+          <div className="card card-pad-0">
+            <table className="tbl">
+              <thead><tr><th>Class</th><th>Before</th><th>After</th></tr></thead>
+              <tbody>
+                {e.transformation.map((t, i) => (
+                  <tr key={i}>
+                    <td className="small">{t.dataClass}</td>
+                    <td className="mono small">{t.before}</td>
+                    <td className="mono small"><span className="hl-tok">{t.after}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {e.transformation.some((t) => t.tokenId) && onNavigate && (
-            <div className="small dim" style={{ marginTop: 6 }}>
+            <div className="small dim" style={{ marginTop: 10 }}>
               Reversible tokens stored in <a onClick={() => onNavigate("vault")}>Token Vault</a> — authorized restoration only.
             </div>
           )}
@@ -128,10 +170,10 @@ export function EventDetail({ e, onClose, onNavigate }: {
       {e.reviewState && (
         <>
           <hr className="divider" />
-          <h3 style={{ fontSize: 13, marginBottom: 8 }}>Review</h3>
+          <SectionLabel icon={<UserCheck size={15} />}>Review</SectionLabel>
           {pending ? (
             <>
-              <div className="small dim" style={{ marginBottom: 8 }}>
+              <div className="small dim" style={{ marginBottom: 14, lineHeight: 1.6 }}>
                 Pending approval · expires {new Date(e.reviewState.expiresAt).toLocaleTimeString()} · requester is separated from approver.
               </div>
               <div className="row">
@@ -155,33 +197,39 @@ export function EventDetail({ e, onClose, onNavigate }: {
       {e.matchedContracts.length > 0 && (
         <>
           <hr className="divider" />
-          <h3 style={{ fontSize: 13, marginBottom: 8 }}>Matched Intent Contract clauses</h3>
-          {e.matchedContracts.map((m) => (
-            <div key={m.clauseId} className="card" style={{ marginBottom: 8, padding: "9px 12px" }}>
-              <div className="small">“{m.clauseText}”</div>
-              <div className="small faint" style={{ marginTop: 2 }}>
-                {onNavigate ? <a onClick={() => onNavigate("intent")}>{m.contractName}</a> : m.contractName} · {m.clauseId}
+          <SectionLabel icon={<ScrollText size={15} />}>Matched Intent Contract clauses</SectionLabel>
+          <div className="grid" style={{ gap: 10 }}>
+            {e.matchedContracts.map((m) => (
+              <div key={m.clauseId} className="card">
+                <div className="small">“{m.clauseText}”</div>
+                <div className="small faint" style={{ marginTop: 4 }}>
+                  {onNavigate ? <a onClick={() => onNavigate("intent")}>{m.contractName}</a> : m.contractName} · {m.clauseId}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </>
       )}
       {e.safetyRules.length > 0 && (
         <>
           <hr className="divider" />
-          <h3 style={{ fontSize: 13, marginBottom: 8 }}>Safety Kernel</h3>
-          {e.safetyRules.map((s) => (
-            <div key={s.ruleId} className="card" style={{ marginBottom: 8, padding: "9px 12px", borderColor: "var(--bad)" }}>
-              <b className="small">{s.name}</b>
-              <div className="small dim">{s.description}</div>
-              <div className="small faint" style={{ marginTop: 2 }}>Protected by Wrapbox baseline safety — no Intent Contract required.</div>
-            </div>
-          ))}
+          <SectionLabel icon={<ShieldAlert size={15} />}>Safety Kernel</SectionLabel>
+          <div className="grid" style={{ gap: 10 }}>
+            {e.safetyRules.map((s) => (
+              <div key={s.ruleId} className="card" style={{ borderColor: "var(--bad)" }}>
+                <b className="small">{s.name}</b>
+                <div className="small dim" style={{ marginTop: 2 }}>{s.description}</div>
+                <div className="small faint" style={{ marginTop: 4 }}>Protected by Wrapbox baseline safety — no Intent Contract required.</div>
+              </div>
+            ))}
+          </div>
         </>
       )}
 
       <hr className="divider" />
-      <h3 style={{ fontSize: 13, marginBottom: 8 }}>Evidence chain <span className="faint small mono">hash {e.evidence.hash} ← {e.evidence.prevHash}</span></h3>
+      <SectionLabel icon={<Link2 size={15} />} meta={<span className="mono">hash {e.evidence.hash} ← {e.evidence.prevHash}</span>}>
+        Evidence chain
+      </SectionLabel>
       <EvidenceChain e={e} />
     </Drawer>
   );

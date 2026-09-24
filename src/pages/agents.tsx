@@ -2,10 +2,11 @@
 // risk and per-agent activity derived from the shared event store.
 import { useState } from "react";
 import { useAppState } from "../state/store";
-import { PageHead, Chip, RiskChip, SimNote, Drawer, DecisionChip, timeAgo, AgentMark, Avatar } from "../ui/kit";
+import { PageHead, SectionHead, Stat, Chip, RiskChip, SimNote, Drawer, DecisionChip, timeAgo, AgentMark, Avatar } from "../ui/kit";
 import { EventStream } from "../ui/event-stream";
 import { AGENTS, deviceById, userById, type OrgAgent } from "../model/org";
 import { destById } from "../model/registries";
+import { Bot, ShieldAlert, ShieldCheck, Activity, ArrowRight } from "lucide-react";
 
 export function AgentsPage({ nav }: { nav: (r: string) => void; route: string }) {
   const s = useAppState();
@@ -24,56 +25,73 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
     };
   };
 
+  const registered = AGENTS.filter((a) => !a.discovered).length;
+  const discovered = AGENTS.filter((a) => a.discovered).length;
+  const trusted = AGENTS.filter((a) => a.trust === "trusted").length;
+  const totalEvents = s.events.length;
+
   return (
-    <div className="page">
+    <div className="page page-wide">
       <PageHead
+        eyebrow="Activity"
         title="Agent Inventory"
         sub="Automatically discovered agents, applications and tools — including shadow agents nobody registered. Identity: user + device + agent + tool feeds every decision."
         right={<SimNote>Discovery simulated · inventory model real</SimNote>}
       />
-      <div className="card" style={{ padding: 0 }}>
-        <table className="tbl">
-          <thead>
-            <tr>
-              <th>Agent</th><th>Provider</th><th>Owner / Device</th><th>Tools</th>
-              <th>Destinations</th><th>Activity</th><th>Trust</th><th>Risk</th>
-            </tr>
-          </thead>
-          <tbody>
-            {AGENTS.map((a) => {
-              const d = decisionsFor(a.id);
-              const last = lastActivity(a.id);
-              return (
-                <tr key={a.id} className="rowlink" onClick={() => setOpen(a)}>
-                  <td>
-                    <span className="row" style={{ gap: 7, flexWrap: "nowrap" }}>
-                      <AgentMark agentId={a.id} size={18} /><b>{a.name}</b>
-                    </span>
-                    {a.discovered && <div style={{ marginTop: 3 }}><Chip tone="critical">DISCOVERED · UNREGISTERED</Chip></div>}
-                  </td>
-                  <td className="dim">{a.provider}</td>
-                  <td className="small">
-                    {a.owner ? (
-                      <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
-                        <Avatar userId={a.owner} size={18} />{userById(a.owner)?.name}
+
+      <div className="grid g4">
+        <Stat icon={<Bot size={17} />} label="Agents detected" value={AGENTS.length} note={`${registered} registered`} />
+        <Stat icon={<ShieldAlert size={17} />} label="Shadow agents" value={discovered} tone={discovered > 0 ? "bad" : "good"} note={discovered > 0 ? "discovered, unregistered" : "none observed"} />
+        <Stat icon={<ShieldCheck size={17} />} label="Trusted" value={trusted} tone="good" note="full trust posture" />
+        <Stat icon={<Activity size={17} />} label="Decisions evaluated" value={totalEvents} note="across every plane" onClick={() => nav("live")} />
+      </div>
+
+      <div className="section">
+        <SectionHead title="Inventory" sub="Every agent Wrapbox has identified, with owner, reach and current risk posture" />
+        <div className="card card-pad-0">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Agent</th><th>Provider</th><th>Owner / Device</th><th>Tools</th>
+                <th>Destinations</th><th>Activity</th><th>Trust</th><th>Risk</th>
+              </tr>
+            </thead>
+            <tbody>
+              {AGENTS.map((a) => {
+                const d = decisionsFor(a.id);
+                const last = lastActivity(a.id);
+                return (
+                  <tr key={a.id} className="rowlink" onClick={() => setOpen(a)}>
+                    <td>
+                      <span className="row" style={{ gap: 7, flexWrap: "nowrap" }}>
+                        <AgentMark agentId={a.id} size={18} /><b>{a.name}</b>
                       </span>
-                    ) : <span className="faint">unknown</span>}
-                    <div className="faint">{a.device ? deviceById(a.device)?.name : "—"}</div>
-                  </td>
-                  <td className="small dim">{a.tools.join(", ")}</td>
-                  <td className="small dim">{a.destinations.map((x) => destById(x)?.label ?? x).join(", ")}</td>
-                  <td className="small">
-                    {d.total} events
-                    {d.blocked > 0 && <span style={{ color: "var(--bad)" }}> · {d.blocked} blocked</span>}
-                    <div className="faint">{last ? timeAgo(last) : "no activity"}</div>
-                  </td>
-                  <td><Chip tone={a.trust === "trusted" ? "allow" : a.trust === "conditional" ? "constrain" : a.trust === "unknown" ? "critical" : "block"}>{a.trust}</Chip></td>
-                  <td><RiskChip r={a.risk} /></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                      {a.discovered && <div style={{ marginTop: 3 }}><Chip tone="critical">DISCOVERED · UNREGISTERED</Chip></div>}
+                    </td>
+                    <td className="dim">{a.provider}</td>
+                    <td className="small">
+                      {a.owner ? (
+                        <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                          <Avatar userId={a.owner} size={18} />{userById(a.owner)?.name}
+                        </span>
+                      ) : <span className="faint">unknown</span>}
+                      <div className="faint">{a.device ? deviceById(a.device)?.name : "—"}</div>
+                    </td>
+                    <td className="small dim">{a.tools.join(", ")}</td>
+                    <td className="small dim">{a.destinations.map((x) => destById(x)?.label ?? x).join(", ")}</td>
+                    <td className="small">
+                      {d.total} events
+                      {d.blocked > 0 && <span style={{ color: "var(--bad)" }}> · {d.blocked} blocked</span>}
+                      <div className="faint">{last ? timeAgo(last) : "no activity"}</div>
+                    </td>
+                    <td><Chip tone={a.trust === "trusted" ? "allow" : a.trust === "conditional" ? "constrain" : a.trust === "unknown" ? "critical" : "block"}>{a.trust}</Chip></td>
+                    <td><RiskChip r={a.risk} /></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {open && (
@@ -122,9 +140,11 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
         </Drawer>
       )}
 
-      <div style={{ marginTop: 20 }}>
-        <h2 style={{ fontSize: 14, marginBottom: 8 }}>Agent activity</h2>
-        <EventStream events={s.events} nav={nav} compact limit={10} filters={false} />
+      <div className="section">
+        <SectionHead title="Agent activity" sub="The live decision stream across all agents, newest first" right={<button className="btn btn-sm" onClick={() => nav("live")}>Live Actions <ArrowRight size={13} /></button>} />
+        <div className="card card-pad-0">
+          <EventStream events={s.events} nav={nav} compact limit={10} filters={false} bare />
+        </div>
       </div>
     </div>
   );

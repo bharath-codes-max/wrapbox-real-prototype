@@ -3,10 +3,11 @@
 // (recommend only — never silently activates wider authority).
 import { useState } from "react";
 import { useAppState, upsertContract, setContractStatus, setAutopilotStatus } from "../state/store";
-import { PageHead, Chip, StatusChip, SimNote, Drawer, DecisionChip } from "../ui/kit";
+import { PageHead, SectionHead, Stat, Chip, StatusChip, SimNote, Drawer, DecisionChip } from "../ui/kit";
 import { CAPABILITIES } from "../model/registries";
 import { userById } from "../model/org";
 import type { ContractClause, IntentContract } from "../model/types";
+import { FileText, FileCheck2, ShieldCheck, Sparkles, Wand2, ArrowRight } from "lucide-react";
 
 // Deterministic clause extractor for the drafting demo (simulated compiler —
 // pattern-driven, predictable; the real product compiles through the Policy IR).
@@ -90,54 +91,78 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
   const [preview, setPreview] = useState<ContractClause[] | null>(null);
   const contract = open ? s.contracts.find((c) => c.id === open) : null;
 
+  const activeCount = s.contracts.filter((c) => c.status === "ACTIVE").length;
+  const draftCount = s.contracts.filter((c) => c.status === "DRAFT").length;
+  const enforcedCount = s.contracts.filter((c) => c.coverage === "ENFORCED").length;
+  const openRecs = s.autopilot.filter((a) => a.status === "open");
+  const acceptedRecs = s.autopilot.filter((a) => a.status === "accepted").length;
+  const dismissedRecs = s.autopilot.filter((a) => a.status === "dismissed").length;
+
   return (
-    <div className="page">
+    <div className="page page-wide">
       <PageHead
+        eyebrow="Policy"
         title="Intent Studio"
         sub="Enterprise intent in natural language, compiled to an enforceable machine representation. A contract only claims the coverage its required capabilities truthfully provide."
         right={<button className="btn btn-primary" onClick={() => { setDrafting(true); setPreview(null); }}>+ Draft contract</button>}
       />
 
-      <div className="card" style={{ padding: 0 }}>
-        <table className="tbl">
-          <thead><tr><th>Contract</th><th>Author</th><th>Clauses</th><th>Coverage</th><th>Status</th><th>Version</th></tr></thead>
-          <tbody>
-            {s.contracts.map((c) => (
-              <tr key={c.id} className="rowlink" onClick={() => setOpen(c.id)}>
-                <td><b>{c.name}</b><div className="small faint" style={{ maxWidth: 420, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.sourceText}</div></td>
-                <td className="small">{userById(c.author)?.name}</td>
-                <td className="mono">{c.clauses.length}</td>
-                <td><StatusChip s={c.coverage} /></td>
-                <td><Chip tone={c.status === "ACTIVE" ? "allow" : c.status === "DRAFT" ? "neutral" : "block"}>{c.status}</Chip></td>
-                <td className="mono small">v{c.version}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="grid g4">
+        <Stat icon={<FileText size={17} />} label="Contracts" value={s.contracts.length} note="natural-language intent, compiled" />
+        <Stat icon={<FileCheck2 size={17} />} label="Active" value={activeCount} tone="good" note={draftCount > 0 ? `${draftCount} draft(s) pending` : "no drafts pending"} />
+        <Stat icon={<ShieldCheck size={17} />} label="Fully enforced" value={enforcedCount} tone={enforcedCount === s.contracts.length ? "good" : "info"} note="coverage backed by live capabilities" />
+        <Stat icon={<Sparkles size={17} />} label="Open recommendations" value={openRecs.length} tone={openRecs.length > 0 ? "warn" : "good"} note="from Policy Autopilot" />
+      </div>
+
+      <div className="section">
+        <SectionHead title="Intent Contracts" sub="Each row is authored intent compiled to enforceable clauses — open one to inspect its machine representation" />
+        <div className="card card-pad-0">
+          <table className="tbl">
+            <thead><tr><th>Contract</th><th>Author</th><th>Clauses</th><th>Coverage</th><th>Status</th><th>Version</th></tr></thead>
+            <tbody>
+              {s.contracts.map((c) => (
+                <tr key={c.id} className="rowlink" onClick={() => setOpen(c.id)}>
+                  <td><b>{c.name}</b><div className="small faint" style={{ maxWidth: 420, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.sourceText}</div></td>
+                  <td className="small">{userById(c.author)?.name}</td>
+                  <td className="mono">{c.clauses.length}</td>
+                  <td><StatusChip s={c.coverage} /></td>
+                  <td><Chip tone={c.status === "ACTIVE" ? "allow" : c.status === "DRAFT" ? "neutral" : "block"}>{c.status}</Chip></td>
+                  <td className="mono small">v{c.version}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Policy Autopilot */}
-      <h2 style={{ fontSize: 14, margin: "22px 0 8px" }}>Policy Autopilot <span className="faint small">— recommendations from observed behavior · never auto-activates</span></h2>
-      {s.autopilot.filter((a) => a.status === "open").length === 0 && (
-        <div className="card empty">No open recommendations.</div>
-      )}
-      {s.autopilot.filter((a) => a.status === "open").map((a) => (
-        <div className="card" key={a.id}>
-          <div className="small dim">Observed across {a.basedOnEvents.toLocaleString()} events:</div>
-          <div style={{ margin: "4px 0" }}>{a.observation}</div>
-          <div className="small"><b>Recommendation:</b> {a.recommendation}</div>
-          <div className="row" style={{ marginTop: 10 }}>
-            <button className="btn btn-sm btn-good" onClick={() => setAutopilotStatus(a.id, "accepted")}>Accept</button>
-            <button className="btn btn-sm" onClick={() => setAutopilotStatus(a.id, "modified")}>Modify</button>
-            <button className="btn btn-sm btn-ghost" onClick={() => setAutopilotStatus(a.id, "dismissed")}>Dismiss</button>
+      <div className="section">
+        <SectionHead title="Policy Autopilot" sub="Recommendations from observed behavior — acceptance creates a DRAFT for human activation; nothing activates silently" />
+        {openRecs.length === 0 && (
+          <div className="card empty"><Wand2 size={18} className="dim" /><div>No open recommendations.</div></div>
+        )}
+        {openRecs.length > 0 && (
+          <div className="grid g2">
+            {openRecs.map((a) => (
+              <div className="card" key={a.id}>
+                <div className="row"><Sparkles size={16} className="dim" /><span className="small dim">Observed across {a.basedOnEvents.toLocaleString()} events</span></div>
+                <div style={{ margin: "10px 0" }}>{a.observation}</div>
+                <div className="small"><b>Recommendation:</b> {a.recommendation}</div>
+                <div className="row" style={{ marginTop: 14 }}>
+                  <button className="btn btn-sm btn-good" onClick={() => setAutopilotStatus(a.id, "accepted")}>Accept</button>
+                  <button className="btn btn-sm" onClick={() => setAutopilotStatus(a.id, "modified")}>Modify</button>
+                  <button className="btn btn-sm btn-ghost" onClick={() => setAutopilotStatus(a.id, "dismissed")}>Dismiss</button>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-      ))}
-      {s.autopilot.some((a) => a.status !== "open") && (
-        <div className="small faint" style={{ marginTop: 6 }}>
-          {s.autopilot.filter((a) => a.status === "accepted").length} accepted · {s.autopilot.filter((a) => a.status === "dismissed").length} dismissed — acceptance creates a DRAFT for human activation; nothing activates silently.
-        </div>
-      )}
+        )}
+        {s.autopilot.some((a) => a.status !== "open") && (
+          <div className="small faint" style={{ marginTop: 12 }}>
+            {acceptedRecs} accepted · {dismissedRecs} dismissed — acceptance creates a DRAFT for human activation; nothing activates silently.
+          </div>
+        )}
+      </div>
 
       {/* Contract detail */}
       {contract && (
@@ -192,7 +217,7 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
             {contract.status === "ACTIVE" && (
               <button className="btn btn-danger btn-sm" onClick={() => setContractStatus(contract.id, "DEACTIVATED")}>Deactivate</button>
             )}
-            <button className="btn btn-sm" onClick={() => { setOpen(null); nav("simulator"); }}>Simulate impact →</button>
+            <button className="btn btn-sm" onClick={() => { setOpen(null); nav("simulator"); }}>Simulate impact <ArrowRight size={13} /></button>
           </div>
           {contract.coverage === "PENDING" && contract.status !== "ACTIVE" && (
             <div className="small" style={{ color: "var(--warn)", marginTop: 8 }}>
