@@ -103,7 +103,14 @@ export function BreakGlassPage({ nav }: { nav: (r: string) => void }) {
                 {overriddenBy(active).map((e) => <div key={e.id} className="dim" style={{ marginTop: 4 }}>• {describe(e)}</div>)}
               </div>
             )}
-            <button className="btn btn-danger btn-sm" onClick={() => endBreakGlass(active.id)}>End override now</button>
+            <div className="row" style={{ gap: 12 }}>
+              <button className="btn btn-danger btn-sm" onClick={() => endBreakGlass(active.id)}>End override now</button>
+              {overriddenBy(active).length > 0 && (
+                <span className="small dim">
+                  Fixed? End it now — until then, {active.scope} keeps skipping approvals.
+                </span>
+              )}
+            </div>
           </div>
         </div>
       ) : (
