@@ -8,7 +8,7 @@ import { decide, type ActionRequest } from "./brain";
 import type { Scenario } from "./scenarios";
 import type {
   Decision, DetectorFinding, EvidenceRecord, IntentContract, InspectionResult,
-  SimulationEvent, TransformStep, VaultToken,
+  SimulationEvent, TaskEnvelope, TransformStep, VaultToken,
 } from "../model/types";
 import { detectorFor, destById } from "../model/registries";
 import { agentById, deviceOfUser, resourceById, userById } from "../model/org";
@@ -122,7 +122,7 @@ export function runScenario(
   sc: Scenario,
   contracts: IntentContract[],
   prevHash: string,
-  opts?: { breakGlass?: boolean; timestamp?: number; kernel?: KernelState }
+  opts?: { breakGlass?: boolean; timestamp?: number; kernel?: KernelState; envelope?: TaskEnvelope }
 ): SimOutcome {
   seq += 1;
   const id = `evt-${String(seq).padStart(5, "0")}`;
@@ -149,6 +149,7 @@ export function runScenario(
       : undefined,
     breakGlass: opts?.breakGlass,
     kernel: opts?.kernel,
+    envelope: opts?.envelope,
     now: opts?.timestamp ?? Date.now(),
   };
 

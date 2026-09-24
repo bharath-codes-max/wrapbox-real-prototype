@@ -358,6 +358,12 @@ export function resolveReview(
   note?: string,
   scope?: string
 ) {
+  const target = state.events.find((e) => e.id === eventId);
+  if (target?.taskId && resolution === "approved_scoped") {
+    // For a task step, "scoped" has a precise meaning: this task may use this
+    // resource in this environment until it finishes.
+    scope = `This task may use ${target.resource} in ${target.environment} until it finishes`;
+  }
   const events = state.events.map((e) => {
     if (e.id !== eventId || !e.reviewState) return e;
     const approved = resolution === "approved" || resolution === "approved_scoped";
@@ -378,7 +384,7 @@ export function resolveReview(
   set({ events });
   // Resume any parked task step tied to this event.
   const ev = events.find((e) => e.id === eventId);
-  if (ev?.taskId) resumeParkedStep(ev.taskId, eventId, resolution);
+  if (ev?.taskId) resumeParkedStep(ev.taskId, eventId, resolution, reviewer);
 }
 
 // ---------------------------------------------------------------------------
@@ -429,9 +435,11 @@ export function advanceTask(taskId: string): void {
   for (const step of updated.steps) {
     if (step.state !== "pending") continue;
     const depsMet = step.dependsOn.every(stepDone);
-    const depParked = step.dependsOn.some((d) => updated.steps[d].state === "parked" || updated.steps[d].state === "blocked");
     if (!depsMet) {
-      if (depParked) step.state = "waiting_dependency";
+      const depStopped = step.dependsOn.some((d) => ["blocked", "skipped"].includes(updated.steps[d].state));
+      const depParked = step.dependsOn.some((d) => ["parked", "waiting_dependency"].includes(updated.steps[d].state));
+      if (depStopped) step.state = "skipped";
+      else if (depParked) step.state = "waiting_dependency";
       continue;
     }
     const def = t.steps[step.index];
@@ -451,7 +459,9 @@ export function advanceTask(taskId: string): void {
       environment: def.environment,
       sensitivity: def.sensitivity,
     };
-    const out = runScenario(sc, state.contracts, lastHash, { kernel: state.kernel });
+    // The task's envelope goes to the brain, so allowed scope, forbidden scope,
+    // time window, file budget and scoped grants are genuinely enforced.
+    const out = runScenario(sc, state.contracts, lastHash, { kernel: state.kernel, envelope: updated });
     out.event.taskId = taskId;
     out.event.stepIndex = step.index;
     out.event.dependsOn = step.dependsOn;
@@ -475,22 +485,35 @@ export function advanceTask(taskId: string): void {
       step.state = "waiting_dependency";
     }
   }
+  // A step skipped earlier because its dependency was waiting may now be stuck behind a stop.
+  for (const step of updated.steps) {
+    if (step.state === "waiting_dependency" && step.dependsOn.some((d) => ["blocked", "skipped"].includes(updated.steps[d].state))) {
+      step.state = "skipped";
+    }
+  }
   const allDone = updated.steps.every((s) => s.state === "done");
   const anyParked = updated.steps.some((s) => s.state === "parked" || s.state === "waiting_dependency");
-  updated.status = allDone ? "completed" : anyParked ? "parked" : "active";
+  const anyPending = updated.steps.some((s) => s.state === "pending");
+  updated.status = allDone ? "completed" : anyParked ? "parked" : anyPending ? "active" : "stopped";
   tasks = tasks.map((x) => (x.taskId === taskId ? updated : x));
   set({ tasks, events, lastHash });
 }
 
-function resumeParkedStep(taskId: string, eventId: string, resolution: string) {
+function resumeParkedStep(taskId: string, eventId: string, resolution: string, reviewer: string) {
   const approved = resolution === "approved" || resolution === "approved_scoped" || resolution === "constrained";
+  const ev = state.events.find((e) => e.id === eventId);
   let tasks = state.tasks.map((task) => {
     if (task.taskId !== taskId) return task;
     const steps = task.steps.map((s) => {
       if (s.eventId !== eventId) return s;
       return { ...s, state: approved ? ("done" as const) : ("blocked" as const) };
     });
-    return { ...task, steps, status: "active" as const };
+    // "Approve scoped" widens this task's envelope for that resource +
+    // environment; any approval re-authorizes the task, renewing its window.
+    const grants = resolution === "approved_scoped" && ev
+      ? [...(task.grants ?? []), { resource: ev.resource, environment: ev.environment, grantedBy: reviewer, at: Date.now() }]
+      : task.grants;
+    return { ...task, steps, grants, startedAt: approved ? Date.now() : task.startedAt, status: "active" as const };
   });
   state = { ...state, tasks };
   // Waiting dependents become pending again and run.

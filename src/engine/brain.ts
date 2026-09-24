@@ -263,9 +263,19 @@ export function decide(req: ActionRequest, contracts: IntentContract[]): BrainRe
   // 7. Task Envelope: outside-envelope actions escalate.
   if (req.envelope && req.envelope.status === "active") {
     const env = req.envelope;
-    const resourceAllowed = env.allowedResources.some((r) => req.resource.includes(r) || r.includes(req.resource));
-    const actionAllowed = env.allowedActions.includes(req.action);
-    const forbidden = env.forbidden.some((f) => req.resource.toLowerCase().includes(f.toLowerCase()) || req.environment === f);
+    // A scoped approval earlier in this task widens the envelope for that
+    // resource + environment only, and only for this task.
+    const granted = (env.grants ?? []).some((g) => g.resource === req.resource && g.environment === req.environment);
+    const expired = (req.now ?? Date.now()) > env.startedAt + env.durationMin * 60_000;
+    const resourceAllowed = granted || env.allowedResources.some((r) => req.resource.includes(r) || r.includes(req.resource));
+    const actionAllowed = granted || env.allowedActions.includes(req.action);
+    const forbidden = !granted && env.forbidden.some((f) => req.resource.toLowerCase().includes(f.toLowerCase()) || req.environment === f);
+    if (granted) reasons.push(`Task Envelope: a scoped approval earlier in "${env.title}" covers ${req.resource} in ${req.environment}.`);
+    if (expired && DECISION_RANK[decision] < DECISION_RANK.REVIEW) {
+      decision = "REVIEW";
+      decidedBy = { layer: "envelope", label: `Task Envelope — the ${env.durationMin}-minute window for "${env.title}" has expired` };
+      reasons.push(`Task Envelope: the ${env.durationMin}-minute window has expired — re-authorization required.`);
+    }
     if (forbidden) {
       if (DECISION_RANK[decision] < DECISION_RANK.REVIEW) {
         decision = "REVIEW";

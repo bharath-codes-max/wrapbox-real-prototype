@@ -221,8 +221,10 @@ export interface TaskEnvelope {
   startedAt: number;
   fileBudget: number;
   filesUsed: number;
-  status: "active" | "completed" | "parked" | "expired";
+  status: "active" | "completed" | "parked" | "stopped" | "expired";
   steps: TaskStep[];
+  // Extra scope a reviewer granted with "Approve scoped" — valid for this task only.
+  grants?: { resource: string; environment: Environment; grantedBy: string; at: number }[];
 }
 
 export interface TaskStep {
@@ -231,7 +233,7 @@ export interface TaskStep {
   action: ActionVerb;
   resource: string;
   dependsOn: number[];
-  state: "pending" | "running" | "done" | "parked" | "blocked" | "waiting_dependency";
+  state: "pending" | "running" | "done" | "parked" | "blocked" | "waiting_dependency" | "skipped";
   decision?: Decision;
   eventId?: string;
 }
