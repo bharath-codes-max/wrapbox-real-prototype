@@ -93,7 +93,7 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
 
         {view === "table" ? (
           <div className="card card-pad-0">
-            <table className="tbl">
+            <table className="tbl tbl-wide">
               <thead><tr><th>Event</th><th>Chain</th><th>Actor</th><th>Action → Resource</th><th>Data</th><th>Wrapbox decision</th><th>Human review</th><th>Risk</th></tr></thead>
               <tbody>
                 {list.map((e) => {

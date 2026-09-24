@@ -8,6 +8,7 @@ import { CAPABILITIES } from "../model/registries";
 import { userById } from "../model/org";
 import type { ContractClause } from "../model/types";
 import { draftClauses, coverageRollup } from "../engine/drafter";
+import { contractCoverage } from "../engine/coverage";
 import { FileText, FileCheck2, ShieldCheck, Sparkles, Wand2, ArrowRight } from "lucide-react";
 
 
@@ -24,7 +25,7 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
 
   const activeCount = s.contracts.filter((c) => c.status === "ACTIVE").length;
   const draftCount = s.contracts.filter((c) => c.status === "DRAFT").length;
-  const enforcedCount = s.contracts.filter((c) => c.coverage === "ENFORCED").length;
+  const enforcedCount = s.contracts.filter((c) => contractCoverage(c) === "ENFORCED").length;
   const openRecs = s.autopilot.filter((a) => a.status === "open");
   const acceptedRecs = s.autopilot.filter((a) => a.status === "accepted").length;
   const dismissedRecs = s.autopilot.filter((a) => a.status === "dismissed").length;
@@ -56,7 +57,7 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
                   <td><b>{c.name}</b><div className="small faint" style={{ maxWidth: 420, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.sourceText}</div></td>
                   <td className="small">{userById(c.author)?.name}</td>
                   <td className="mono">{c.clauses.length}</td>
-                  <td><StatusChip s={c.coverage} /></td>
+                  <td><StatusChip s={contractCoverage(c)} /></td>
                   <td><Chip tone={c.status === "ACTIVE" ? "allow" : c.status === "DRAFT" ? "neutral" : "block"}>{c.status}</Chip></td>
                   <td className="mono small">v{c.version}</td>
                 </tr>
@@ -101,7 +102,7 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
           <div className="spread">
             <h2 style={{ fontSize: 16 }}>{contract.name}</h2>
             <div className="row">
-              <StatusChip s={contract.coverage} />
+              <StatusChip s={contractCoverage(contract)} />
               <Chip tone={contract.status === "ACTIVE" ? "allow" : "neutral"}>{contract.status}</Chip>
             </div>
           </div>
@@ -139,8 +140,8 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
               <button
                 className="btn btn-good btn-sm"
                 onClick={() => setContractStatus(contract.id, "ACTIVE")}
-                disabled={contract.coverage === "PENDING"}
-                title={contract.coverage === "PENDING" ? "Required capability is PENDING — activation would create a false security claim" : ""}
+                disabled={contractCoverage(contract) === "PENDING"}
+                title={contractCoverage(contract) === "PENDING" ? "Required capability is PENDING — activation would create a false security claim" : ""}
               >
                 Activate
               </button>
@@ -150,16 +151,24 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
             )}
             <button className="btn btn-sm" onClick={() => { setOpen(null); nav("simulator"); }}>Simulate impact <ArrowRight size={13} /></button>
           </div>
-          {contract.coverage === "PENDING" && contract.status !== "ACTIVE" && (
-            <div className="small" style={{ color: "var(--warn)", marginTop: 8 }}>
-              Activation gated: a required capability is PENDING. Wrapbox will not claim enforcement it cannot deliver.
-            </div>
-          )}
-          {contract.coverage === "DEGRADED" && (
-            <div className="small" style={{ color: "var(--warn)", marginTop: 8 }}>
-              Coverage DEGRADED: the semantic classifier is still improving. Decisions are enforced with reduced confidence — shown honestly, not hidden.
-            </div>
-          )}
+          {(() => {
+            const cov = contractCoverage(contract);
+            if (cov === "ENFORCED") return null;
+            const weak = [...new Set(contract.clauses.flatMap((cl) => cl.requiredCapabilities))]
+              .map((id) => CAPABILITIES.find((c) => c.id === id))
+              .filter((c) => c && c.status !== "ENFORCED")
+              .map((c) => `${c!.label} (${c!.status.replaceAll("_", " ").toLowerCase()})`);
+            return (
+              <div className="small" style={{ color: "var(--warn)", marginTop: 8 }}>
+                {cov === "PENDING"
+                  ? contract.status === "ACTIVE"
+                    ? "A required skill is missing — this contract cannot be fully kept."
+                    : "Can't be switched on: a required skill is missing. Wrapbox will not claim protection it cannot deliver."
+                  : "Enforced with reduced confidence — shown honestly, not hidden."}
+                {weak.length > 0 && <> Weak skills: {weak.join(", ")}.</>}
+              </div>
+            );
+          })()}
         </Drawer>
       )}
 

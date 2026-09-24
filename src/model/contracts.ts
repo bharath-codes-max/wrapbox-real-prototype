@@ -172,7 +172,7 @@ export const SEED_CONTRACTS: IntentContract[] = [
         failClosed: true,
       },
     ],
-    coverage: "ENFORCED",
+    coverage: "DEGRADED", // production deploys need the Cloud gateway, which is DEGRADED
   },
   {
     id: "ic-hr-legal",

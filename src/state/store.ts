@@ -11,6 +11,7 @@ import type {
 } from "../model/types";
 import { SEED_CONTRACTS } from "../model/contracts";
 import { userById } from "../model/org";
+import { canActivate, contractCoverage } from "../engine/coverage";
 import { SCENARIOS, TASK_SCENARIO, scenarioById, type Scenario } from "../engine/scenarios";
 import { runScenario, setSeq, getSeq, setTokenCounter, getTokenCounter } from "../engine/simulate";
 import { decide } from "../engine/brain";
@@ -417,8 +418,13 @@ export function upsertContract(c: IntentContract) {
   });
 }
 
-export function setContractStatus(id: string, status: IntentContract["status"]) {
-  set({ contracts: state.contracts.map((c) => (c.id === id ? { ...c, status } : c)) });
+/** Returns false (and changes nothing) when activation would be a false claim. */
+export function setContractStatus(id: string, status: IntentContract["status"]): boolean {
+  const target = state.contracts.find((c) => c.id === id);
+  if (!target) return false;
+  if (status === "ACTIVE" && !canActivate(target)) return false;
+  set({ contracts: state.contracts.map((c) => (c.id === id ? { ...c, status, coverage: contractCoverage(c) } : c)) });
+  return true;
 }
 
 export function startBreakGlass(requester: string, reason: string, scope: string, durationMin: number) {

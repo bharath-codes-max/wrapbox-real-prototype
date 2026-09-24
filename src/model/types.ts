@@ -198,7 +198,9 @@ export interface IntentContract {
   status: "ACTIVE" | "DRAFT" | "DEACTIVATED";
   sourceText: string; // the natural-language contract
   clauses: ContractClause[];
-  coverage: CoverageStatus; // rollup from clause capabilities
+  // Snapshot only. Screens must read engine/coverage.ts contractCoverage(),
+  // which derives it live from the clauses' required capabilities.
+  coverage: CoverageStatus;
 }
 
 // ---------------------------------------------------------------------------

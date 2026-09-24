@@ -5,7 +5,7 @@
 // ============================================================================
 
 import type { ContractClause, IntentContract } from "../model/types";
-import { CAPABILITIES } from "../model/registries";
+import { contractCoverage } from "./coverage";
 
 const EXTERNAL_DESTINATIONS: ContractClause["destinations"] = [
   "APPROVED_AI", "UNAPPROVED_AI", "GENERIC_EXTERNAL", "UNKNOWN_EXTERNAL", "PARTNER",
@@ -72,16 +72,7 @@ export function draftClauses(text: string): ContractClause[] {
   return clauses;
 }
 
+/** Coverage of a drafted set of clauses — same single function everything uses. */
 export function coverageRollup(clauses: ContractClause[]): IntentContract["coverage"] {
-  const capState = (id: string) => CAPABILITIES.find((c) => c.id === id)?.status ?? "PENDING";
-  let worst: IntentContract["coverage"] = "ENFORCED";
-  const rank = { ENFORCED: 0, DEGRADED: 1, UNDERSTOOD_ONLY: 2, PENDING: 3, UNINSPECTABLE: 3 };
-  for (const cl of clauses) {
-    for (const cap of cl.requiredCapabilities) {
-      const st = capState(cap);
-      const mapped = st === "UNINSPECTABLE" ? "PENDING" : st;
-      if (rank[mapped] > rank[worst]) worst = mapped;
-    }
-  }
-  return worst;
+  return contractCoverage({ clauses });
 }
