@@ -33,7 +33,7 @@ const STEPS: DemoStep[] = [
   },
   {
     title: "…and Wrapbox tokenizes it in-flight",
-    text: "Run the 'Customer PII → approved AI' scenario (▶ Run). The AI receives EMAIL_TOKEN_001 — never the real address. Originals are sealed in the Token Vault; work continues without a single approval prompt.",
+    text: "The 'Customer PII → approved AI' scenario has just run. The AI receives EMAIL_TOKEN_001 — never the real address. Originals are sealed in the Token Vault; work continues without a single approval prompt.",
     route: "simlab/network",
     action: () => simulateById("net-pii-approved"),
   },

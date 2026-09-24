@@ -28,7 +28,7 @@ export function SettingsPage({ nav }: { nav: (r: string) => void }) {
       </div>
 
       <div className="section">
-        <SectionHead title="Reset demo data" sub="Discard all events, reviews, tasks and drafted contracts, then restore the seed." />
+        <SectionHead title="Reset demo data" sub="Go back to Veridian's starting point: the seed history and contracts, Safety Kernel v2026.09.1 (so the 2026.09.2 update box appears again), the seed standing permissions and Autopilot suggestions. Everything you added is discarded." />
         <div className="card">
           {!confirming ? (
             <button className="btn btn-danger" onClick={() => setConfirming(true)}>
@@ -36,7 +36,7 @@ export function SettingsPage({ nav }: { nav: (r: string) => void }) {
             </button>
           ) : (
             <div className="row">
-              <span className="small">Discard all events, reviews, tasks and drafted contracts and restore the seed?</span>
+              <span className="small">Discard your events, reviews, tasks, drafts, break-glass history, vault restores and kernel changes, and restore the seed? This can't be undone.</span>
               <button className="btn btn-danger btn-sm" onClick={() => { resetDemoData(); setConfirming(false); nav("control"); }}>Yes, reset</button>
               <button className="btn btn-sm" onClick={() => setConfirming(false)}>Cancel</button>
             </div>
@@ -53,8 +53,10 @@ export function SettingsPage({ nav }: { nav: (r: string) => void }) {
               <b className="small">Real (live behavior)</b>
             </div>
             <ul className="small dim" style={{ paddingLeft: 18, margin: 0, lineHeight: 1.7 }}>
-              <li>The decision engine: contracts, Safety Kernel, blast radius, context, envelopes</li>
-              <li>State transitions: approvals, denials, park/resume, break-glass expiry</li>
+              <li>The decision engine, in its real order: your rules, Safety Kernel, blast radius, context, task slips, standing permissions, break-glass</li>
+              <li>State transitions: approvals and routing to the right approver, park/resume, break-glass scope and expiry, revoke and grant-again</li>
+              <li>Safety Kernel observe → enforce: a new rule really only records until switched on</li>
+              <li>Policy Simulator: your recorded history is really replayed through a draft</li>
               <li>Transformations: payloads genuinely change; tokens genuinely link to the vault</li>
               <li>Every counter and chart derives from the event store</li>
               <li>Policy changes genuinely change simulation outcomes</li>
@@ -67,10 +69,13 @@ export function SettingsPage({ nav }: { nav: (r: string) => void }) {
               <b className="small">Simulated (representative)</b>
             </div>
             <ul className="small dim" style={{ paddingLeft: 18, margin: 0, lineHeight: 1.7 }}>
-              <li>All integrations: GitHub, SQL, AWS, MCP, SSO, Endpoint Security, Network Extension</li>
+              <li>All integrations: GitHub, SQL, AWS, Stripe, support desk, MCP, Okta SSO, Endpoint Security, Network Extension</li>
+              <li>Intent drafting uses a built-in sentence parser, not a hosted AI model</li>
+              <li>Safety Kernel releases ship inside the app — there is no real update server</li>
+              <li>Notifications (break-glass, approvers) are recorded on the page, never sent</li>
               <li>Detector/OCR/semantic analysis results (registry-shaped fixtures)</li>
               <li>Veridian Systems org, users, devices and traffic history</li>
-              <li>Evidence signing (hash chain is illustrative, not cryptographic)</li>
+              <li>Evidence signing: events are chained with a simple FNV hash for illustration — not a cryptographic signature</li>
             </ul>
           </div>
         </div>
