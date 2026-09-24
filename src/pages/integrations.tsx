@@ -2,16 +2,17 @@
 import { PageHead, Chip, StatusChip, SimNote } from "../ui/kit";
 import { RESOURCES } from "../model/org";
 import { ACTION_NORMALIZATION } from "../model/registries";
+import { logoUrl } from "../ui/logos";
 
 const CONNECTIONS = [
-  { name: "GitHub Organization", kind: "Gateway connector", status: "ENFORCED", detail: "github.com/veridian · push/PR/branch operations governed" },
-  { name: "PostgreSQL gateway", kind: "Gateway connector", status: "ENFORCED", detail: "payments-prod, customer-db · query preflight + row estimates" },
-  { name: "AWS Production", kind: "Gateway connector", status: "DEGRADED", detail: "IAM + S3 governed; remaining services observed" },
-  { name: "macOS Endpoint runtime", kind: "Endpoint plane", status: "ENFORCED", detail: "4 enrolled devices · file/process authorization" },
-  { name: "Network Extension", kind: "Network plane", status: "ENFORCED", detail: "HTTPS + WebSocket inspection · QUIC downgraded" },
-  { name: "Salesforce Service Cloud", kind: "SaaS destination", status: "ENFORCED", detail: "Approved SaaS destination class" },
-  { name: "MCP registry", kind: "Gateway connector", status: "UNDERSTOOD_ONLY", detail: "1 unknown MCP server discovered, unregistered" },
-  { name: "Okta SSO", kind: "Identity provider", status: "ENFORCED", detail: "User identity for decisions & evidence" },
+  { name: "GitHub Organization", logo: "github_light", kind: "Gateway connector", status: "ENFORCED", detail: "github.com/veridian · push/PR/branch operations governed" },
+  { name: "PostgreSQL gateway", logo: "postgresql", kind: "Gateway connector", status: "ENFORCED", detail: "payments-prod, customer-db · query preflight + row estimates" },
+  { name: "AWS Production", logo: "aws", kind: "Gateway connector", status: "DEGRADED", detail: "IAM + S3 governed; remaining services observed" },
+  { name: "macOS Endpoint runtime", logo: "wrapbox-icon", kind: "Endpoint plane", status: "ENFORCED", detail: "4 enrolled devices · file/process authorization" },
+  { name: "Network Extension", logo: "wrapbox-icon", kind: "Network plane", status: "ENFORCED", detail: "HTTPS + WebSocket inspection · QUIC downgraded" },
+  { name: "Salesforce Service Cloud", logo: "salesforce", kind: "SaaS destination", status: "ENFORCED", detail: "Approved SaaS destination class" },
+  { name: "MCP registry", logo: "mcp", kind: "Gateway connector", status: "UNDERSTOOD_ONLY", detail: "1 unknown MCP server discovered, unregistered" },
+  { name: "Okta SSO", logo: "okta", kind: "Identity provider", status: "ENFORCED", detail: "User identity for decisions & evidence" },
 ];
 
 export function IntegrationsPage({ nav }: { nav: (r: string) => void }) {
@@ -26,7 +27,10 @@ export function IntegrationsPage({ nav }: { nav: (r: string) => void }) {
         {CONNECTIONS.map((c) => (
           <div className="card" key={c.name}>
             <div className="spread">
-              <b>{c.name}</b>
+              <span className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
+                <img src={logoUrl(c.logo)} alt="" className="logo-lg" />
+                <b>{c.name}</b>
+              </span>
               <StatusChip s={c.status} />
             </div>
             <div className="small faint">{c.kind}</div>

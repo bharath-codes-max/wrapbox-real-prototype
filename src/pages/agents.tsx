@@ -2,7 +2,7 @@
 // risk and per-agent activity derived from the shared event store.
 import { useState } from "react";
 import { useAppState } from "../state/store";
-import { PageHead, Chip, RiskChip, SimNote, Drawer, DecisionChip, timeAgo } from "../ui/kit";
+import { PageHead, Chip, RiskChip, SimNote, Drawer, DecisionChip, timeAgo, AgentMark, Avatar } from "../ui/kit";
 import { EventStream } from "../ui/event-stream";
 import { AGENTS, deviceById, userById, type OrgAgent } from "../model/org";
 import { destById } from "../model/registries";
@@ -46,12 +46,18 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
               return (
                 <tr key={a.id} className="rowlink" onClick={() => setOpen(a)}>
                   <td>
-                    <b>{a.name}</b>
-                    {a.discovered && <div><Chip tone="critical">DISCOVERED · UNREGISTERED</Chip></div>}
+                    <span className="row" style={{ gap: 7, flexWrap: "nowrap" }}>
+                      <AgentMark agentId={a.id} size={18} /><b>{a.name}</b>
+                    </span>
+                    {a.discovered && <div style={{ marginTop: 3 }}><Chip tone="critical">DISCOVERED · UNREGISTERED</Chip></div>}
                   </td>
                   <td className="dim">{a.provider}</td>
                   <td className="small">
-                    {a.owner ? userById(a.owner)?.name : <span className="faint">unknown</span>}
+                    {a.owner ? (
+                      <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                        <Avatar userId={a.owner} size={18} />{userById(a.owner)?.name}
+                      </span>
+                    ) : <span className="faint">unknown</span>}
                     <div className="faint">{a.device ? deviceById(a.device)?.name : "—"}</div>
                   </td>
                   <td className="small dim">{a.tools.join(", ")}</td>
@@ -72,7 +78,9 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
 
       {open && (
         <Drawer onClose={() => setOpen(null)}>
-          <h2 style={{ fontSize: 16, marginBottom: 4 }}>{open.name}</h2>
+          <h2 style={{ fontSize: 16, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+            <AgentMark agentId={open.id} size={20} />{open.name}
+          </h2>
           <div className="row small dim" style={{ marginBottom: 12 }}>
             {open.provider} · {open.kind}
             {open.discovered && <Chip tone="critical">SHADOW AGENT — discovered by traffic analysis</Chip>}

@@ -3,7 +3,7 @@
 // engine, record real events, and propagate to every other screen.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppState, simulate } from "../state/store";
-import { PageHead, Chip, DecisionChip, SimNote, Payload, names } from "../ui/kit";
+import { PageHead, Chip, DecisionChip, SimNote, Payload, names, Avatar, AgentMark, DestMark } from "../ui/kit";
 import { EventDetail } from "../ui/event-detail";
 import { SCENARIOS, type Scenario } from "../engine/scenarios";
 import { pipelineFor, buildInspection, type PipelineStage } from "../engine/simulate";
@@ -148,11 +148,17 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
                 <div className="browser-frame">
                   <div className="browser-bar">
                     <div className="term-chrome"><i /><i /><i /></div>
-                    <div className="browser-url">https://{sc.destination ? destById(sc.destination)?.host : "app.example"}/</div>
+                    <div className="browser-url" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      {sc.destination && <DestMark destId={sc.destination} size={13} />}
+                      https://{sc.destination ? destById(sc.destination)?.host : "app.example"}/
+                    </div>
                   </div>
                   <div className="browser-body">
                     <div className="chat-bubble">
-                      <b className="small">{userById(sc.user)?.name}</b>
+                      <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                        <Avatar userId={sc.user} size={18} />
+                        <b className="small">{userById(sc.user)?.name}</b>
+                      </span>
                       <div className="small dim" style={{ marginTop: 2 }}>
                         {sc.id === "net-pii-approved" && "Here's our customer list — draft a personalised renewal email for each."}
                         {sc.id === "net-cred-approved" && "Why is this service failing? Config attached."}
@@ -206,8 +212,13 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
                 </div>
               ) : (
                 <div className="term">
-                  <div className="term-chrome"><i /><i /><i /></div>
-                  <span className="dim">{userById(sc.user)?.name} · {agentById(sc.agent)?.name} · {sc.application}</span>{"\n"}
+                  <div className="term-chrome" style={{ alignItems: "center", gap: 8 }}>
+                    <i /><i /><i />
+                    <span style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <AgentMark agentId={sc.agent} size={13} />
+                      <span className="dim">{userById(sc.user)?.name} · {agentById(sc.agent)?.name} · {sc.application}</span>
+                    </span>
+                  </div>
                   <span style={{ color: "var(--good)" }}>❯</span> {sc.actionRaw ?? sc.action.toLowerCase()}{"\n"}
                   {!event && <span className="faint">… press Run to execute</span>}
                   {event && !finished && <span className="dim">…</span>}

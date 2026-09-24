@@ -3,6 +3,31 @@ import React from "react";
 import type { Decision, SimulationEvent } from "../model/types";
 import { agentById, resourceById, userById } from "../model/org";
 import { destById } from "../model/registries";
+import { AGENT_LOGOS, DEST_LOGOS, logoUrl, photoOf } from "./logos";
+
+const AVATAR_COLORS = ["#1848ff", "#6b45e0", "#0a8a5c", "#b26500"];
+export function Avatar({ userId, size = 22 }: { userId: string; size?: number }) {
+  const u = userById(userId);
+  const photo = photoOf(userId);
+  if (photo) {
+    return <img src={photo} alt={u?.name ?? userId} className="avatar" style={{ width: size, height: size, objectFit: "cover" }} />;
+  }
+  const initials = (u?.name ?? "?").split(" ").map((x) => x[0]).slice(0, 2).join("");
+  const color = AVATAR_COLORS[(userId.charCodeAt(2) || 0) % AVATAR_COLORS.length];
+  return <span className="avatar" style={{ width: size, height: size, background: color }}>{initials}</span>;
+}
+
+export function AgentMark({ agentId, size = 16 }: { agentId: string; size?: number }) {
+  const mark = AGENT_LOGOS[agentId];
+  if (!mark) return null;
+  return <img src={logoUrl(mark)} alt="" className="logo-img" style={{ width: size, height: size }} />;
+}
+
+export function DestMark({ destId, size = 16 }: { destId: string; size?: number }) {
+  const mark = DEST_LOGOS[destId];
+  if (!mark) return null;
+  return <img src={logoUrl(mark)} alt="" className="logo-img" style={{ width: size, height: size }} />;
+}
 
 export function DecisionChip({ d, small }: { d: Decision | string; small?: boolean }) {
   const cls =

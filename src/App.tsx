@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
+import {
+  Bot, BrainCircuit, CirclePlay, FileCheck2, FlaskConical, Hand, KeyRound,
+  LayoutGrid, ListChecks, ListTree, Play, Plug, ScrollText, Settings as SettingsIcon,
+  ShieldCheck, Siren, Table2, Timer, Waypoints, type LucideIcon,
+} from "lucide-react";
 import { useAppState, metrics } from "./state/store";
+import { logoUrl } from "./ui/logos";
 import { ControlRoom } from "./pages/control-room";
 import { LiveActions } from "./pages/live-actions";
 import { AgentsPage } from "./pages/agents";
@@ -22,48 +28,48 @@ import { DemoBar, DEMO_SCRIPT } from "./pages/demo";
 
 export type Route = string; // "control" | "live" | ... | "simlab/network"
 
-const NAV: { group: string; items: { route: string; label: string; icon: string }[] }[] = [
-  { group: "Overview", items: [{ route: "control", label: "Control Room", icon: "◉" }] },
+const NAV: { group: string; items: { route: string; label: string; icon: LucideIcon }[] }[] = [
+  { group: "Overview", items: [{ route: "control", label: "Control Room", icon: LayoutGrid }] },
   {
     group: "Activity",
     items: [
-      { route: "live", label: "Live Actions", icon: "≋" },
-      { route: "agents", label: "Agents", icon: "⬡" },
-      { route: "tasks", label: "Tasks", icon: "☰" },
+      { route: "live", label: "Live Actions", icon: ListTree },
+      { route: "agents", label: "Agents", icon: Bot },
+      { route: "tasks", label: "Tasks", icon: ListChecks },
     ],
   },
   {
     group: "Policy",
     items: [
-      { route: "intent", label: "Intent Studio", icon: "✎" },
-      { route: "safety", label: "Safety Kernel", icon: "◈" },
-      { route: "simulator", label: "Policy Simulator", icon: "⧉" },
+      { route: "intent", label: "Intent Studio", icon: FileCheck2 },
+      { route: "safety", label: "Safety Kernel", icon: ShieldCheck },
+      { route: "simulator", label: "Policy Simulator", icon: FlaskConical },
     ],
   },
   {
     group: "Authorization",
     items: [
-      { route: "reviews", label: "Review Center", icon: "✓" },
-      { route: "standing", label: "Standing Permissions", icon: "⏲" },
-      { route: "breakglass", label: "Break Glass", icon: "⚠" },
+      { route: "reviews", label: "Review Center", icon: Hand },
+      { route: "standing", label: "Standing Permissions", icon: Timer },
+      { route: "breakglass", label: "Break Glass", icon: Siren },
     ],
   },
   {
     group: "Visibility",
     items: [
-      { route: "coverage", label: "Coverage Map", icon: "▦" },
-      { route: "trust", label: "Trust Graph", icon: "⬢" },
-      { route: "evidence", label: "Evidence", icon: "❯" },
+      { route: "coverage", label: "Coverage Map", icon: Table2 },
+      { route: "trust", label: "Trust Graph", icon: Waypoints },
+      { route: "evidence", label: "Evidence", icon: ScrollText },
     ],
   },
-  { group: "Simulation", items: [{ route: "simlab", label: "Simulation Lab", icon: "▶" }] },
+  { group: "Simulation", items: [{ route: "simlab", label: "Simulation Lab", icon: CirclePlay }] },
   {
     group: "System",
     items: [
-      { route: "integrations", label: "Integrations", icon: "⇄" },
-      { route: "vault", label: "Token Vault", icon: "◫" },
-      { route: "brain", label: "Core Brain", icon: "✳" },
-      { route: "settings", label: "Settings", icon: "⚙" },
+      { route: "integrations", label: "Integrations", icon: Plug },
+      { route: "vault", label: "Token Vault", icon: KeyRound },
+      { route: "brain", label: "Core Brain", icon: BrainCircuit },
+      { route: "settings", label: "Settings", icon: SettingsIcon },
     ],
   },
 ];
@@ -117,7 +123,9 @@ export function App() {
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">W</div>
+          <div className="brand-mark">
+            <img src={logoUrl("wrapbox-mark")} alt="Wrapbox" />
+          </div>
           <div>
             <div className="brand-name">Wrapbox</div>
             <div className="faint" style={{ fontSize: 10 }}>Veridian Systems</div>
@@ -133,7 +141,7 @@ export function App() {
                 className={`nav-item ${base === it.route ? "active" : ""}`}
                 onClick={() => nav(it.route)}
               >
-                <span style={{ width: 14, textAlign: "center", opacity: 0.8 }}>{it.icon}</span>
+                <it.icon />
                 {it.label}
                 {it.route === "reviews" && m.pendingReviews > 0 && (
                   <span className="badge-count">{m.pendingReviews}</span>
@@ -142,10 +150,10 @@ export function App() {
             ))}
           </div>
         ))}
-        <div style={{ marginTop: "auto", padding: 14 }}>
+        <div className="sidebar-foot">
           {!demoOn && (
             <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => DEMO_SCRIPT.start(nav)}>
-              ▶ Demo Mode
+              <Play size={13} /> Demo Mode
             </button>
           )}
           <div className="faint" style={{ fontSize: 10, marginTop: 8 }}>

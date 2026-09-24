@@ -1,7 +1,7 @@
 // Shared filterable event stream — used by Live Actions and embedded elsewhere.
 import { useMemo, useState } from "react";
 import type { SimulationEvent } from "../model/types";
-import { DecisionChip, names, clock, RiskChip } from "./kit";
+import { Avatar, AgentMark, DecisionChip, names, clock, RiskChip } from "./kit";
 import { EventDetail } from "./event-detail";
 import { AGENTS, USERS } from "../model/org";
 
@@ -74,8 +74,13 @@ export function EventStream({
             <div className="stream-item rowlink" key={e.id} onClick={() => setOpen(e)} style={{ cursor: "pointer" }}>
               <span className="stream-time">{clock(e.timestamp)}</span>
               <span className="stream-text">
-                <b>{n.user}</b><span className="sep">→</span>
-                <b>{n.agent}</b>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, verticalAlign: "middle" }}>
+                  <Avatar userId={e.user} size={17} /><b>{n.user}</b>
+                </span>
+                <span className="sep">→</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, verticalAlign: "middle" }}>
+                  <AgentMark agentId={e.agent} size={14} /><b>{n.agent}</b>
+                </span>
                 {e.application && <><span className="sep">→</span>{e.application}</>}
                 <span className="sep">→</span>
                 <span className="mono">{e.actionRaw ?? e.action}</span>
