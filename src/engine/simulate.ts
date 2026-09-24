@@ -90,7 +90,7 @@ function applyTransform(
         steps.push({ kind: "REVERSIBLE_TOKENIZE", dataClass: cls, before: m, after: tok, tokenId: tok });
         tokens.push({
           id: tok, dataClass: cls, createdAt: Date.now(),
-          scope: `restore:${sc.destinationClass ?? "internal"}`,
+          scope: "veridian-internal",
           expiresAt: Date.now() + 30 * 24 * 3600 * 1000,
           restorable: true, eventId,
         });

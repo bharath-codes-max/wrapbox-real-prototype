@@ -7,7 +7,7 @@
 import { useSyncExternalStore } from "react";
 import type {
   AutopilotRecommendation, BreakGlassSession, IntentContract, SimulationEvent,
-  StandingPermission, TaskEnvelope, VaultToken, Decision,
+  StandingPermission, TaskEnvelope, VaultToken, Decision, RestoreRecord,
 } from "../model/types";
 import { SEED_CONTRACTS } from "../model/contracts";
 import { deviceOfUser, userById } from "../model/org";
@@ -22,6 +22,7 @@ export interface AppState {
   contracts: IntentContract[];
   tasks: TaskEnvelope[];
   tokens: VaultToken[];
+  restorations: RestoreRecord[]; // audit log of every token restore attempt
   standing: StandingPermission[];
   breakGlass: BreakGlassSession[];
   autopilot: AutopilotRecommendation[];
@@ -144,6 +145,7 @@ function seedState(): AppState {
     contracts,
     tasks: [],
     tokens,
+    restorations: [],
     standing,
     breakGlass: [],
     autopilot,
@@ -193,7 +195,7 @@ function load(): AppState {
         }
         return out;
       });
-      return { ...parsed, events, kernel: parsed.kernel ?? BASELINE_KERNEL, demoStep: -1 }; // demo mode never persists across reloads
+      return { ...parsed, events, kernel: parsed.kernel ?? BASELINE_KERNEL, restorations: parsed.restorations ?? [], demoStep: -1 }; // demo mode never persists across reloads
     }
   } catch {
     /* corrupted state → reseed */
@@ -238,6 +240,30 @@ function set(patch: Partial<AppState>) {
 // ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Token Vault — restoring a token back to its original value
+// ---------------------------------------------------------------------------
+
+/** Only someone inside the company's authorized scope may turn a token back
+ *  into the real value. Every attempt — allowed or denied — is logged. */
+export function restoreToken(tokenId: string, requester: string, inside: boolean): RestoreRecord | undefined {
+  const t = state.tokens.find((x) => x.id === tokenId);
+  if (!t) return undefined;
+  const expired = t.expiresAt <= Date.now();
+  const allowed = inside && t.restorable && !expired;
+  const rec: RestoreRecord = {
+    id: `rst-${Date.now().toString(36)}-${state.restorations.length}`,
+    tokenId, requester, inside, allowed, at: Date.now(),
+    reason: !inside
+      ? "Requester is outside Veridian — external parties only ever hold tokens"
+      : expired ? "Token has expired"
+      : !t.restorable ? "Token is sealed — no restoration permitted"
+      : "Inside Veridian, token in scope",
+  };
+  set({ restorations: [...state.restorations, rec] });
+  return rec;
+}
 
 // ---------------------------------------------------------------------------
 // Safety Kernel updates (Wrapbox-managed rule pack)

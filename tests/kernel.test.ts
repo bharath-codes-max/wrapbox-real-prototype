@@ -82,3 +82,18 @@ test("store: install and enforce update the saved state; reset restores the base
   store.resetDemoData();
   assert.equal(store.getState().kernel.version, "2026.09.1");
 });
+
+test("token vault: restore allowed only inside the company, every attempt logged", async () => {
+  const store = await import("../src/state/store");
+  store.resetDemoData();
+  const tok = store.getState().tokens[0];
+  assert.ok(tok, "seed has tokens");
+  const inside = store.restoreToken(tok.id, "Priya Menon (inside Veridian)", true)!;
+  const outside = store.restoreToken(tok.id, "ai.enterprise.example (outside Veridian)", false)!;
+  assert.equal(inside.allowed, true);
+  assert.equal(outside.allowed, false);
+  assert.match(outside.reason, /outside/);
+  assert.equal(store.getState().restorations.length, 2);
+  store.resetDemoData();
+  assert.equal(store.getState().restorations.length, 0);
+});

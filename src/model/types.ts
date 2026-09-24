@@ -269,6 +269,17 @@ export interface VaultToken {
   eventId: string;
 }
 
+/** One attempt to turn a token back into its original value. */
+export interface RestoreRecord {
+  id: string;
+  tokenId: string;
+  requester: string; // who asked, e.g. "Priya Menon (inside Veridian)" or "claude.ai"
+  inside: boolean; // inside the company's authorized scope?
+  allowed: boolean;
+  reason: string;
+  at: number;
+}
+
 export interface AutopilotRecommendation {
   id: string;
   observation: string;
