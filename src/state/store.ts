@@ -7,7 +7,7 @@
 import { useSyncExternalStore } from "react";
 import type {
   AutopilotRecommendation, BreakGlassSession, IntentContract, SimulationEvent,
-  StandingPermission, TaskEnvelope, VaultToken, Decision, RestoreRecord,
+  StandingPermission, TaskEnvelope, VaultToken, Decision, RestoreRecord, Environment,
 } from "../model/types";
 import { SEED_CONTRACTS } from "../model/contracts";
 import { deviceOfUser, userById } from "../model/org";
@@ -336,8 +336,13 @@ export function resetDemoData() {
   emit();
 }
 
-export function simulate(sc: Scenario, opts?: { breakGlass?: boolean }): SimulationEvent {
-  const bg = opts?.breakGlass ?? state.breakGlass.some((b) => b.active && b.startedAt + b.durationMin * 60000 > Date.now());
+export function activeBreakGlass(now = Date.now()): BreakGlassSession | undefined {
+  return state.breakGlass.find((b) => b.active && b.startedAt + b.durationMin * 60000 > now && b.scopeResource && b.scopeEnvironment);
+}
+
+export function simulate(sc: Scenario): SimulationEvent {
+  const live = activeBreakGlass();
+  const bg = live ? { resource: live.scopeResource!, environment: live.scopeEnvironment! } : undefined;
   const out = runScenario(sc, state.contracts, state.lastHash, { breakGlass: bg, kernel: state.kernel, standing: state.standing });
   set({
     events: [...state.events, out.event],
@@ -598,10 +603,16 @@ export function setContractStatus(id: string, status: IntentContract["status"]):
   return true;
 }
 
-export function startBreakGlass(requester: string, reason: string, scope: string, durationMin: number) {
+/** Start an emergency override for ONE resource in ONE environment. The
+ *  security analyst and engineering manager are notified (recorded). */
+export function startBreakGlass(
+  requester: string, reason: string, scopeResource: string, scopeEnvironment: Environment, scope: string, durationMin: number,
+) {
   const bg: BreakGlassSession = {
     id: `bg-${Date.now().toString(36)}`,
-    requester, reason, scope, durationMin,
+    requester, reason, scope, scopeResource, scopeEnvironment,
+    notified: ["u-maya", "u-alex"].filter((u) => u !== requester),
+    durationMin: Math.min(60, Math.max(5, durationMin)),
     startedAt: Date.now(), active: true,
   };
   set({ breakGlass: [...state.breakGlass, bg] });

@@ -34,7 +34,7 @@ export interface ActionRequest {
   context: EventContext;
   blastRadius?: BlastRadius;
   envelope?: TaskEnvelope | null;
-  breakGlass?: boolean;
+  breakGlass?: { resource: string; environment: Environment }; // active emergency override scope
   kernel?: KernelState; // installed Safety Kernel pack (defaults to the baseline)
   standing?: StandingPermission[]; // agents' everyday authority (not used inside a task)
   now?: number; // decision time (observe windows)
@@ -346,11 +346,19 @@ export function decide(req: ActionRequest, contracts: IntentContract[]): BrainRe
     safeAlternative = suggestAlternative(req);
   }
 
-  // 9. Break-glass override (scoped, loud).
-  if (req.breakGlass && (decision === "REVIEW" || decision === "BLOCK") && safety.every((s) => s.ruleId !== "sk-cred-exfil")) {
-    reasons.push("BREAK-GLASS override active: decision executed under emergency authority with high-visibility evidence and automatic expiry.");
-    decision = "ALLOW";
-    decidedBy = { layer: "breakglass", label: "Break-glass emergency override" };
+  // 9. Break-glass override: only inside its chosen scope (one resource in one
+  //    environment), only for REVIEW/BLOCK from company rules, limits or
+  //    authority — never when a Safety Kernel rule fired.
+  const bg = req.breakGlass;
+  if (bg && (decision === "REVIEW" || decision === "BLOCK")) {
+    const inScope = bg.resource === req.resource && bg.environment === req.environment;
+    if (inScope && safety.length === 0) {
+      reasons.push("BREAK-GLASS override: executed under emergency authority for this scope; recorded and time-limited.");
+      decision = "ALLOW";
+      decidedBy = { layer: "breakglass", label: "Break-glass emergency override" };
+    } else if (inScope) {
+      reasons.push("Break-glass is active for this scope, but the Safety Kernel never yields to an override.");
+    }
   }
 
   return finish(req, {

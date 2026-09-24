@@ -2,13 +2,23 @@
 import { useEffect, useState } from "react";
 import { useAppState, startBreakGlass, endBreakGlass } from "../state/store";
 import { PageHead, SectionHead, Stat, Chip, SimNote } from "../ui/kit";
-import { USERS } from "../model/org";
+import { USERS, userById } from "../model/org";
+import { describe } from "../ui/describe";
+import type { BreakGlassSession, Environment } from "../model/types";
+
+// What an emergency override can cover: exactly one system in one environment.
+const SCOPES: { resource: string; environment: Environment; label: string }[] = [
+  { resource: "r-checkout", environment: "production", label: "checkout-service — production branch (main)" },
+  { resource: "r-aws-prod", environment: "production", label: "AWS Production" },
+  { resource: "r-customer-db", environment: "production", label: "customer-db (production)" },
+  { resource: "r-payments-prod", environment: "production", label: "payments-prod database" },
+];
 import { Siren, Timer, History, TriangleAlert, ShieldAlert, KeyRound } from "lucide-react";
 
 export function BreakGlassPage({ nav }: { nav: (r: string) => void }) {
   const s = useAppState();
   const [reason, setReason] = useState("");
-  const [scope, setScope] = useState("production checkout-service only");
+  const [scopeIdx, setScopeIdx] = useState(0);
   const [duration, setDuration] = useState(20);
   const [, tick] = useState(0);
   useEffect(() => {
@@ -24,13 +34,17 @@ export function BreakGlassPage({ nav }: { nav: (r: string) => void }) {
   const activeNow = s.breakGlass.filter((b) => b.active && b.startedAt + b.durationMin * 60000 > Date.now()).length;
   const lifetime = s.breakGlass.length;
   const expired = lifetime - activeNow;
+  // The actions a session actually overrode (stamped only when it changed the outcome).
+  const overriddenBy = (b: BreakGlassSession) =>
+    s.events.filter((e) => e.breakGlass && e.timestamp >= b.startedAt && e.timestamp <= b.startedAt + b.durationMin * 60000
+      && e.resource === b.scopeResource && e.environment === b.scopeEnvironment);
 
   return (
     <div className="page">
       <PageHead
         eyebrow="Authorization"
         title="Break Glass"
-        sub="Emergency override for genuine incidents. Requires reason, scope and duration; always expires automatically; generates high-visibility evidence. Never permanent."
+        sub="An emergency override for a real incident. It covers exactly one system, lasts at most 60 minutes, is recorded loudly, and never overrides the Safety Kernel."
         right={<SimNote />}
       />
 
@@ -53,7 +67,7 @@ export function BreakGlassPage({ nav }: { nav: (r: string) => void }) {
           label="Expired"
           value={expired}
           tone="good"
-          note="auto-expired, no manual reset"
+          note="expired or ended early"
         />
       </div>
 
@@ -71,13 +85,24 @@ export function BreakGlassPage({ nav }: { nav: (r: string) => void }) {
             <dl className="kv" style={{ marginTop: 16 }}>
               <dt>Requester</dt><dd>{USERS.find((u) => u.id === active.requester)?.name}</dd>
               <dt>Reason</dt><dd>{active.reason}</dd>
-              <dt>Scope</dt><dd>{active.scope}</dd>
-              <dt>Duration</dt><dd>{active.durationMin} minutes · expires automatically</dd>
+              <dt>Covers only</dt><dd>{active.scope}</dd>
+              <dt>Duration</dt><dd>{active.durationMin} minutes · ends by itself</dd>
+              <dt>Notified</dt>
+              <dd>
+                {(active.notified ?? []).map((u) => `${userById(u)?.name} (${userById(u)?.role})`).join(", ") || "—"}
+                <div className="small faint">Recorded here; no real message is sent in this prototype.</div>
+              </dd>
             </dl>
             <div className="small dim" style={{ margin: "16px 0", lineHeight: 1.6 }}>
-              While active, REVIEW/BLOCK decisions within scope are executed under emergency authority — except Safety Kernel
-              credential-exfiltration, which never yields. Every overridden action is stamped BREAK-GLASS in Evidence.
+              While this is on, actions on <b>{active.scope}</b> that would need a yes (or are blocked by a company rule) go through —
+              and each one is stamped BREAK-GLASS in Evidence. Everything else is unchanged, and the Safety Kernel never yields.
             </div>
+            {overriddenBy(active).length > 0 && (
+              <div className="small" style={{ marginBottom: 16 }}>
+                <b>Done under this override ({overriddenBy(active).length}):</b>
+                {overriddenBy(active).map((e) => <div key={e.id} className="dim" style={{ marginTop: 4 }}>• {describe(e)}</div>)}
+              </div>
+            )}
             <button className="btn btn-danger btn-sm" onClick={() => endBreakGlass(active.id)}>End override now</button>
           </div>
         </div>
@@ -91,8 +116,10 @@ export function BreakGlassPage({ nav }: { nav: (r: string) => void }) {
                 <input className="input" placeholder="e.g. SEV-1: checkout down, revenue impacting" value={reason} onChange={(e) => setReason(e.target.value)} />
               </div>
               <div className="field">
-                <label className="field-label">Scope</label>
-                <input className="input" value={scope} onChange={(e) => setScope(e.target.value)} />
+                <label className="field-label">Covers only (one system)</label>
+                <select className="select" value={scopeIdx} onChange={(e) => setScopeIdx(Number(e.target.value))}>
+                  {SCOPES.map((sc, i) => <option key={sc.label} value={i}>{sc.label}</option>)}
+                </select>
               </div>
               <div className="field">
                 <label className="field-label">Duration (minutes, max 60)</label>
@@ -105,14 +132,15 @@ export function BreakGlassPage({ nav }: { nav: (r: string) => void }) {
                 <div>
                   <b className="small" style={{ color: "var(--warn)" }}>Strong warning:</b>{" "}
                   <span className="small dim">
-                    break-glass bypasses review for in-scope actions. It is loud by design — the security team is notified,
-                    every action is flagged, and the override cannot be extended silently.
+                    for the next {duration} minutes, actions on the chosen system that would need a yes or hit a company block go through. Security and engineering
+                    leadership are notified, every action it overrides is flagged in Evidence, it can't be extended, and the
+                    Safety Kernel still applies.
                   </span>
                 </div>
               </div>
             </div>
             <div className="row" style={{ gap: 10, alignItems: "center", marginTop: 16 }}>
-              <button className="btn btn-danger" disabled={reason.trim().length < 8} onClick={() => startBreakGlass("u-priya", reason, scope, duration)}>
+              <button className="btn btn-danger" disabled={reason.trim().length < 8} onClick={() => startBreakGlass("u-priya", reason, SCOPES[scopeIdx].resource, SCOPES[scopeIdx].environment, SCOPES[scopeIdx].label, duration)}>
                 <ShieldAlert size={13} /> Activate break-glass ({duration} min)
               </button>
               {reason.trim().length < 8 && <span className="small faint">A meaningful reason is required.</span>}
@@ -130,7 +158,7 @@ export function BreakGlassPage({ nav }: { nav: (r: string) => void }) {
           />
           <div className="card card-pad-0">
             <table className="tbl">
-              <thead><tr><th>When</th><th>Requester</th><th>Reason</th><th>Scope</th><th>Duration</th><th>Status</th></tr></thead>
+              <thead><tr><th>When</th><th>Requester</th><th>Reason</th><th>Covered</th><th>Duration</th><th>Overrode</th><th>Status</th></tr></thead>
               <tbody>
                 {[...s.breakGlass].reverse().map((b) => {
                   const isActive = b.active && b.startedAt + b.durationMin * 60000 > Date.now();
@@ -141,7 +169,8 @@ export function BreakGlassPage({ nav }: { nav: (r: string) => void }) {
                       <td className="small dim">{b.reason}</td>
                       <td className="small dim">{b.scope}</td>
                       <td className="small">{b.durationMin}m</td>
-                      <td><Chip tone={isActive ? "block" : "neutral"}>{isActive ? "ACTIVE" : "expired"}</Chip></td>
+                      <td className="small">{overriddenBy(b).length} action{overriddenBy(b).length === 1 ? "" : "s"}</td>
+                      <td><Chip tone={isActive ? "block" : "neutral"}>{isActive ? "ACTIVE" : b.active ? "expired" : "ended"}</Chip></td>
                     </tr>
                   );
                 })}

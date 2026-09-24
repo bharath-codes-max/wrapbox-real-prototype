@@ -268,7 +268,10 @@ export interface BreakGlassSession {
   id: string;
   requester: string;
   reason: string;
-  scope: string;
+  scope: string; // plain-language label of the scope
+  scopeResource?: string; // the ONLY resource it covers (absent on old saves = covers nothing)
+  scopeEnvironment?: Environment;
+  notified?: string[]; // user ids told when it started
   durationMin: number;
   startedAt: number;
   active: boolean;

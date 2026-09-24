@@ -7,7 +7,7 @@
 import { decide, type ActionRequest } from "./brain";
 import type { Scenario } from "./scenarios";
 import type {
-  Decision, DetectorFinding, EvidenceRecord, IntentContract, InspectionResult,
+  Decision, DetectorFinding, Environment, EvidenceRecord, IntentContract, InspectionResult,
   SimulationEvent, StandingPermission, TaskEnvelope, TransformStep, VaultToken,
 } from "../model/types";
 import { detectorFor, destById } from "../model/registries";
@@ -122,7 +122,7 @@ export function runScenario(
   sc: Scenario,
   contracts: IntentContract[],
   prevHash: string,
-  opts?: { breakGlass?: boolean; timestamp?: number; kernel?: KernelState; envelope?: TaskEnvelope; standing?: StandingPermission[] }
+  opts?: { breakGlass?: { resource: string; environment: Environment }; timestamp?: number; kernel?: KernelState; envelope?: TaskEnvelope; standing?: StandingPermission[] }
 ): SimOutcome {
   seq += 1;
   const id = `evt-${String(seq).padStart(5, "0")}`;
@@ -250,7 +250,8 @@ export function runScenario(
       : result.decision === "CONSTRAIN" ? "transformed"
       : "completed",
     risk: result.risk,
-    breakGlass: opts?.breakGlass && result.decision === "ALLOW" ? true : undefined,
+    // Stamped only when the override actually changed the outcome.
+    breakGlass: result.decidedBy.layer === "breakglass" ? true : undefined,
     evidence: { eventId: id, hash, prevHash, chain },
   };
 
