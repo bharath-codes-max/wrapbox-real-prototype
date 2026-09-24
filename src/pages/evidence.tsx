@@ -5,6 +5,29 @@ import { useAppState } from "../state/store";
 import { PageHead, SectionHead, Stat, DecisionChip, Chip, SimNote, names, EvidenceChain, RiskChip } from "../ui/kit";
 import { EventDetail } from "../ui/event-detail";
 import type { SimulationEvent } from "../model/types";
+import { userById } from "../model/org";
+
+// The human's answer to a REVIEW, kept separate from Wrapbox's own decision.
+const REVIEW_OUTCOME: Record<string, [string, string]> = {
+  pending: ["review", "Waiting"],
+  approved: ["allow", "Approved"],
+  approved_scoped: ["allow", "Approved (scoped)"],
+  constrained: ["constrain", "Constrained"],
+  denied: ["block", "Denied"],
+  expired: ["neutral", "Expired"],
+};
+
+function HumanReview({ e }: { e: SimulationEvent }) {
+  const r = e.reviewState;
+  if (!r) return <span className="faint">—</span>;
+  const [tone, label] = REVIEW_OUTCOME[r.status] ?? ["neutral", r.status];
+  return (
+    <div>
+      <Chip tone={tone}>{label}</Chip>
+      {r.reviewer && <div className="small faint" style={{ marginTop: 4 }}>by {userById(r.reviewer)?.name ?? r.reviewer}</div>}
+    </div>
+  );
+}
 import { FileClock, Ban, Hand, KeyRound, Table2, GitBranch, Search } from "lucide-react";
 
 export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: string }) {
@@ -71,7 +94,7 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
         {view === "table" ? (
           <div className="card card-pad-0">
             <table className="tbl">
-              <thead><tr><th>Event</th><th>Chain</th><th>Actor</th><th>Action → Resource</th><th>Data</th><th>Decision</th><th>Risk</th></tr></thead>
+              <thead><tr><th>Event</th><th>Chain</th><th>Actor</th><th>Action → Resource</th><th>Data</th><th>Wrapbox decision</th><th>Human review</th><th>Risk</th></tr></thead>
               <tbody>
                 {list.map((e) => {
                   const n = names(e);
@@ -83,11 +106,12 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
                       <td className="small"><span className="mono">{e.actionRaw ?? e.action}</span><div className="faint">{n.resource}{n.destination ? ` → ${n.destination}` : ""}</div></td>
                       <td>{e.dataClasses.slice(0, 2).map((c) => <div key={c}><Chip tone="violet">{c}</Chip></div>)}{e.dataClasses.length > 2 && <span className="faint small">+{e.dataClasses.length - 2}</span>}</td>
                       <td><DecisionChip d={e.decision} small />{e.breakGlass && <div><Chip tone="critical">BREAK-GLASS</Chip></div>}</td>
+                      <td><HumanReview e={e} /></td>
                       <td><RiskChip r={e.risk} /></td>
                     </tr>
                   );
                 })}
-                {list.length === 0 && <tr><td colSpan={7}><div className="empty">No evidence matches your search.</div></td></tr>}
+                {list.length === 0 && <tr><td colSpan={8}><div className="empty">No evidence matches your search.</div></td></tr>}
               </tbody>
             </table>
           </div>

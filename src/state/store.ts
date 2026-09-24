@@ -10,6 +10,7 @@ import type {
   StandingPermission, TaskEnvelope, VaultToken, Decision,
 } from "../model/types";
 import { SEED_CONTRACTS } from "../model/contracts";
+import { userById } from "../model/org";
 import { SCENARIOS, TASK_SCENARIO, scenarioById, type Scenario } from "../engine/scenarios";
 import { runScenario, setSeq, getSeq, setTokenCounter, getTokenCounter } from "../engine/simulate";
 import { decide } from "../engine/brain";
@@ -266,7 +267,7 @@ export function resolveReview(
         ...e.evidence,
         chain: [
           ...e.evidence.chain,
-          { label: "Review", detail: `${resolution.replaceAll("_", " ")} by ${reviewer}${scope ? ` · scope: ${scope}` : ""}` },
+          { label: "Review", detail: `${resolution.replaceAll("_", " ")} by ${userById(reviewer)?.name ?? reviewer}${scope ? ` · scope: ${scope}` : ""}` },
           { label: "Outcome", detail: approved ? "Action executed after approval" : resolution === "constrained" ? "Constrained alternative executed" : "Action remained blocked" },
         ],
       },
