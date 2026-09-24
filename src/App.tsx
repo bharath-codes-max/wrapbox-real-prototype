@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bot, BrainCircuit, CirclePlay, FileCheck2, FlaskConical, Hand, KeyRound,
+  Bot, BrainCircuit, ChevronsUpDown, CirclePlay, FileCheck2, FlaskConical, Hand, KeyRound,
   LayoutGrid, ListChecks, ListTree, Play, Plug, ScrollText, Search,
   Settings as SettingsIcon, ShieldCheck, Siren, Table2, Timer, Waypoints,
   type LucideIcon,
@@ -140,42 +140,37 @@ function Palette({ open, onClose, nav }: { open: boolean; onClose: () => void; n
   );
 }
 
-function Topbar({ nav, onPalette }: { nav: (r: string) => void; onPalette: () => void }) {
+function Topbar({ nav, onPalette, current }: { nav: (r: string) => void; onPalette: () => void; current?: NavItem }) {
   const s = useAppState();
   const m = metrics(s);
   const activeRules = s.contracts.filter((c) => c.status === "ACTIVE").reduce((n, c) => n + c.clauses.length, 0);
   return (
     <header className="topbar">
-      <a onClick={() => nav("control")} aria-label="Wrapbox home" style={{ cursor: "pointer", flexShrink: 0, display: "flex" }}>
-        <WrapboxWordmark tone="light" />
-      </a>
-      <span className="topbar-div" />
-      <button className="workspace-menu" onClick={() => nav("settings")}>
-        <span className="workspace-dot" />
-        Veridian Systems
-        <span className="faint" style={{ fontWeight: 400 }}>· Demo environment</span>
-      </button>
-      <button className="topbar-search" onClick={onPalette}>
+      {current && (
+        <span className="topbar-title">
+          <current.icon size={16} strokeWidth={1.9} />
+          {current.label}
+        </span>
+      )}
+      <button className="topbar-search" onClick={onPalette} style={{ marginLeft: "auto" }}>
         <Search size={15} />
-        Search screens, agents, rules, evidence…
+        Search…
         <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
           <kbd className="kbd">⌘</kbd>
           <kbd className="kbd">K</kbd>
         </span>
       </button>
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-        {m.pendingReviews > 0 && (
-          <button className="pill pill-review" onClick={() => nav("reviews")}>
-            <span className="pill-dot" style={{ background: "var(--review)" }} />
-            {m.pendingReviews} pending {m.pendingReviews === 1 ? "review" : "reviews"}
-          </button>
-        )}
-        <span className="pill pill-ok">
-          <span className="pill-dot live-dot" style={{ background: "var(--allow)" }} />
-          Enforcing {activeRules} rules
-        </span>
-        <Avatar userId="u-priya" size={30} />
-      </div>
+      {m.pendingReviews > 0 && (
+        <button className="pill pill-review" onClick={() => nav("reviews")}>
+          <span className="pill-dot" style={{ background: "var(--review)" }} />
+          {m.pendingReviews} pending {m.pendingReviews === 1 ? "review" : "reviews"}
+        </button>
+      )}
+      <span className="pill pill-ok">
+        <span className="pill-dot live-dot" style={{ background: "var(--allow)" }} />
+        Enforcing {activeRules} rules
+      </span>
+      <Avatar userId="u-priya" size={28} />
     </header>
   );
 }
@@ -234,41 +229,55 @@ export function App() {
     }
   })();
 
+  const current = ALL_ITEMS.find((i) => i.route === base);
+
   return (
     <div className="shell-col">
-      <Topbar nav={nav} onPalette={() => setPalette(true)} />
-      <div className="shell">
-        <aside className="sidebar">
-          <nav className="sidebar-nav">
-            {NAV.map((g, gi) => (
-              <div key={gi} className={gi > 0 ? "nav-group" : "nav-group first"}>
-                {g.group && <div className="nav-group-label">{g.group}</div>}
-                <div className="nav-group-items">
-                  {g.items.map((it) => (
-                    <NavLink
-                      key={it.route}
-                      it={it}
-                      active={base === it.route}
-                      onClick={() => nav(it.route)}
-                      badge={it.route === "reviews" ? m.pendingReviews : undefined}
-                    />
-                  ))}
-                </div>
+      <aside className="sidebar">
+        <div className="sidebar-head">
+          <button className="sidebar-brand" onClick={() => nav("control")} aria-label="Wrapbox home">
+            <WrapboxWordmark tone="dark" />
+          </button>
+          <button className="ws-switch" onClick={() => nav("settings")}>
+            <span className="ws-dot" />
+            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              Veridian Systems <span className="faint">· Demo</span>
+            </span>
+            <ChevronsUpDown size={14} className="ws-chev" />
+          </button>
+        </div>
+        <nav className="sidebar-nav">
+          {NAV.map((g, gi) => (
+            <div key={gi} className={gi > 0 ? "nav-group" : "nav-group first"}>
+              {g.group && <div className="nav-group-label">{g.group}</div>}
+              <div className="nav-group-items">
+                {g.items.map((it) => (
+                  <NavLink
+                    key={it.route}
+                    it={it}
+                    active={base === it.route}
+                    onClick={() => nav(it.route)}
+                    badge={it.route === "reviews" ? m.pendingReviews : undefined}
+                  />
+                ))}
               </div>
-            ))}
-          </nav>
-          <div className="sidebar-bottom">
-            <NavLink it={{ route: "settings", label: "Settings", icon: SettingsIcon }} active={base === "settings"} onClick={() => nav("settings")} />
-            {!demoOn && (
-              <button className="btn btn-primary" style={{ width: "100%", marginTop: 8 }} onClick={() => DEMO_SCRIPT.start(nav)}>
-                <Play size={13} /> Demo Mode
-              </button>
-            )}
-            <div className="faint" style={{ fontSize: 10, marginTop: 8, lineHeight: 1.45 }}>
-              Wrapbox Real Prototype · integrations simulated · product behavior live
             </div>
+          ))}
+        </nav>
+        <div className="sidebar-bottom">
+          <NavLink it={{ route: "settings", label: "Settings", icon: SettingsIcon }} active={base === "settings"} onClick={() => nav("settings")} />
+          {!demoOn && (
+            <button className="btn btn-primary" style={{ width: "100%", marginTop: 8 }} onClick={() => DEMO_SCRIPT.start(nav)}>
+              <Play size={13} /> Demo Mode
+            </button>
+          )}
+          <div className="faint" style={{ fontSize: 10, marginTop: 8, lineHeight: 1.45 }}>
+            Wrapbox Real Prototype · integrations simulated · product behavior live
           </div>
-        </aside>
+        </div>
+      </aside>
+      <div className="content-col">
+        <Topbar nav={nav} onPalette={() => setPalette(true)} current={current} />
         <main className="main" style={demoOn ? { paddingBottom: 90 } : undefined}>
           {page}
         </main>
