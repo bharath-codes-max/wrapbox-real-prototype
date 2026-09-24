@@ -25,13 +25,13 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
       else { const ne = { from, to, risky, count: 1 }; eKey.set(k, ne); edges.push(ne); }
     };
     // Columns: users | agents | resources+destinations
-    USERS.forEach((u, i) => nodes.push({ id: u.id, label: u.name, kind: "user", x: 90, y: 70 + i * 92 }));
-    AGENTS.forEach((a, i) => nodes.push({ id: a.id, label: a.name, kind: "agent", x: 390, y: 46 + i * 52, risky: a.discovered }));
+    USERS.forEach((u, i) => nodes.push({ id: u.id, label: u.name, kind: "user", x: 100, y: 70 + i * 92 }));
+    AGENTS.forEach((a, i) => nodes.push({ id: a.id, label: a.name, kind: "agent", x: 370, y: 46 + i * 52, risky: a.discovered }));
     const targets = new Map<string, Node>();
     let ti = 0;
     const targetNode = (id: string, label: string, kind: "resource" | "dest", risky = false) => {
       if (!targets.has(id)) {
-        const n: Node = { id, label, kind, x: 700, y: 46 + ti * 46, risky };
+        const n: Node = { id, label, kind, x: 640, y: 46 + ti * 46, risky };
         targets.set(id, n); nodes.push(n); ti += 1;
       } else if (risky) targets.get(id)!.risky = true;
       return id;
@@ -43,8 +43,10 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
         const d = destById(e.destination);
         addEdge(e.agent, targetNode(e.destination, d?.label ?? e.destination, "dest", e.destinationClass === "UNKNOWN_EXTERNAL"), risky);
       } else {
-        const r = resourceById(e.resource);
-        addEdge(e.agent, targetNode(e.resource, r?.name ?? e.resource, "resource"), risky);
+        // Events may name a resource by id ("r-checkout") or by name
+        // ("checkout-service"); key by the resolved name so it is one dot.
+        const name = resourceById(e.resource)?.name ?? e.resource;
+        addEdge(e.agent, targetNode(`res:${name}`, name, "resource"), risky);
       }
     }
     return { nodes, edges };
@@ -60,20 +62,20 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
   const agentCount = nodes.filter((n) => n.kind === "agent").length;
   const targetCount = nodes.filter((n) => n.kind === "resource" || n.kind === "dest").length;
   const riskyEdges = edges.filter((e) => e.risky).length;
-  const riskyNodes = nodes.filter((n) => n.risky).length;
+  const riskyAgents = nodes.filter((n) => n.kind === "agent" && n.risky).length;
 
   return (
     <div className="page page-wide">
       <PageHead
         eyebrow="Visibility"
         title="Trust Graph"
-        sub="Who talks to what: users → agents → tools → resources and destinations, built from observed events. Red edges carry high-risk activity; amber nodes are unknown/unclassified."
+        sub="Who talks to what: users → agents → tools → resources and destinations, built from observed events. Red lines carry high-risk activity; red dots are strangers (unregistered agents or unknown addresses)."
         right={<SimNote />}
       />
 
       <div className="grid g4">
         <Stat icon={<Users size={17} />} label="Identities" value={userCount} note="human principals observed" />
-        <Stat icon={<Bot size={17} />} label="Agents" value={agentCount} tone={riskyNodes > 0 ? "warn" : undefined} note={riskyNodes > 0 ? `${riskyNodes} unregistered / risky` : "all registered"} onClick={() => nav("agents")} />
+        <Stat icon={<Bot size={17} />} label="Agents" value={agentCount} tone={riskyAgents > 0 ? "warn" : undefined} note={riskyAgents > 0 ? `${riskyAgents} unregistered (stranger)` : "all registered"} onClick={() => nav("agents")} />
         <Stat icon={<Boxes size={17} />} label="Resources & destinations" value={targetCount} note="tools, files and endpoints reached" />
         <Stat icon={<ShieldAlert size={17} />} label="High-risk edges" value={riskyEdges} tone={riskyEdges > 0 ? "bad" : "good"} note="relationships carrying high/critical activity" onClick={() => nav("evidence")} />
       </div>
@@ -84,15 +86,16 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
           sub="Every edge is an observed event; thicker lines carry more traffic. Click any node to focus its neighbourhood."
           right={
             <div className="row">
-              <Chip tone="constrain">● users</Chip><Chip tone="violet">● agents</Chip>
-              <Chip tone="allow">● resources</Chip><Chip tone="review">● destinations</Chip>
-              <Chip tone="block">— high-risk edge</Chip>
+              {([["users", colors.user], ["agents", colors.agent], ["resources", colors.resource], ["destinations", colors.dest], ["stranger", "#ef5f74"]] as const).map(([label, c]) => (
+                <span key={label} className="legend-item"><span className="legend-dot" style={{ background: c }} />{label}</span>
+              ))}
+              <span className="legend-item"><span className="legend-line" />high-risk line</span>
               {selected && <button className="btn btn-sm btn-ghost" onClick={() => setSelected(null)}>clear focus</button>}
             </div>
           }
         />
         <div className="card">
-          <svg className="tg-svg" viewBox={`0 0 800 ${height}`}>
+          <svg className="tg-svg" viewBox={`0 0 860 ${height}`}>
             {selEdges.map((e, i) => {
               const a = byId.get(e.from); const b = byId.get(e.to);
               if (!a || !b) return null;
@@ -102,7 +105,7 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
                   <path
                     d={`M ${a.x + 8} ${a.y} C ${mx} ${a.y}, ${mx} ${b.y}, ${b.x - 8} ${b.y}`}
                     fill="none"
-                    stroke={e.risky ? "#ef5f74" : "#2f3950"}
+                    stroke={e.risky ? "#ef5f74" : "#c7cbd6"}
                     strokeWidth={Math.min(4, 1 + e.count * 0.4)}
                     opacity={selected && !(e.from === selected || e.to === selected) ? 0.15 : 0.85}
                   />
