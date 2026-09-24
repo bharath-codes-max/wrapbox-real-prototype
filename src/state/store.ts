@@ -162,7 +162,7 @@ function load(): AppState {
       const parsed = JSON.parse(raw) as AppState & { _seq?: number; _tok?: number };
       setSeq(parsed._seq ?? parsed.events.length);
       setTokenCounter(parsed._tok ?? parsed.tokens.length);
-      return parsed;
+      return { ...parsed, demoStep: -1 }; // demo mode never persists across reloads
     }
   } catch {
     /* corrupted state → reseed */
@@ -207,6 +207,10 @@ function set(patch: Partial<AppState>) {
 // ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
+
+export function setDemoStep(n: number) {
+  set({ demoStep: n });
+}
 
 export function resetDemoData() {
   state = seedState();
