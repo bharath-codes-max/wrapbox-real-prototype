@@ -16,7 +16,7 @@
 import type {
   ActionVerb, BlastRadius, ContractClause, Decision, DestinationClass,
   DecidedBy, Environment, EventContext, IntentContract, InspectionResult, MatchedClause,
-  SafetyRuleHit, TaskEnvelope, TransformKind,
+  SafetyRuleHit, StandingPermission, TaskEnvelope, TransformKind,
 } from "../model/types";
 import { BASELINE_KERNEL, kernelHits, type KernelFacts, type KernelState } from "./kernel";
 import { resourceById } from "../model/org";
@@ -36,6 +36,7 @@ export interface ActionRequest {
   envelope?: TaskEnvelope | null;
   breakGlass?: boolean;
   kernel?: KernelState; // installed Safety Kernel pack (defaults to the baseline)
+  standing?: StandingPermission[]; // agents' everyday authority (not used inside a task)
   now?: number; // decision time (observe windows)
 }
 
@@ -297,6 +298,33 @@ export function decide(req: ActionRequest, contracts: IntentContract[]): BrainRe
       decision = "REVIEW";
       decidedBy = { layer: "envelope", label: `Task Envelope — file budget (${env.fileBudget}) exhausted` };
       reasons.push(`Task Envelope: file-change budget (${env.fileBudget}) exhausted — re-authorization required.`);
+    }
+  }
+
+  // 7b. Standing permission — an agent's everyday authority on a system.
+  //     Inside a task the envelope is the authority, so this is skipped there.
+  if (!req.envelope && req.standing) {
+    const perm = req.standing.find((p) => p.agent === req.agent && p.resource === req.resource);
+    if (perm && DECISION_RANK[decision] < DECISION_RANK.REVIEW) {
+      const resName = resourceById(req.resource)?.name ?? req.resource;
+      const lapsed = perm.status !== "active" || perm.expiresAt <= (req.now ?? Date.now());
+      const deny = perm.denies.find((d) =>
+        (!d.actions || d.actions.includes(req.action)) &&
+        (!d.environments || d.environments.includes(req.environment)) &&
+        (!d.rawPattern || new RegExp(d.rawPattern).test(req.actionRaw ?? "")));
+      const outside = !perm.actions.includes(req.action) || (perm.environments !== undefined && !perm.environments.includes(req.environment));
+      const overRows = perm.maxRows !== undefined && req.action === "READ" && (req.blastRadius?.rows ?? 0) > perm.maxRows;
+      const why = lapsed
+        ? `the standing permission on ${resName} was ${perm.status === "revoked" ? "revoked" : "expired"} — no everyday authority left`
+        : deny ? `the standing permission on ${resName} says "may not: ${deny.label}"`
+        : outside ? `${req.action} in ${req.environment} is outside the standing permission on ${resName}`
+        : overRows ? `${(req.blastRadius?.rows ?? 0).toLocaleString("en-US")} rows is above the standing limit of ${perm.maxRows} rows per query on ${resName}`
+        : undefined;
+      if (why) {
+        decision = "REVIEW";
+        decidedBy = { layer: "standing", label: `Standing permission — ${why}` };
+        reasons.push(`Standing permission: ${why}.`);
+      }
     }
   }
 

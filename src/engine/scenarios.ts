@@ -244,6 +244,18 @@ export const SCENARIOS: Scenario[] = [
     sensitivity: "customer-impacting",
   },
   {
+    id: "gw-select-300",
+    group: "GATEWAY",
+    title: "Support Agent queries 300 rows",
+    narrative: "Support Agent pulls 300 recent orders from customer-db to find a billing pattern.",
+    expected: "ALLOW — within its 500-row standing limit (narrow the limit and this changes)",
+    plane: "GATEWAY", action: "READ", actionRaw: "SELECT * FROM orders ORDER BY created_at DESC LIMIT 300",
+    agent: "a-support", user: "u-maya", application: "SQL MCP",
+    resource: "r-customer-db", environment: "production",
+    blast: { rows: 300, label: "300 rows", severity: "low" },
+    sensitivity: "customer-impacting",
+  },
+  {
     id: "gw-export-500k",
     group: "GATEWAY",
     title: "Export 500,000 customer rows",

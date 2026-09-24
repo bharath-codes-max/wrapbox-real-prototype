@@ -2,7 +2,7 @@
 // sees. RIGHT: what Wrapbox sees and does. Scenarios run through the real
 // engine, record real events, and propagate to every other screen.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAppState, simulate, shadowEvaluate } from "../state/store";
+import { useAppState, simulate, shadowEvaluate, standingSeed } from "../state/store";
 import { SEED_CONTRACTS } from "../model/contracts";
 import { BASELINE_KERNEL } from "../engine/kernel";
 import { PageHead, Chip, DecisionChip, SimNote, Payload, names, Avatar, AgentMark, DestMark, SectionHead } from "../ui/kit";
@@ -98,10 +98,10 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
   const outlook = useMemo(() => {
     const out: Record<string, { current: Decision; baseline: Decision }> = {};
     for (const x of SCENARIOS.filter((y) => y.group === group)) {
-      out[x.id] = { current: shadowEvaluate(x, s.contracts), baseline: shadowEvaluate(x, SEED_CONTRACTS, BASELINE_KERNEL) };
+      out[x.id] = { current: shadowEvaluate(x, s.contracts), baseline: shadowEvaluate(x, SEED_CONTRACTS, BASELINE_KERNEL, standingSeed()) };
     }
     return out;
-  }, [group, s.contracts, s.kernel]);
+  }, [group, s.contracts, s.kernel, s.standing]);
 
   return (
     <div className="page">

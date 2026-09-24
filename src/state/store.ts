@@ -60,7 +60,7 @@ function seedState(): AppState {
   ];
   for (const [sid, ago] of history) {
     const sc = scenarioById(sid)!;
-    const out = runScenario(sc, contracts, lastHash, { timestamp: now - ago });
+    const out = runScenario(sc, contracts, lastHash, { timestamp: now - ago, standing: standingSeed(now) });
     events.push(out.event);
     tokens.push(...out.tokens);
     lastHash = out.event.evidence.hash;
@@ -89,32 +89,7 @@ function seedState(): AppState {
     oldExport.status = "completed";
   }
 
-  const standing: StandingPermission[] = [
-    {
-      id: "sp-001",
-      agent: "a-claude-code",
-      scope: "repository checkout-service",
-      allowed: ["edit files on feature branches", "run tests", "commit"],
-      forbidden: ["push main", "access production", "read credentials"],
-      window: "business hours (09:00–18:00 PT)",
-      expiresAt: now + 5 * 24 * h,
-      maxFilesPerTask: 25,
-      grantedBy: "u-alex",
-      status: "active",
-    },
-    {
-      id: "sp-002",
-      agent: "a-support",
-      scope: "customer-db (read-only)",
-      allowed: ["SELECT ≤500 rows per query", "ticket lookups"],
-      forbidden: ["writes", "bulk export", "schema changes"],
-      window: "24/7",
-      expiresAt: now + 12 * 24 * h,
-      maxFilesPerTask: 0,
-      grantedBy: "u-priya",
-      status: "active",
-    },
-  ];
+  const standing: StandingPermission[] = standingSeed(now);
 
   const autopilot: AutopilotRecommendation[] = autopilotSeed();
 
@@ -131,6 +106,50 @@ function seedState(): AppState {
     demoStep: -1,
     kernel: BASELINE_KERNEL,
   };
+}
+
+/** Agents' everyday authority. Structured so the brain can enforce it. */
+export function standingSeed(now = Date.now()): StandingPermission[] {
+  const d = 24 * 3600 * 1000;
+  return [
+    {
+      id: "sp-001",
+      agent: "a-claude-code",
+      resource: "r-checkout",
+      scope: "repository checkout-service",
+      actions: ["READ", "WRITE", "EXECUTE"],
+      environments: ["development"],
+      denies: [
+        { label: "push to main", actions: ["WRITE"], environments: ["production"] },
+        { label: "anything in production", environments: ["production"] },
+      ],
+      allowed: ["read, edit and commit on feature branches", "run tests"],
+      forbidden: ["push to main", "anything in production"],
+      expiresAt: now + 5 * d,
+      maxFilesPerTask: 25,
+      grantedBy: "u-alex",
+      status: "active",
+    },
+    {
+      id: "sp-002",
+      agent: "a-support",
+      resource: "r-customer-db",
+      scope: "customer-db (read-only)",
+      actions: ["READ"],
+      maxRows: 500,
+      denies: [
+        { label: "writes or deletes", actions: ["WRITE", "DELETE"] },
+        { label: "bulk export", actions: ["DATA_EXPORT"] },
+        { label: "schema changes", actions: ["PERMISSION_CHANGE", "SECURITY_CHANGE"] },
+      ],
+      allowed: ["read-only lookups (SELECT)", "ticket lookups"],
+      forbidden: ["writes or deletes", "bulk export", "schema changes"],
+      expiresAt: now + 12 * d,
+      maxFilesPerTask: 0,
+      grantedBy: "u-priya",
+      status: "active",
+    },
+  ];
 }
 
 // Policy Autopilot recommendations — each says exactly what accepting does.
@@ -159,7 +178,7 @@ function autopilotSeed(): AutopilotRecommendation[] {
       recommendation: "Lower Support Agent's standing row budget from 500 to 200 rows per query.",
       basedOnEvents: 1873,
       status: "open",
-      proposes: { kind: "narrow-standing", standingId: "sp-002", from: "SELECT ≤500 rows per query", to: "SELECT ≤200 rows per query" },
+      proposes: { kind: "narrow-standing", standingId: "sp-002", from: "SELECT ≤500 rows per query", to: "SELECT ≤200 rows per query", maxRows: 200 },
     },
     {
       id: "ap-003",
@@ -221,7 +240,7 @@ function load(): AppState {
         }
         return out;
       });
-      return { ...parsed, events, kernel: parsed.kernel ?? BASELINE_KERNEL, restorations: parsed.restorations ?? [], autopilot: autopilotSeed().map((seed) => ({ ...seed, ...(parsed.autopilot ?? []).find((x) => x.id === seed.id), proposes: seed.proposes, recommendation: seed.recommendation })), demoStep: -1 }; // demo mode never persists across reloads
+      return { ...parsed, events, kernel: parsed.kernel ?? BASELINE_KERNEL, restorations: parsed.restorations ?? [], standing: parsed.standing?.every((p) => p.resource) ? parsed.standing : standingSeed().map((seed) => ({ ...seed, status: parsed.standing?.find((x) => x.id === seed.id)?.status ?? seed.status })), autopilot: autopilotSeed().map((seed) => ({ ...seed, ...(parsed.autopilot ?? []).find((x) => x.id === seed.id), proposes: seed.proposes, recommendation: seed.recommendation })), demoStep: -1 }; // demo mode never persists across reloads
     }
   } catch {
     /* corrupted state → reseed */
@@ -319,7 +338,7 @@ export function resetDemoData() {
 
 export function simulate(sc: Scenario, opts?: { breakGlass?: boolean }): SimulationEvent {
   const bg = opts?.breakGlass ?? state.breakGlass.some((b) => b.active && b.startedAt + b.durationMin * 60000 > Date.now());
-  const out = runScenario(sc, state.contracts, state.lastHash, { breakGlass: bg, kernel: state.kernel });
+  const out = runScenario(sc, state.contracts, state.lastHash, { breakGlass: bg, kernel: state.kernel, standing: state.standing });
   set({
     events: [...state.events, out.event],
     tokens: [...state.tokens, ...out.tokens],
@@ -338,17 +357,19 @@ export function simulateById(id: string): SimulationEvent | undefined {
 /** Pure what-if through the real brain — nothing is recorded. Restores the
  *  event sequence and token counter so a preview never consumes ids that a
  *  real run will later show. */
-export function shadowEvent(sc: Scenario, contracts: IntentContract[], kernel: KernelState = state.kernel): SimulationEvent {
+export function shadowEvent(
+  sc: Scenario, contracts: IntentContract[], kernel: KernelState = state.kernel, standing: StandingPermission[] = state.standing,
+): SimulationEvent {
   const seqBefore = getSeq();
   const tokBefore = getTokenCounter();
-  const out = runScenario(sc, contracts, "shadow", { timestamp: Date.now(), kernel });
+  const out = runScenario(sc, contracts, "shadow", { timestamp: Date.now(), kernel, standing });
   setSeq(seqBefore);
   setTokenCounter(tokBefore);
   return out.event;
 }
 
-export function shadowEvaluate(sc: Scenario, contracts: IntentContract[], kernel?: KernelState): Decision {
-  return shadowEvent(sc, contracts, kernel).decision;
+export function shadowEvaluate(sc: Scenario, contracts: IntentContract[], kernel?: KernelState, standing?: StandingPermission[]): Decision {
+  return shadowEvent(sc, contracts, kernel, standing).decision;
 }
 
 /** Who must decide a review: the job's approver for task steps, otherwise the
@@ -617,7 +638,7 @@ export function acceptAutopilot(id: string): string | undefined {
   const result = `Narrowed a standing permission: "${p.from}" → "${p.to}".`;
   set({
     standing: state.standing.map((sp) =>
-      sp.id === p.standingId ? { ...sp, allowed: sp.allowed.map((x) => (x === p.from ? p.to : x)) } : sp),
+      sp.id === p.standingId ? { ...sp, maxRows: p.maxRows } : sp),
     autopilot: state.autopilot.map((a) => (a.id === id ? { ...a, status: "accepted", result } : a)),
   });
   return result;
@@ -633,6 +654,14 @@ export function markAutopilotModified(id: string, contractId: string, name: stri
 
 export function revokeStanding(id: string) {
   set({ standing: state.standing.map((s) => (s.id === id ? { ...s, status: "revoked" } : s)) });
+}
+
+/** A human grants the permission again — a fresh 7-day window, recorded as theirs. */
+export function grantStandingAgain(id: string, grantedBy: string) {
+  set({
+    standing: state.standing.map((s) =>
+      s.id === id ? { ...s, status: "active", grantedBy, expiresAt: Date.now() + 7 * 24 * 3600 * 1000 } : s),
+  });
 }
 
 // ---------------------------------------------------------------------------

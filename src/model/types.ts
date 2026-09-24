@@ -102,7 +102,7 @@ export interface MatchedClause {
 
 /** Which layer of the Core Brain produced the final decision. */
 export interface DecidedBy {
-  layer: "contract" | "safety" | "blast" | "context" | "envelope" | "uninspectable" | "breakglass" | "default";
+  layer: "contract" | "safety" | "blast" | "context" | "envelope" | "standing" | "uninspectable" | "breakglass" | "default";
   clauseId?: string; // set when layer === "contract"
   ruleId?: string; // set when layer === "safety"
   label: string; // human-readable, e.g. the clause text or rule name
@@ -244,13 +244,20 @@ export interface TaskStep {
   eventId?: string;
 }
 
+/** An agent's everyday authority on one system, outside any task. While
+ *  active, in-scope work flows; its limits and "may not" list are enforced;
+ *  once revoked or expired, that agent's work there needs a human yes. */
 export interface StandingPermission {
   id: string;
   agent: string;
-  scope: string;
-  allowed: string[];
-  forbidden: string[];
-  window: string;
+  resource: string; // resource id it covers
+  scope: string; // plain-language summary
+  actions: ActionVerb[]; // what it covers
+  environments?: Environment[]; // where (absent = any)
+  maxRows?: number; // per-query read limit
+  denies: { label: string; actions?: ActionVerb[]; environments?: Environment[]; rawPattern?: string }[];
+  allowed: string[]; // display text
+  forbidden: string[]; // display text
   expiresAt: number;
   maxFilesPerTask: number;
   grantedBy: string;
@@ -292,7 +299,7 @@ export interface RestoreRecord {
  *  never switches anything on by itself. */
 export type AutopilotProposal =
   | { kind: "draft"; name: string; sourceText: string; clauses: ContractClause[] }
-  | { kind: "narrow-standing"; standingId: string; from: string; to: string };
+  | { kind: "narrow-standing"; standingId: string; from: string; to: string; maxRows: number };
 
 export interface AutopilotRecommendation {
   id: string;

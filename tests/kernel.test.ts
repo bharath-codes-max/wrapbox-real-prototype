@@ -111,7 +111,6 @@ test("policy autopilot: accept creates a DRAFT (never active) or narrows a permi
   assert.equal(store.acceptAutopilot("ap-001"), undefined);
   store.acceptAutopilot("ap-002");
   const sp = store.getState().standing.find((x) => x.id === "sp-002")!;
-  assert.ok(sp.allowed.includes("SELECT ≤200 rows per query"));
-  assert.ok(!sp.allowed.includes("SELECT ≤500 rows per query"));
+  assert.equal(sp.maxRows, 200);
   store.resetDemoData();
 });
