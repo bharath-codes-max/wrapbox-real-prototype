@@ -280,10 +280,19 @@ export interface RestoreRecord {
   at: number;
 }
 
+/** What accepting a recommendation would do. It never widens authority and
+ *  never switches anything on by itself. */
+export type AutopilotProposal =
+  | { kind: "draft"; name: string; sourceText: string; clauses: ContractClause[] }
+  | { kind: "narrow-standing"; standingId: string; from: string; to: string };
+
 export interface AutopilotRecommendation {
   id: string;
   observation: string;
   recommendation: string;
   basedOnEvents: number;
   status: "open" | "accepted" | "modified" | "dismissed";
+  proposes?: AutopilotProposal;
+  result?: string; // what accepting / modifying actually did
+  contractId?: string; // draft created from it, if any
 }

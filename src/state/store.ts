@@ -116,29 +116,7 @@ function seedState(): AppState {
     },
   ];
 
-  const autopilot: AutopilotRecommendation[] = [
-    {
-      id: "ap-001",
-      observation: "93% of code-agent pushes over 30 days target feature branches; force pushes to main were reviewed or denied every time.",
-      recommendation: "Restrict automated pushes to feature branches; require review for any push to main.",
-      basedOnEvents: 412,
-      status: "open",
-    },
-    {
-      id: "ap-002",
-      observation: "Support Agent queries have never exceeded 120 rows in normal operation.",
-      recommendation: "Lower Support Agent standing row budget from 500 to 200 rows per query.",
-      basedOnEvents: 1873,
-      status: "open",
-    },
-    {
-      id: "ap-003",
-      observation: "An unknown MCP server (tcp/7823) on Finance-Laptop-07 attempted 3 external transfers in 48h.",
-      recommendation: "Quarantine the unknown MCP agent pending identification; block its external destinations.",
-      basedOnEvents: 3,
-      status: "open",
-    },
-  ];
+  const autopilot: AutopilotRecommendation[] = autopilotSeed();
 
   return {
     events,
@@ -153,6 +131,54 @@ function seedState(): AppState {
     demoStep: -1,
     kernel: BASELINE_KERNEL,
   };
+}
+
+// Policy Autopilot recommendations — each says exactly what accepting does.
+function autopilotSeed(): AutopilotRecommendation[] {
+  return [
+    {
+      id: "ap-001",
+      observation: "93% of code-agent pushes over 30 days target feature branches; force pushes to main were reviewed or denied every time.",
+      recommendation: "Require engineering review for any push to main by a coding agent.",
+      basedOnEvents: 412,
+      status: "open",
+      proposes: {
+        kind: "draft",
+        name: "Autopilot · Protect main branch",
+        sourceText: "Pushes to main by coding agents require engineering review.",
+        clauses: [{
+          id: "cl-ap1-1", text: "Pushes to main by coding agents require engineering review",
+          dataClasses: ["SOURCE_CODE"], destinations: "ANY", actions: ["WRITE"], environments: ["production"],
+          effect: "REVIEW", requiredCapabilities: ["cap-gw-github"], failClosed: true,
+        }],
+      },
+    },
+    {
+      id: "ap-002",
+      observation: "Support Agent queries have never exceeded 120 rows in normal operation.",
+      recommendation: "Lower Support Agent's standing row budget from 500 to 200 rows per query.",
+      basedOnEvents: 1873,
+      status: "open",
+      proposes: { kind: "narrow-standing", standingId: "sp-002", from: "SELECT ≤500 rows per query", to: "SELECT ≤200 rows per query" },
+    },
+    {
+      id: "ap-003",
+      observation: "An unknown MCP server (tcp/7823) on Finance-Laptop-07 attempted 3 external transfers in 48h.",
+      recommendation: "Block every transfer to unknown destinations — this also cuts off the unknown MCP agent.",
+      basedOnEvents: 3,
+      status: "open",
+      proposes: {
+        kind: "draft",
+        name: "Autopilot · Block unknown destinations",
+        sourceText: "Sending any data to unknown destinations is blocked.",
+        clauses: [{
+          id: "cl-ap3-1", text: "Sending any data to unknown destinations is blocked",
+          dataClasses: [], destinations: ["UNKNOWN_EXTERNAL"], actions: ["NETWORK_SEND", "DATA_EXPORT"],
+          effect: "BLOCK", requiredCapabilities: ["cap-net-https"], failClosed: true,
+        }],
+      },
+    },
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -195,7 +221,7 @@ function load(): AppState {
         }
         return out;
       });
-      return { ...parsed, events, kernel: parsed.kernel ?? BASELINE_KERNEL, restorations: parsed.restorations ?? [], demoStep: -1 }; // demo mode never persists across reloads
+      return { ...parsed, events, kernel: parsed.kernel ?? BASELINE_KERNEL, restorations: parsed.restorations ?? [], autopilot: autopilotSeed().map((seed) => ({ ...seed, ...(parsed.autopilot ?? []).find((x) => x.id === seed.id), proposes: seed.proposes, recommendation: seed.recommendation })), demoStep: -1 }; // demo mode never persists across reloads
     }
   } catch {
     /* corrupted state → reseed */
@@ -517,6 +543,43 @@ export function endBreakGlass(id: string) {
 
 export function setAutopilotStatus(id: string, status: AutopilotRecommendation["status"]) {
   set({ autopilot: state.autopilot.map((a) => (a.id === id ? { ...a, status } : a)) });
+}
+
+/** Accept a recommendation: create a DRAFT rule (never active) or narrow a
+ *  standing permission. Nothing is switched on or widened automatically. */
+export function acceptAutopilot(id: string): string | undefined {
+  const rec = state.autopilot.find((a) => a.id === id);
+  if (!rec?.proposes || rec.status !== "open") return undefined;
+  const p = rec.proposes;
+  if (p.kind === "draft") {
+    const contractId = `ic-${rec.id}`;
+    const clauses = structuredClone(p.clauses);
+    const draft: IntentContract = {
+      id: contractId, name: p.name, author: "u-priya", createdAt: Date.now(), version: 1,
+      status: "DRAFT", sourceText: p.sourceText, clauses, coverage: contractCoverage({ clauses }),
+    };
+    const result = `Created draft "${p.name}" — test it in the Policy Simulator, then switch it on in Intent Studio.`;
+    set({
+      contracts: [...state.contracts.filter((c) => c.id !== contractId), draft],
+      autopilot: state.autopilot.map((a) => (a.id === id ? { ...a, status: "accepted", result, contractId } : a)),
+    });
+    return result;
+  }
+  const result = `Narrowed a standing permission: "${p.from}" → "${p.to}".`;
+  set({
+    standing: state.standing.map((sp) =>
+      sp.id === p.standingId ? { ...sp, allowed: sp.allowed.map((x) => (x === p.from ? p.to : x)) } : sp),
+    autopilot: state.autopilot.map((a) => (a.id === id ? { ...a, status: "accepted", result } : a)),
+  });
+  return result;
+}
+
+/** The admin rewrote a recommendation in the drafting panel and saved it as a draft. */
+export function markAutopilotModified(id: string, contractId: string, name: string) {
+  set({
+    autopilot: state.autopilot.map((a) =>
+      a.id === id ? { ...a, status: "modified", contractId, result: `Saved your edited version as draft "${name}".` } : a),
+  });
 }
 
 export function revokeStanding(id: string) {

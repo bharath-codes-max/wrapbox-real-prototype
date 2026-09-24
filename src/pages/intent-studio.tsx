@@ -2,7 +2,7 @@
 // coverage status, simulation and activation. Includes Policy Autopilot
 // (recommend only — never silently activates wider authority).
 import { useState } from "react";
-import { useAppState, upsertContract, setContractStatus, setAutopilotStatus } from "../state/store";
+import { useAppState, upsertContract, setContractStatus, setAutopilotStatus, acceptAutopilot, markAutopilotModified } from "../state/store";
 import { PageHead, SectionHead, Stat, Chip, StatusChip, SimNote, Drawer, DecisionChip } from "../ui/kit";
 import { CAPABILITIES } from "../model/registries";
 import { userById } from "../model/org";
@@ -47,6 +47,7 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
     "Employees may use approved AI services for normal business work. Customer email addresses and phone numbers must be reversibly tokenized before transmission to external AI. Credentials must never be transmitted externally."
   );
   const [preview, setPreview] = useState<ContractClause[] | null>(null);
+  const [modifyFrom, setModifyFrom] = useState<string | null>(null); // autopilot rec being edited
   const contract = open ? s.contracts.find((c) => c.id === open) : null;
 
   const activeCount = s.contracts.filter((c) => c.status === "ACTIVE").length;
@@ -62,7 +63,7 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
         eyebrow="Policy"
         title="Intent Studio"
         sub="Enterprise intent in natural language, compiled to an enforceable machine representation. A contract only claims the coverage its required capabilities truthfully provide."
-        right={<button className="btn btn-primary" onClick={() => { setDrafting(true); setPreview(null); }}>+ Draft contract</button>}
+        right={<button className="btn btn-primary" onClick={() => { setModifyFrom(null); setDrafting(true); setPreview(null); }}>+ Draft contract</button>}
       />
 
       <div className="grid g4">
@@ -95,7 +96,7 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
 
       {/* Policy Autopilot */}
       <div className="section">
-        <SectionHead title="Policy Autopilot" sub="Recommendations from observed behavior — acceptance creates a DRAFT for human activation; nothing activates silently" />
+        <SectionHead title="Policy Autopilot" sub="Suggestions based on what Wrapbox has seen. Accepting creates a draft rule (switched off) or narrows a permission — never switches anything on by itself." />
         {openRecs.length === 0 && (
           <div className="card empty"><Wand2 size={18} className="dim" /><div>No open recommendations.</div></div>
         )}
@@ -106,9 +107,22 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
                 <div className="row"><Sparkles size={16} className="dim" /><span className="small dim">Observed across {a.basedOnEvents.toLocaleString()} events</span></div>
                 <div style={{ margin: "10px 0" }}>{a.observation}</div>
                 <div className="small"><b>Recommendation:</b> {a.recommendation}</div>
+                <div className="small faint" style={{ marginTop: 6 }}>
+                  If you accept: {a.proposes?.kind === "draft"
+                    ? <>a new <b>draft</b> rule is created — switched off until you activate it.</>
+                    : a.proposes?.kind === "narrow-standing"
+                      ? <>a standing permission is <b>narrowed</b> ("{a.proposes.from}" → "{a.proposes.to}").</>
+                      : "nothing is created."}
+                </div>
                 <div className="row" style={{ marginTop: 14 }}>
-                  <button className="btn btn-sm btn-good" onClick={() => setAutopilotStatus(a.id, "accepted")}>Accept</button>
-                  <button className="btn btn-sm" onClick={() => setAutopilotStatus(a.id, "modified")}>Modify</button>
+                  <button className="btn btn-sm btn-good" onClick={() => acceptAutopilot(a.id)}>Accept</button>
+                  {a.proposes?.kind === "draft" && (
+                    <button className="btn btn-sm" onClick={() => {
+                      if (a.proposes?.kind !== "draft") return;
+                      setModifyFrom(a.id); setDraftName(a.proposes.name); setDraftText(a.proposes.sourceText);
+                      setPreview(null); setDrafting(true);
+                    }}>Modify</button>
+                  )}
                   <button className="btn btn-sm btn-ghost" onClick={() => setAutopilotStatus(a.id, "dismissed")}>Dismiss</button>
                 </div>
               </div>
@@ -116,8 +130,22 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
           </div>
         )}
         {s.autopilot.some((a) => a.status !== "open") && (
-          <div className="small faint" style={{ marginTop: 12 }}>
-            {acceptedRecs} accepted · {dismissedRecs} dismissed — acceptance creates a DRAFT for human activation; nothing activates silently.
+          <div className="card" style={{ marginTop: 16 }}>
+            <div className="small" style={{ fontWeight: 600, marginBottom: 8 }}>
+              Handled · {acceptedRecs} accepted · {s.autopilot.filter((a) => a.status === "modified").length} modified · {dismissedRecs} dismissed
+            </div>
+            {s.autopilot.filter((a) => a.status !== "open").map((a) => (
+              <div key={a.id} className="row small" style={{ gap: 8, padding: "5px 0", flexWrap: "nowrap", alignItems: "flex-start" }}>
+                <Chip tone={a.status === "dismissed" ? "neutral" : "allow"}>{a.status.toUpperCase()}</Chip>
+                <span className="dim">
+                  {a.status === "dismissed" ? `Dismissed: ${a.recommendation}` : a.result ?? a.recommendation}
+                  {a.contractId && s.contracts.some((c) => c.id === a.contractId) && (
+                    <> <a onClick={() => setOpen(a.contractId!)}>Open draft</a></>
+                  )}
+                </span>
+              </div>
+            ))}
+            <div className="small faint" style={{ marginTop: 8 }}>Autopilot never switches a rule on or widens anyone's authority by itself.</div>
           </div>
         )}
       </div>
@@ -230,8 +258,9 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
               <button
                 className="btn btn-good"
                 onClick={() => {
+                  const newId = `ic-${Date.now().toString(36)}`;
                   upsertContract({
-                    id: `ic-${Date.now().toString(36)}`,
+                    id: newId,
                     name: draftName,
                     author: "u-priya",
                     createdAt: Date.now(),
@@ -241,6 +270,8 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
                     clauses: preview,
                     coverage: coverageRollup(preview),
                   });
+                  if (modifyFrom) markAutopilotModified(modifyFrom, newId, draftName);
+                  setModifyFrom(null);
                   setDrafting(false);
                 }}
               >

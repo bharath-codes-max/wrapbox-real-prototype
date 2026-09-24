@@ -97,3 +97,21 @@ test("token vault: restore allowed only inside the company, every attempt logged
   store.resetDemoData();
   assert.equal(store.getState().restorations.length, 0);
 });
+
+test("policy autopilot: accept creates a DRAFT (never active) or narrows a permission", async () => {
+  const store = await import("../src/state/store");
+  store.resetDemoData();
+  const before = store.getState().contracts.length;
+  store.acceptAutopilot("ap-001");
+  const draft = store.getState().contracts.find((c) => c.id === "ic-ap-001")!;
+  assert.equal(store.getState().contracts.length, before + 1);
+  assert.equal(draft.status, "DRAFT");
+  assert.equal(store.getState().autopilot.find((a) => a.id === "ap-001")!.status, "accepted");
+  // accepting twice does nothing
+  assert.equal(store.acceptAutopilot("ap-001"), undefined);
+  store.acceptAutopilot("ap-002");
+  const sp = store.getState().standing.find((x) => x.id === "sp-002")!;
+  assert.ok(sp.allowed.includes("SELECT ≤200 rows per query"));
+  assert.ok(!sp.allowed.includes("SELECT ≤500 rows per query"));
+  store.resetDemoData();
+});
