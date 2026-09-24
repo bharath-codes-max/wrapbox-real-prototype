@@ -231,7 +231,7 @@ export function EventDetail({ e, onClose, onNavigate }: {
               <div key={s.ruleId} className="card" style={{ borderColor: "var(--bad)" }}>
                 <b className="small">{s.name}</b>
                 <div className="small dim" style={{ marginTop: 2 }}>{s.description}</div>
-                <div className="small faint" style={{ marginTop: 4 }}>Protected by Wrapbox baseline safety — no Intent Contract required.</div>
+                <div className="small faint" style={{ marginTop: 4 }}>{e.decidedBy?.layer === "safety" && e.decidedBy.ruleId === s.ruleId ? "This rule made the decision — no Intent Contract was needed." : "Second lock — another rule decided this, but this rule would have blocked it on its own."}</div>
               </div>
             ))}
           </div>

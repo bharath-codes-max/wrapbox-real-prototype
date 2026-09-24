@@ -170,7 +170,25 @@ function load(): AppState {
       // the person's own device so user + device always agree.
       const events = parsed.events.map((e) => {
         const d = deviceOfUser(e.user);
-        return d && e.device !== d.id ? { ...e, device: d.id } : e;
+        let out = d && e.device !== d.id ? { ...e, device: d.id } : e;
+        // Events saved before "decided by" existed: infer it from what was
+        // recorded (a clause carrying the final effect, else a safety rule).
+        if (!out.decidedBy) {
+          const effectOf = (clauseId: string) =>
+            parsed.contracts.flatMap((c) => c.clauses).find((cl) => cl.id === clauseId)?.effect;
+          const matched = out.matchedContracts.map((m) => ({ ...m, effect: m.effect ?? effectOf(m.clauseId) }));
+          out = { ...out, matchedContracts: matched };
+          const clause = matched.find((m) => m.effect === out.decision);
+          out = {
+            ...out,
+            decidedBy: clause
+              ? { layer: "contract", clauseId: clause.clauseId, label: `"${clause.clauseText}" (${clause.contractName})` }
+              : out.safetyRules.length > 0 && out.decision === "BLOCK"
+                ? { layer: "safety", ruleId: out.safetyRules[0].ruleId, label: `Safety Kernel — ${out.safetyRules[0].name}` }
+                : { layer: "default", label: out.decisionReasons[0] ?? "No rule restricts this action" },
+          };
+        }
+        return out;
       });
       return { ...parsed, events, demoStep: -1 }; // demo mode never persists across reloads
     }
@@ -245,15 +263,20 @@ export function simulateById(id: string): SimulationEvent | undefined {
 }
 
 // What-if evaluation that does NOT record an event (Policy Simulator).
-export function shadowEvaluate(sc: Scenario, contracts: IntentContract[]): Decision {
-  // Pure what-if: restore the event sequence and token counter so a preview
-  // never consumes ids that a real run will later show.
+/** Pure what-if through the real brain — nothing is recorded. Restores the
+ *  event sequence and token counter so a preview never consumes ids that a
+ *  real run will later show. */
+export function shadowEvent(sc: Scenario, contracts: IntentContract[]): SimulationEvent {
   const seqBefore = getSeq();
   const tokBefore = getTokenCounter();
   const out = runScenario(sc, contracts, "shadow", { timestamp: Date.now() });
   setSeq(seqBefore);
   setTokenCounter(tokBefore);
-  return out.event.decision;
+  return out.event;
+}
+
+export function shadowEvaluate(sc: Scenario, contracts: IntentContract[]): Decision {
+  return shadowEvent(sc, contracts).decision;
 }
 
 export function resolveReview(

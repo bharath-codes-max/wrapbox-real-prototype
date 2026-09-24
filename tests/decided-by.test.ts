@@ -88,6 +88,18 @@ test("decidedBy: safety kernel, context and default layers", () => {
   assert.equal(run("net-encrypted", seed()).decidedBy?.layer, "uninspectable");
 });
 
+test("private-key exfil: company rule decides today, Safety Kernel alone still blocks with zero rules", () => {
+  const withRules = run("sk-privkey-exfil", seed());
+  assert.equal(withRules.decision, "BLOCK");
+  assert.equal(withRules.decidedBy?.layer, "contract"); // "Credentials must never be transmitted externally"
+  assert.ok(withRules.safetyRules.some((r) => r.ruleId === "sk-cred-exfil")); // second lock
+  const noRules = run("sk-privkey-exfil", []);
+  assert.equal(noRules.decision, "BLOCK");
+  assert.equal(noRules.decidedBy?.layer, "safety");
+  // customer data to an unknown address: no company rule covers it → kernel decides
+  assert.equal(run("net-unknown-dest", seed()).decidedBy?.layer, "safety");
+});
+
 test("explicit enterprise BLOCK keeps credit over the safety kernel", () => {
   const ev = run("net-cred-approved", seed());
   assert.equal(ev.decision, "BLOCK");

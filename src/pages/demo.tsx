@@ -39,7 +39,7 @@ const STEPS: DemoStep[] = [
   },
   {
     title: "Credential exfiltration attempt",
-    text: "Now an agent tries to send a private key to an unknown site — with NO contract covering keys. The Safety Kernel blocks it: baseline protection exists even before an admin writes a single policy.",
+    text: "Now an unknown program tries to send a private key to an unknown site. A company credential rule blocks it — and the Safety Kernel fires as a second lock. Its ‘zero rules’ preview shows it would still block this even if the company had written no rules at all.",
     route: "safety",
     action: () => simulateById("sk-privkey-exfil"),
   },
