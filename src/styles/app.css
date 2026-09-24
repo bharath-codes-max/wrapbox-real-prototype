@@ -582,3 +582,8 @@ textarea.input { resize: vertical; line-height: 1.6; }
 .legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-2); margin-right: 6px; }
 .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .legend-line { width: 16px; height: 2.5px; border-radius: 2px; background: #ef5f74; flex-shrink: 0; }
+
+/* A rule's conditions (Intent Studio) — what / where to / only in */
+.clause-facts { display: grid; grid-template-columns: 70px 1fr; gap: 6px 10px; margin: 10px 0 0; font-size: 12.5px; }
+.clause-facts dt { color: var(--fg-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding-top: 2px; }
+.clause-facts dd { margin: 0; color: var(--fg-2); }

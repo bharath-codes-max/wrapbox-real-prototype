@@ -76,7 +76,8 @@ const DEST_LABEL: Record<DestinationClass, string> = {
   UNKNOWN_EXTERNAL: "unknown destinations",
 };
 
-function destinationText(d: ContractClause["destinations"]): string {
+/** "approved AI, unapproved AI, …" — a rule's "where to" in plain words. */
+export function destinationText(d: ContractClause["destinations"]): string {
   if (d === "ANY") return "Anywhere";
   return d.map((x) => DEST_LABEL[x]).join(", ");
 }

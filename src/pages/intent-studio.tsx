@@ -8,9 +8,35 @@ import { CAPABILITIES } from "../model/registries";
 import { userById } from "../model/org";
 import type { ContractClause } from "../model/types";
 import { draftClauses, coverageRollup } from "../engine/drafter";
-import { contractCoverage } from "../engine/coverage";
+import { contractCoverage, destinationText } from "../engine/coverage";
 import { FileText, FileCheck2, ShieldCheck, Sparkles, Wand2, ArrowRight } from "lucide-react";
 
+
+/** A rule's conditions in plain words: what, where to, and only-in (context). */
+function ClauseFacts({ cl }: { cl: ContractClause }) {
+  const env = cl.environments?.length ? cl.environments.join(", ") : "any environment";
+  return (
+    <dl className="clause-facts">
+      <dt>What</dt>
+      <dd className="row" style={{ gap: 4 }}>
+        {cl.dataClasses.length ? cl.dataClasses.map((d) => <Chip key={d} tone="violet">{d}</Chip>) : <span className="faint">any data</span>}
+        <span className="faint">· {cl.actions === "ANY" ? "any action" : cl.actions.join(" / ")}</span>
+      </dd>
+      <dt>Where to</dt><dd>{cl.destinations === "ANY" ? <span className="faint">anywhere</span> : destinationText(cl.destinations)}</dd>
+      <dt>Only in</dt>
+      <dd>{cl.environments?.length ? <Chip tone="review">{env}</Chip> : <span className="faint">{env}</span>}</dd>
+      {(cl.transform || cl.failClosed) && (
+        <>
+          <dt>Also</dt>
+          <dd className="row" style={{ gap: 4 }}>
+            {cl.transform && <Chip tone="constrain">{cl.transform}</Chip>}
+            {cl.failClosed && <Chip tone="critical">fail closed</Chip>}
+          </dd>
+        </>
+      )}
+    </dl>
+  );
+}
 
 export function IntentStudio({ nav }: { nav: (r: string) => void; route: string }) {
   const s = useAppState();
@@ -119,13 +145,7 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
                 <span className="small">“{cl.text}”</span>
                 <DecisionChip d={cl.effect} small />
               </div>
-              <div className="row small" style={{ marginTop: 6 }}>
-                {cl.dataClasses.map((d) => <Chip key={d} tone="violet">{d}</Chip>)}
-                <Chip tone="neutral">{cl.actions === "ANY" ? "any action" : cl.actions.join(" / ")}</Chip>
-                <Chip tone="neutral">{cl.destinations === "ANY" ? "any destination" : `${cl.destinations.length} destination classes`}</Chip>
-                {cl.transform && <Chip tone="constrain">{cl.transform}</Chip>}
-                {cl.failClosed && <Chip tone="critical">fail closed</Chip>}
-              </div>
+              <ClauseFacts cl={cl} />
               <div className="row small faint" style={{ marginTop: 6 }}>
                 requires:{" "}
                 {cl.requiredCapabilities.map((cap) => {
