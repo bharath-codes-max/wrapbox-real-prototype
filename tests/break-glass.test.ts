@@ -60,3 +60,25 @@ test("notified list excludes the requester; duration clamps to 5–60; ended ses
   assert.equal(store.simulateById("gw-force-main")!.decision, "REVIEW");
   store.resetDemoData();
 });
+
+test("with the history-rewrite kernel rule enforced, only the SRE-approval deploy is overridable in AWS Production", async () => {
+  const store = await fresh();
+  store.installKernelUpdate(); store.enforceKernelRule("sk-history-rewrite");
+  assert.equal(store.simulateById("gw-deploy-hotfix")!.decision, "REVIEW");
+  store.startBreakGlass("u-priya", "SEV-1", "r-aws-prod", "production", "AWS Production", 30);
+  const deploy = store.simulateById("gw-deploy-hotfix")!;
+  assert.equal(deploy.decision, "ALLOW");
+  assert.equal(deploy.breakGlass, true);
+  assert.equal(store.simulateById("gw-iam-admin")!.decision, "BLOCK");
+  store.resetDemoData();
+});
+
+test("DROP TABLE under a payments-prod override stays blocked: the Safety Kernel also caught it", async () => {
+  const store = await fresh();
+  store.startBreakGlass("u-priya", "SEV-1", "r-payments-prod", "production", "payments-prod", 15);
+  const e = store.simulateById("gw-drop-table")!;
+  assert.equal(e.decision, "BLOCK");
+  assert.equal(e.breakGlass, undefined);
+  assert.ok(e.decisionReasons.some((r: string) => /never yields/.test(r)));
+  store.resetDemoData();
+});

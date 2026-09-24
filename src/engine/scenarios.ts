@@ -296,6 +296,18 @@ export const SCENARIOS: Scenario[] = [
     blast: { label: "Full administrative authority to automation role", severity: "critical" },
     sensitivity: "customer-impacting", privileged: true,
   },
+  {
+    id: "gw-deploy-hotfix",
+    group: "GATEWAY",
+    title: "Deploy checkout hotfix to production",
+    narrative: "Claude Code deploys the checkout-service hotfix (image v2.14.1) to AWS Production — company policy wants SRE approval first.",
+    expected: "REVIEW",
+    plane: "GATEWAY", action: "DEPLOY", actionRaw: "aws ecs update-service --cluster prod --service checkout --task-definition checkout:2.14.1",
+    agent: "a-claude-code", user: "u-daniel", application: "AWS API",
+    resource: "r-aws-prod", environment: "production",
+    blast: { label: "1 service · rolling deploy · previous version kept for rollback", severity: "moderate" },
+    sensitivity: "customer-impacting",
+  },
   // ── CONTEXT ───────────────────────────────────────────────────────────────
   {
     id: "ctx-del-testdb",
