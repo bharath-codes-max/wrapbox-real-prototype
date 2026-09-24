@@ -2,12 +2,13 @@
 // The 10-step "Fix checkout and deploy" workflow runs through the real brain:
 // step 6 (production deploy) parks; independent steps continue; approval resumes.
 import { useAppState, startTask, advanceTask } from "../state/store";
-import { PageHead, SectionHead, Stat, Chip, DecisionChip, SimNote } from "../ui/kit";
+import { TASK_JOBS } from "../engine/scenarios";
+import { PageHead, SectionHead, Stat, Chip, DecisionChip, SimNote, AgentMark, Avatar } from "../ui/kit";
 import { EventDetail } from "../ui/event-detail";
 import { useState } from "react";
 import { agentById, resourceById, userById } from "../model/org";
 import type { TaskEnvelope } from "../model/types";
-import { Boxes, Activity, PauseCircle, CheckCircle2, ShieldOff, Timer, FileStack, Play, PauseOctagon } from "lucide-react";
+import { Boxes, Activity, PauseCircle, CheckCircle2, ShieldOff, Timer, FileStack, Play, PauseOctagon, Sunrise } from "lucide-react";
 
 function StepState({ s }: { s: string }) {
   const map: Record<string, [string, string]> = {
@@ -38,21 +39,28 @@ function EnvelopeCard({ t, nav }: { t: TaskEnvelope; nav: (r: string) => void })
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 16, letterSpacing: "-0.01em" }}>“{t.title}”</div>
           <div className="small dim" style={{ marginTop: 3 }}>
-            {agentById(t.agent)?.name} · requested by {userById(t.user)?.name} · envelope <span className="mono">{t.taskId}</span>
+            {agentById(t.agent)?.name} · asked by {userById(t.user)?.name}
+            {t.approver && <> · risky steps go to <b>{userById(t.approver)?.name}</b> ({t.approverRole})</>}
+            {t.templateName && <> · slip: {t.templateName}</>}
           </div>
         </div>
-        <Chip tone={t.status === "completed" ? "allow" : t.status === "parked" ? "review" : t.status === "stopped" ? "block" : "constrain"}>{t.status.toUpperCase()}</Chip>
+        <div className="row" style={{ gap: 6 }}>
+          {t.team && <Chip tone="neutral">{t.team}</Chip>}
+          <Chip tone={t.status === "completed" ? "allow" : t.status === "parked" ? "review" : t.status === "stopped" ? "block" : "constrain"}>
+            {t.status === "stopped" ? "PARTLY DONE" : t.status.toUpperCase()}
+          </Chip>
+        </div>
       </div>
 
       <div className="grid g4" style={{ marginTop: 18 }}>
         <div>
           <div className="stat-label row" style={{ gap: 6 }}><Boxes size={13} /> Allowed scope</div>
-          <div className="small" style={{ marginTop: 4 }}>{t.allowedResources.join(", ")}</div>
+          <div className="small" style={{ marginTop: 4 }}>{t.allowedResources.map((r) => resourceById(r)?.name ?? r).join(", ")}</div>
           <div className="small faint">{t.allowedActions.join(" · ")}</div>
         </div>
         <div>
           <div className="stat-label row" style={{ gap: 6 }}><ShieldOff size={13} /> Forbidden</div>
-          <div className="small" style={{ marginTop: 4, color: "var(--bad)" }}>{t.forbidden.join(", ")}</div>
+          <div className="small" style={{ marginTop: 4, color: "var(--bad)" }}>{t.forbidden.map((f) => resourceById(f)?.name ?? f).join(", ")}</div>
         </div>
         <div>
           <div className="stat-label row" style={{ gap: 6 }}><Timer size={13} /> Time window</div>
@@ -83,9 +91,10 @@ function EnvelopeCard({ t, nav }: { t: TaskEnvelope; nav: (r: string) => void })
 
       {t.status === "stopped" && (
         <div className="card" style={{ borderColor: "var(--bad)", background: "var(--bad-soft)", marginTop: 16 }}>
-          <b className="small">Task stopped.</b>{" "}
+          <b className="small">Partly done.</b>{" "}
           <span className="small dim">
-            A step was denied or blocked, so the steps that needed it were skipped. Everything that didn't depend on it still finished.
+            {t.steps.filter((x) => x.state === "blocked").length} step(s) were denied or blocked
+            {t.steps.some((x) => x.state === "skipped") ? ", and the steps that needed them were skipped" : ""}. Everything that didn't depend on them still finished.
           </span>
         </div>
       )}
@@ -143,7 +152,10 @@ export function TasksPage({ nav }: { nav: (r: string) => void }) {
   const completed = s.tasks.filter((t) => t.status === "completed").length;
   const parkedTasks = s.tasks.filter((t) => t.steps.some((x) => x.state === "parked")).length;
   const stopped = s.tasks.filter((t) => t.status === "stopped").length;
-  const run = () => { const t = startTask(); advanceTask(t.taskId); };
+  const run = (jobId?: string) => { const t = startTask(jobId); advanceTask(t.taskId); };
+  const busyMorning = () => TASK_JOBS.forEach((j) => run(j.id));
+  const [teamFilter, setTeamFilter] = useState<string>("");
+  const shown = [...s.tasks].reverse().filter((t) => !teamFilter || (t.team ?? "Engineering") === teamFilter);
 
   return (
     <div className="page">
@@ -151,26 +163,46 @@ export function TasksPage({ nav }: { nav: (r: string) => void }) {
         eyebrow="Activity"
         title="Tasks"
         sub="Each agent task runs inside a short-lived Task Envelope: allowed scope, forbidden scope, time window and file budget. Unsafe steps park; safe work continues."
-        right={
-          <>
-            <SimNote>Task execution simulated through the real decision engine</SimNote>
-            {s.tasks.length > 0 && <button className="btn btn-primary btn-sm" onClick={run}><Play size={13} /> Start new run</button>}
-          </>
-        }
+        right={<SimNote>Task execution simulated through the real decision engine</SimNote>}
       />
+
+      <div className="section" style={{ marginTop: 0 }}>
+        <SectionHead
+          title="Start a task"
+          sub="Four real jobs from four teams. Each agent gets its team's permission slip; its risky step goes to a different person to approve."
+          right={<button className="btn btn-primary btn-sm" onClick={busyMorning}><Sunrise size={13} /> Busy morning — start all 4</button>}
+        />
+        <div className="grid g2">
+          {TASK_JOBS.map((j) => (
+            <div className="card" key={j.id}>
+              <div className="spread" style={{ alignItems: "flex-start" }}>
+                <div className="row" style={{ gap: 10, flexWrap: "nowrap", alignItems: "flex-start" }}>
+                  <AgentMark agentId={j.agent} size={22} />
+                  <div>
+                    <div className="eyebrow">{j.team}</div>
+                    <b>“{j.title}”</b>
+                  </div>
+                </div>
+                <button className="btn btn-sm" onClick={() => run(j.id)}><Play size={13} /> Start</button>
+              </div>
+              <dl className="clause-facts" style={{ gridTemplateColumns: "92px 1fr" }}>
+                <dt>Agent</dt><dd>{agentById(j.agent)?.name}</dd>
+                <dt>Asked by</dt><dd className="row" style={{ gap: 6 }}><Avatar userId={j.user} size={16} />{userById(j.user)?.name} <span className="faint">({userById(j.user)?.role})</span></dd>
+                <dt>Slip</dt><dd>{j.envelope.name} · {j.envelope.durationMin} min · never: {j.envelope.forbidden.map((f) => resourceById(f)?.name ?? f).join(", ")}</dd>
+                <dt>Approver</dt><dd className="row" style={{ gap: 6 }}><Avatar userId={j.approver} size={16} />{userById(j.approver)?.name} <span className="faint">({j.approverRole})</span></dd>
+              </dl>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {s.tasks.length === 0 ? (
         <div className="empty">
           <Boxes size={26} className="dim" />
-          <div style={{ fontWeight: 600, fontSize: 15, marginTop: 10 }}>No active tasks</div>
-          <div className="small dim" style={{ maxWidth: 520, margin: "8px auto 18px", lineHeight: 1.55 }}>
-            Start the demonstration workflow: Daniel asks Claude Code to “Fix checkout and deploy.”
-            Ten steps run through the Core Brain — the production deploy (step 6) will require approval and park,
-            while independent steps continue.
+          <div style={{ fontWeight: 600, fontSize: 15, marginTop: 10 }}>No tasks yet</div>
+          <div className="small dim" style={{ maxWidth: 520, margin: "8px auto 0", lineHeight: 1.55 }}>
+            Start one of the jobs above — or press <b>Busy morning</b> to see all four teams working at once.
           </div>
-          <button className="btn btn-primary" onClick={run}>
-            <Play size={13} /> Start “Fix checkout and deploy”
-          </button>
         </div>
       ) : (
         <>
@@ -182,8 +214,21 @@ export function TasksPage({ nav }: { nav: (r: string) => void }) {
           </div>
 
           <div className="section">
-            <SectionHead title="Task envelopes" sub="Newest first — click any step with a recorded decision to inspect its event" />
-            {[...s.tasks].reverse().map((t) => <EnvelopeCard key={t.taskId} t={t} nav={nav} />)}
+            <SectionHead
+              title="Running and finished tasks"
+              sub="Newest first — click any step with a recorded decision to inspect its event"
+              right={
+                <div className="row" style={{ gap: 4 }}>
+                  {["", ...TASK_JOBS.map((j) => j.team)].map((tm) => (
+                    <button key={tm || "all"} className={`btn btn-sm ${teamFilter === tm ? "btn-primary" : "btn-ghost"}`} onClick={() => setTeamFilter(tm)}>
+                      {tm || "All teams"}
+                    </button>
+                  ))}
+                </div>
+              }
+            />
+            {shown.map((t) => <EnvelopeCard key={t.taskId} t={t} nav={nav} />)}
+            {shown.length === 0 && <div className="card empty">No {teamFilter} tasks yet.</div>}
           </div>
         </>
       )}

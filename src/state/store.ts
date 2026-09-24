@@ -13,7 +13,7 @@ import { SEED_CONTRACTS } from "../model/contracts";
 import { deviceOfUser, userById } from "../model/org";
 import { canActivate, contractCoverage } from "../engine/coverage";
 import { BASELINE_KERNEL, enforceRule, installRelease, pendingRelease, type KernelState } from "../engine/kernel";
-import { SCENARIOS, TASK_SCENARIO, scenarioById, type Scenario } from "../engine/scenarios";
+import { SCENARIOS, jobById, scenarioById, type Scenario } from "../engine/scenarios";
 import { runScenario, setSeq, getSeq, setTokenCounter, getTokenCounter } from "../engine/simulate";
 import { decide } from "../engine/brain";
 
@@ -351,6 +351,13 @@ export function shadowEvaluate(sc: Scenario, contracts: IntentContract[], kernel
   return shadowEvent(sc, contracts, kernel).decision;
 }
 
+/** Who must decide a review: the job's approver for task steps, otherwise the
+ *  Engineering Manager — and never the person who made the request. */
+export function approverFor(e: SimulationEvent): string {
+  if (e.reviewState?.approver) return e.reviewState.approver;
+  return e.user === "u-alex" ? "u-priya" : "u-alex";
+}
+
 export function resolveReview(
   eventId: string,
   resolution: "approved" | "approved_scoped" | "constrained" | "denied",
@@ -391,20 +398,29 @@ export function resolveReview(
 // Task engine — envelope + park/resume (§25, §28)
 // ---------------------------------------------------------------------------
 
-export function startTask(): TaskEnvelope {
-  const t = TASK_SCENARIO;
+let taskCounter = 0;
+
+/** Start a team's job: the agent gets that team's permission slip (envelope). */
+export function startTask(jobId?: string): TaskEnvelope {
+  const t = jobById(jobId);
+  taskCounter += 1;
   const envelope: TaskEnvelope = {
-    taskId: `task-${Date.now().toString(36)}`,
+    taskId: `task-${Date.now().toString(36)}-${taskCounter}`,
+    jobId: t.id,
+    team: t.team,
+    approver: t.approver,
+    approverRole: t.approverRole,
+    templateName: t.envelope.name,
     title: t.title,
     agent: t.agent,
     user: t.user,
-    allowedResources: ["src/", "tests/", "tmp/", "CHANGELOG.md", "docs/", "checkout-service", "r-checkout"],
-    allowedActions: ["READ", "WRITE", "EXECUTE", "DELETE"],
-    environment: "development",
-    forbidden: ["production", ".env", "credentials"],
-    durationMin: 30,
+    allowedResources: [...t.envelope.allowedResources],
+    allowedActions: [...t.envelope.allowedActions],
+    environment: t.envelope.environment,
+    forbidden: [...t.envelope.forbidden],
+    durationMin: t.envelope.durationMin,
     startedAt: Date.now(),
-    fileBudget: 25,
+    fileBudget: t.envelope.fileBudget,
     filesUsed: 0,
     status: "active",
     steps: t.steps.map((s, i) => ({
@@ -424,10 +440,11 @@ export function startTask(): TaskEnvelope {
 export function advanceTask(taskId: string): void {
   const task = state.tasks.find((t) => t.taskId === taskId);
   if (!task || task.status !== "active") return;
-  const t = TASK_SCENARIO;
+  const t = jobById(task.jobId);
   let tasks = state.tasks;
   let events = state.events;
   let lastHash = state.lastHash;
+  let tokens = state.tokens;
   let updated = { ...task, steps: task.steps.map((s) => ({ ...s })) };
 
   const stepDone = (i: number) => updated.steps[i].state === "done";
@@ -449,15 +466,21 @@ export function advanceTask(taskId: string): void {
       title: step.label,
       narrative: step.label,
       expected: "",
-      plane: def.environment === "production" ? "GATEWAY" : "ENDPOINT",
+      plane: def.plane ?? (def.environment === "production" ? "GATEWAY" : "ENDPOINT"),
       action: def.action,
       actionRaw: def.actionRaw,
       agent: t.agent,
       user: t.user,
-      application: "Terminal",
+      application: def.application ?? "Terminal",
       resource: def.resource,
       environment: def.environment,
       sensitivity: def.sensitivity,
+      destination: def.destination,
+      destinationClass: def.destinationClass,
+      fileName: def.fileName,
+      payload: def.payload,
+      findings: def.findings,
+      blast: def.blast,
     };
     // The task's envelope goes to the brain, so allowed scope, forbidden scope,
     // time window, file budget and scoped grants are genuinely enforced.
@@ -465,8 +488,11 @@ export function advanceTask(taskId: string): void {
     out.event.taskId = taskId;
     out.event.stepIndex = step.index;
     out.event.dependsOn = step.dependsOn;
+    tokens = [...tokens, ...out.tokens];
     if (out.event.decision === "REVIEW") {
       out.event.status = "parked";
+      // Route the decision to this job's approver — never the requester.
+      if (out.event.reviewState) out.event.reviewState = { ...out.event.reviewState, approver: t.approver };
       step.state = "parked";
     } else if (out.event.decision === "BLOCK") {
       step.state = "blocked";
@@ -496,7 +522,7 @@ export function advanceTask(taskId: string): void {
   const anyPending = updated.steps.some((s) => s.state === "pending");
   updated.status = allDone ? "completed" : anyParked ? "parked" : anyPending ? "active" : "stopped";
   tasks = tasks.map((x) => (x.taskId === taskId ? updated : x));
-  set({ tasks, events, lastHash });
+  set({ tasks, events, lastHash, tokens });
 }
 
 function resumeParkedStep(taskId: string, eventId: string, resolution: string, reviewer: string) {

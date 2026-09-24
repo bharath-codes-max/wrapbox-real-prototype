@@ -123,6 +123,7 @@ export interface ReviewState {
   expiresAt: number;
   bundleId?: string;
   safeAlternative?: string;
+  approver?: string; // who is asked to decide (user id)
 }
 
 export interface EvidenceRecord {
@@ -223,6 +224,11 @@ export interface TaskEnvelope {
   filesUsed: number;
   status: "active" | "completed" | "parked" | "stopped" | "expired";
   steps: TaskStep[];
+  jobId?: string; // which team job this run came from
+  team?: string;
+  approver?: string; // who decides this job's risky steps (never the requester)
+  approverRole?: string;
+  templateName?: string; // envelope template, e.g. "Finance · reporting"
   // Extra scope a reviewer granted with "Approve scoped" — valid for this task only.
   grants?: { resource: string; environment: Environment; grantedBy: string; at: number }[];
 }

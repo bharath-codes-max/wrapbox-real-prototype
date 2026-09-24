@@ -3,8 +3,8 @@ import { Drawer, DecisionChip, Payload, EvidenceChain, names, RiskChip, StatusCh
 import { describe } from "./describe";
 import type { ReactNode } from "react";
 import type { SimulationEvent } from "../model/types";
-import { resolveReview } from "../state/store";
-import { deviceById } from "../model/org";
+import { resolveReview, approverFor } from "../state/store";
+import { deviceById, userById } from "../model/org";
 import {
   Info, Lightbulb, ScanSearch, FileDiff, ArrowLeftRight, UserCheck,
   ScrollText, ShieldAlert, Link2, ShieldCheck, Ban, AlertTriangle,
@@ -176,19 +176,19 @@ export function EventDetail({ e, onClose, onNavigate }: {
           {pending ? (
             <>
               <div className="small dim" style={{ marginBottom: 14, lineHeight: 1.6 }}>
-                Pending approval · expires {new Date(e.reviewState.expiresAt).toLocaleTimeString()} · requester is separated from approver.
+                Waiting for <b>{userById(approverFor(e))?.name}</b> ({userById(approverFor(e))?.role}) · expires {new Date(e.reviewState.expiresAt).toLocaleTimeString()} · the person who asked can't approve their own request.
               </div>
               <div className="row">
-                <button className="btn btn-good btn-sm" onClick={() => resolveReview(e.id, "approved", "u-alex", "Approved once")}>Approve once</button>
-                <button className="btn btn-sm" onClick={() => resolveReview(e.id, "approved_scoped", "u-alex", "Scoped approval", "This resource only · 4h")}>Approve scoped</button>
-                <button className="btn btn-warn btn-sm" onClick={() => resolveReview(e.id, "constrained", "u-alex", "Constrained to safe alternative")}>Constrain</button>
-                <button className="btn btn-danger btn-sm" onClick={() => resolveReview(e.id, "denied", "u-alex", "Denied")}>Deny</button>
+                <button className="btn btn-good btn-sm" onClick={() => resolveReview(e.id, "approved", approverFor(e), "Approved once")}>Approve once</button>
+                <button className="btn btn-sm" onClick={() => resolveReview(e.id, "approved_scoped", approverFor(e), "Scoped approval", "This resource only · 4h")}>Approve scoped</button>
+                <button className="btn btn-warn btn-sm" onClick={() => resolveReview(e.id, "constrained", approverFor(e), "Constrained to safe alternative")}>Constrain</button>
+                <button className="btn btn-danger btn-sm" onClick={() => resolveReview(e.id, "denied", approverFor(e), "Denied")}>Deny</button>
               </div>
             </>
           ) : (
             <dl className="kv">
               <dt>Outcome</dt><dd><StatusChip s={e.reviewState.status} /></dd>
-              {e.reviewState.reviewer && <><dt>Reviewer</dt><dd>{e.reviewState.reviewer === "u-alex" ? "Alex Morgan" : e.reviewState.reviewer === "u-maya" ? "Maya Chen" : e.reviewState.reviewer}</dd></>}
+              {e.reviewState.reviewer && <><dt>Reviewer</dt><dd>{userById(e.reviewState.reviewer)?.name ?? e.reviewState.reviewer}</dd></>}
               {e.reviewState.scope && <><dt>Scope</dt><dd>{e.reviewState.scope}</dd></>}
               {e.reviewState.note && <><dt>Note</dt><dd>{e.reviewState.note}</dd></>}
             </dl>

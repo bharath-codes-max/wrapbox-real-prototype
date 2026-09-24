@@ -1,8 +1,8 @@
 // Review Center — only exceptional items; impact, blast radius, safer
 // alternative, expiry, requester separation, transaction bundling.
 import { useState } from "react";
-import { useAppState, resolveReview } from "../state/store";
-import { PageHead, SectionHead, Stat, DecisionChip, Chip, RiskChip, SimNote, names, timeAgo, StatusChip } from "../ui/kit";
+import { useAppState, resolveReview, approverFor } from "../state/store";
+import { PageHead, SectionHead, Stat, DecisionChip, Chip, RiskChip, SimNote, names, timeAgo, StatusChip, Avatar } from "../ui/kit";
 import { describe } from "../ui/describe";
 import { userById } from "../model/org";
 import { EventDetail } from "../ui/event-detail";
@@ -32,7 +32,7 @@ export function ReviewCenter({ nav }: { nav: (r: string) => void }) {
         eyebrow="Authorization"
         title="Review Center"
         sub="Humans review exceptions, not every action. Related actions arrive as one coherent bundle with purpose, blast radius, risk, expiry and a safer alternative. Requester and approver are separated."
-        right={<SimNote>Approver: Alex Morgan (Engineering Manager)</SimNote>}
+        right={<SimNote>Each request goes to the right approver — never the requester</SimNote>}
       />
 
       <div className="grid g4">
@@ -64,11 +64,16 @@ export function ReviewCenter({ nav }: { nav: (r: string) => void }) {
                 <div className="card" key={key} style={{ borderColor: "var(--warn)" }}>
                   <div className="spread">
                     <div>
-                      <b>{task ? `Task transaction — “${task.title}”` : `${first.action} · ${n.resource}`}</b>
+                      <b>{task ? `${task.team ?? "Task"} · “${task.title}”` : describe(first)}</b>
                       <div className="small dim">
                         {isBundle && task
-                          ? `${task.steps.length} actions in this task · ${task.steps.filter((x) => x.state === "done").length} auto-allowed · ${evs.length} need authorization`
+                          ? `Asked by ${n.user} via ${n.agent} · ${task.steps.length} steps · ${task.steps.filter((x) => x.state === "done").length} already done · ${evs.length} need${evs.length === 1 ? "s" : ""} a yes`
                           : `Requested by ${n.user} via ${n.agent}${first.application ? ` (${first.application})` : ""} · ${timeAgo(first.timestamp)}`}
+                      </div>
+                      <div className="row small" style={{ gap: 6, marginTop: 6 }}>
+                        <Avatar userId={approverFor(first)} size={18} />
+                        <span>Needs a decision from <b>{userById(approverFor(first))?.name}</b>{" "}
+                          <span className="faint">({task?.approverRole ?? userById(approverFor(first))?.role})</span></span>
                       </div>
                     </div>
                     <div className="row">
@@ -113,10 +118,10 @@ export function ReviewCenter({ nav }: { nav: (r: string) => void }) {
                           )}
                         </div>
                         <div className="row" style={{ marginTop: 14 }}>
-                          <button className="btn btn-good btn-sm" onClick={() => resolveReview(e.id, "approved", "u-alex", "Approved once")}>Approve once</button>
-                          <button className="btn btn-sm" onClick={() => resolveReview(e.id, "approved_scoped", "u-alex", "Scoped", "This resource only · 4h · no wider authority")}>Approve scoped</button>
-                          <button className="btn btn-warn btn-sm" onClick={() => resolveReview(e.id, "constrained", "u-alex", "Constrained to the safer alternative")}>Constrain</button>
-                          <button className="btn btn-danger btn-sm" onClick={() => resolveReview(e.id, "denied", "u-alex", "Denied")}>Deny</button>
+                          <button className="btn btn-good btn-sm" onClick={() => resolveReview(e.id, "approved", approverFor(e), "Approved once")}>Approve once</button>
+                          <button className="btn btn-sm" onClick={() => resolveReview(e.id, "approved_scoped", approverFor(e), "Scoped", "This resource only · 4h · no wider authority")}>Approve scoped</button>
+                          <button className="btn btn-warn btn-sm" onClick={() => resolveReview(e.id, "constrained", approverFor(e), "Constrained to the safer alternative")}>Constrain</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => resolveReview(e.id, "denied", approverFor(e), "Denied")}>Deny</button>
                           <button className="btn btn-ghost btn-sm" onClick={() => setOpen(e)}>Full evidence <ArrowRight size={13} /></button>
                         </div>
                       </div>

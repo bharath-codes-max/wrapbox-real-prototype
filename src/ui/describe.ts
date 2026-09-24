@@ -48,6 +48,7 @@ function verbFor(e: SimulationEvent): Verb {
         object: rows && rows > 1000 ? `${res} (${n(rows)} rows)` : res,
       };
     case "WRITE":
+      if (/^refund\b/.test(raw)) return { base: "issue a", past: "Issued a", object: `${raw.replace(/^refund\s*/, "refund of ")} via ${res}` };
       if (/--force/.test(raw)) return { base: "force-push to", past: "Force-pushed to", object: res };
       if (/git push/.test(raw)) return { base: "push code to", past: "Pushed code to", object: res };
       if (/git commit/.test(raw)) return { base: "commit to", past: "Committed to", object: res };

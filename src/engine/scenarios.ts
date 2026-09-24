@@ -336,26 +336,158 @@ export interface TaskScenarioStep {
   environment: Environment;
   dependsOn: number[];
   sensitivity: "disposable" | "internal" | "sensitive" | "customer-impacting";
+  // Optional detail for steps that move data or money.
+  plane?: Scenario["plane"];
+  application?: string;
+  destination?: string;
+  destinationClass?: DestinationClass;
+  fileName?: string;
+  payload?: string;
+  findings?: ScenarioFinding[];
+  blast?: Scenario["blast"];
 }
 
-export const TASK_SCENARIO: { id: string; title: string; agent: string; user: string; steps: TaskScenarioStep[] } = {
-  id: "task-fix-checkout",
-  title: "Fix checkout and deploy",
-  agent: "a-claude-code",
-  user: "u-daniel",
-  steps: [
-    { label: "Read checkout source", action: "READ", actionRaw: "read src/checkout.ts", resource: "src/checkout.ts", environment: "development", dependsOn: [], sensitivity: "internal" },
-    { label: "Read failing test", action: "READ", actionRaw: "read tests/checkout.test.ts", resource: "tests/checkout.test.ts", environment: "development", dependsOn: [], sensitivity: "internal" },
-    { label: "Patch rounding bug", action: "WRITE", actionRaw: "edit src/checkout.ts", resource: "src/checkout.ts", environment: "development", dependsOn: [0, 1], sensitivity: "internal" },
-    { label: "Run unit tests", action: "EXECUTE", actionRaw: "npm test", resource: "checkout-service", environment: "development", dependsOn: [2], sensitivity: "internal" },
-    { label: "Commit fix", action: "WRITE", actionRaw: "git commit -m 'fix: rounding'", resource: "r-checkout", environment: "development", dependsOn: [3], sensitivity: "internal" },
-    { label: "Deploy to production", action: "DEPLOY", actionRaw: "deploy checkout-service → prod", resource: "r-aws-prod", environment: "production", dependsOn: [4], sensitivity: "customer-impacting" },
-    { label: "Update CHANGELOG", action: "WRITE", actionRaw: "edit CHANGELOG.md", resource: "CHANGELOG.md", environment: "development", dependsOn: [4], sensitivity: "internal" },
-    { label: "Write release notes", action: "WRITE", actionRaw: "edit docs/release-notes.md", resource: "docs/release-notes.md", environment: "development", dependsOn: [4], sensitivity: "internal" },
-    { label: "Clean temp fixtures", action: "DELETE", actionRaw: "rm tmp/fixture-*.json", resource: "tmp/fixture-*.json", environment: "development", dependsOn: [3], sensitivity: "disposable" },
-    { label: "Verify production health", action: "READ", actionRaw: "curl /healthz (prod)", resource: "r-aws-prod", environment: "production", dependsOn: [5], sensitivity: "internal" },
-  ],
-};
+/** The permission slip a team's jobs start with (Task Envelope template). */
+export interface EnvelopeTemplate {
+  name: string;
+  allowedResources: string[];
+  allowedActions: ActionVerb[];
+  environment: Environment;
+  forbidden: string[];
+  durationMin: number;
+  fileBudget: number;
+}
+
+/** A real job a person hands to an AI agent. Its risky step goes to an
+ *  approver who is never the person who asked (requester separation). */
+export interface TaskJob {
+  id: string;
+  team: "Engineering" | "Finance" | "Support" | "Operations";
+  title: string;
+  agent: string;
+  user: string; // who asked
+  approver: string; // who decides risky steps
+  approverRole: string;
+  envelope: EnvelopeTemplate;
+  steps: TaskScenarioStep[];
+}
+
+export const TASK_JOBS: TaskJob[] = [
+  {
+    id: "job-eng-checkout",
+    team: "Engineering",
+    title: "Fix checkout and deploy",
+    agent: "a-claude-code",
+    user: "u-daniel",
+    approver: "u-alex",
+    approverRole: "Engineering Manager",
+    envelope: {
+      name: "Engineering · code change",
+      allowedResources: ["src/", "tests/", "tmp/", "CHANGELOG.md", "docs/", "checkout-service", "r-checkout"],
+      allowedActions: ["READ", "WRITE", "EXECUTE", "DELETE"],
+      environment: "development",
+      forbidden: ["production", ".env", "credentials"],
+      durationMin: 30,
+      fileBudget: 25,
+    },
+    steps: [
+      { label: "Read checkout source", action: "READ", actionRaw: "read src/checkout.ts", resource: "src/checkout.ts", environment: "development", dependsOn: [], sensitivity: "internal" },
+      { label: "Read failing test", action: "READ", actionRaw: "read tests/checkout.test.ts", resource: "tests/checkout.test.ts", environment: "development", dependsOn: [], sensitivity: "internal" },
+      { label: "Patch rounding bug", action: "WRITE", actionRaw: "edit src/checkout.ts", resource: "src/checkout.ts", environment: "development", dependsOn: [0, 1], sensitivity: "internal" },
+      { label: "Run unit tests", action: "EXECUTE", actionRaw: "npm test", resource: "checkout-service", environment: "development", dependsOn: [2], sensitivity: "internal" },
+      { label: "Commit fix", action: "WRITE", actionRaw: "git commit -m 'fix: rounding'", resource: "r-checkout", environment: "development", dependsOn: [3], sensitivity: "internal" },
+      { label: "Deploy to production", action: "DEPLOY", actionRaw: "deploy checkout-service → prod", resource: "r-aws-prod", environment: "production", dependsOn: [4], sensitivity: "customer-impacting", plane: "GATEWAY" },
+      { label: "Update CHANGELOG", action: "WRITE", actionRaw: "edit CHANGELOG.md", resource: "CHANGELOG.md", environment: "development", dependsOn: [4], sensitivity: "internal" },
+      { label: "Write release notes", action: "WRITE", actionRaw: "edit docs/release-notes.md", resource: "docs/release-notes.md", environment: "development", dependsOn: [4], sensitivity: "internal" },
+      { label: "Clean temp fixtures", action: "DELETE", actionRaw: "rm tmp/fixture-*.json", resource: "tmp/fixture-*.json", environment: "development", dependsOn: [3], sensitivity: "disposable" },
+      { label: "Verify production health", action: "READ", actionRaw: "curl /healthz (prod)", resource: "r-aws-prod", environment: "production", dependsOn: [5], sensitivity: "internal", plane: "GATEWAY" },
+    ],
+  },
+  {
+    id: "job-fin-q3",
+    team: "Finance",
+    title: "Prepare the Q3 revenue report",
+    agent: "a-finance",
+    user: "u-sam",
+    approver: "u-maya",
+    approverRole: "Security Analyst",
+    envelope: {
+      name: "Finance · reporting",
+      allowedResources: ["r-customer-db", "Q3-revenue", "reports/"],
+      allowedActions: ["READ", "EXECUTE", "WRITE", "NETWORK_SEND"],
+      environment: "production",
+      forbidden: [".env", "credentials", "r-payments-prod"],
+      durationMin: 60,
+      fileBudget: 10,
+    },
+    steps: [
+      { label: "Query Q3 revenue totals", action: "READ", actionRaw: "SELECT month, SUM(amount) FROM orders WHERE quarter='Q3' GROUP BY month", resource: "r-customer-db", environment: "production", dependsOn: [], sensitivity: "customer-impacting", plane: "GATEWAY", application: "SQL MCP", blast: { rows: 3, label: "3 summary rows", severity: "low" } },
+      { label: "Query top 50 accounts", action: "READ", actionRaw: "SELECT account, revenue FROM accounts ORDER BY revenue DESC LIMIT 50", resource: "r-customer-db", environment: "production", dependsOn: [], sensitivity: "customer-impacting", plane: "GATEWAY", application: "SQL MCP", blast: { rows: 50, label: "50 rows", severity: "low" } },
+      { label: "Build revenue charts", action: "EXECUTE", actionRaw: "python build_charts.py", resource: "Q3-revenue", environment: "production", dependsOn: [0, 1], sensitivity: "internal" },
+      { label: "Export every customer to a spreadsheet", action: "DATA_EXPORT", actionRaw: "COPY (SELECT * FROM customers) TO 'Q3-customers.csv'", resource: "r-customer-db", environment: "production", dependsOn: [0], sensitivity: "customer-impacting", plane: "GATEWAY", application: "SQL MCP", destination: "dest-internal", destinationClass: "INTERNAL", findings: [{ dataClass: "CUSTOM.CUSTOMER_ID", count: 50000, sample: "VRD-CUST-••••" }, { dataClass: "PII.EMAIL", count: 50000, sample: "•••@•••" }], blast: { rows: 50_000, label: "50,000 customer rows", severity: "high" } },
+      { label: "Write the report summary", action: "WRITE", actionRaw: "write reports/Q3-summary.md", resource: "reports/Q3-summary.md", environment: "production", dependsOn: [2], sensitivity: "internal" },
+      { label: "Attach customer sheet and send to the CFO", action: "NETWORK_SEND", actionRaw: "send report to cfo@veridian.example", resource: "reports/Q3-summary.md", environment: "production", dependsOn: [3, 4], sensitivity: "sensitive", destination: "dest-internal", destinationClass: "INTERNAL", plane: "NETWORK", application: "Mail" },
+    ],
+  },
+  {
+    id: "job-sup-refund",
+    team: "Support",
+    title: "Resolve refund ticket #4821",
+    agent: "a-support",
+    user: "u-jordan",
+    approver: "u-sam",
+    approverRole: "Finance Controller",
+    envelope: {
+      name: "Support · ticket resolution",
+      allowedResources: ["r-support-saas", "r-customer-db", "ticket-4821"],
+      allowedActions: ["READ", "WRITE", "NETWORK_SEND"],
+      environment: "production",
+      forbidden: [".env", "credentials", "r-payments-prod"],
+      durationMin: 30,
+      fileBudget: 5,
+    },
+    steps: [
+      { label: "Read ticket #4821", action: "READ", actionRaw: "GET /tickets/4821", resource: "r-support-saas", environment: "production", dependsOn: [], sensitivity: "sensitive", plane: "GATEWAY", application: "Support SaaS API" },
+      { label: "Look up the customer's orders", action: "READ", actionRaw: "SELECT * FROM orders WHERE customer='VRD-CUST-0921' LIMIT 20", resource: "r-customer-db", environment: "production", dependsOn: [0], sensitivity: "customer-impacting", plane: "GATEWAY", application: "SQL MCP", blast: { rows: 20, label: "20 rows", severity: "low" } },
+      { label: "Draft a reply with the AI", action: "NETWORK_SEND", actionRaw: "POST draft request to ChatGPT", resource: "ticket-4821", environment: "production", dependsOn: [1], sensitivity: "sensitive", plane: "NETWORK", application: "Browser", destination: "dest-chatgpt", destinationClass: "APPROVED_AI", fileName: "ticket-4821.txt", payload: "Customer Alice Johnson (alice@example.com, +1 415 555 0100) was charged twice for order 88142. Draft an apology and confirm a refund.", findings: [{ dataClass: "PII.NAME", count: 1, sample: "Alice Johnson" }, { dataClass: "PII.EMAIL", count: 1, sample: "a•••e@example.com" }, { dataClass: "PII.PHONE", count: 1, sample: "+1 415 ••• ••00" }] },
+      { label: "Refund $1,240 to the customer", action: "WRITE", actionRaw: "refund $1,240 on order 88142", resource: "r-stripe", environment: "production", dependsOn: [1], sensitivity: "customer-impacting", plane: "GATEWAY", application: "Stripe API", blast: { spendUsd: 1240, label: "$1,240 refund", severity: "high" } },
+      { label: "Send the reply to the customer", action: "NETWORK_SEND", actionRaw: "send reply on ticket #4821", resource: "r-support-saas", environment: "production", dependsOn: [2, 3], sensitivity: "sensitive", plane: "NETWORK", application: "Support SaaS API", destination: "dest-salesforce", destinationClass: "APPROVED_SAAS" },
+      { label: "Close the ticket", action: "WRITE", actionRaw: "PATCH /tickets/4821 status=solved", resource: "r-support-saas", environment: "production", dependsOn: [4], sensitivity: "sensitive", plane: "GATEWAY", application: "Support SaaS API" },
+    ],
+  },
+  {
+    id: "job-ops-staging",
+    team: "Operations",
+    title: "Fix the checkout outage",
+    agent: "a-codex",
+    user: "u-daniel",
+    approver: "u-alex",
+    approverRole: "Engineering Manager",
+    envelope: {
+      name: "Operations · incident fix",
+      allowedResources: ["r-aws-staging", "logs/"],
+      allowedActions: ["READ", "EXECUTE"],
+      environment: "staging",
+      forbidden: ["production", "credentials"],
+      durationMin: 45,
+      fileBudget: 5,
+    },
+    steps: [
+      { label: "Read error logs", action: "READ", actionRaw: "aws logs tail /checkout --since 1h", resource: "logs/checkout", environment: "staging", dependsOn: [], sensitivity: "internal", plane: "GATEWAY", application: "AWS API" },
+      { label: "Restart the staging service", action: "EXECUTE", actionRaw: "aws ecs update-service --cluster staging --force-new-deployment", resource: "r-aws-staging", environment: "staging", dependsOn: [0], sensitivity: "internal", plane: "GATEWAY", application: "AWS API" },
+      { label: "Restart the production service", action: "EXECUTE", actionRaw: "aws ecs update-service --cluster prod --force-new-deployment", resource: "r-aws-prod", environment: "production", dependsOn: [1], sensitivity: "customer-impacting", plane: "GATEWAY", application: "AWS API" },
+      { label: "Give the CI robot admin rights", action: "PERMISSION_CHANGE", actionRaw: "iam:AttachRolePolicy AdministratorAccess → role/ci-runner", resource: "r-aws-prod", environment: "production", dependsOn: [0], sensitivity: "customer-impacting", plane: "GATEWAY", application: "AWS API", blast: { label: "Full admin rights to an automation role", severity: "critical" } },
+      { label: "Check production is healthy", action: "READ", actionRaw: "curl /healthz (prod)", resource: "r-aws-prod", environment: "production", dependsOn: [2], sensitivity: "internal", plane: "GATEWAY", application: "AWS API" },
+    ],
+  },
+];
+
+export function jobById(id: string | undefined): TaskJob {
+  return TASK_JOBS.find((j) => j.id === id) ?? TASK_JOBS[0];
+}
+
+/** @deprecated kept for older callers — the Engineering job. */
+export const TASK_SCENARIO = TASK_JOBS[0];
 
 export function scenarioById(id: string): Scenario | undefined {
   return SCENARIOS.find((s) => s.id === id);

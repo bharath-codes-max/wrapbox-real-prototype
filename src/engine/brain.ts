@@ -19,6 +19,7 @@ import type {
   SafetyRuleHit, TaskEnvelope, TransformKind,
 } from "../model/types";
 import { BASELINE_KERNEL, kernelHits, type KernelFacts, type KernelState } from "./kernel";
+import { resourceById } from "../model/org";
 
 export interface ActionRequest {
   plane: "ENDPOINT" | "NETWORK" | "GATEWAY";
@@ -98,7 +99,7 @@ function blastGovernor(req: ActionRequest): { escalate: Decision | null; reason?
     return { escalate: "REVIEW", reason: `Row read exceeds budget: ${fmt(b.rows)} > ${BLAST_LIMITS.rows} rows` };
   }
   if (b.spendUsd !== undefined && b.spendUsd > BLAST_LIMITS.spendUsd) {
-    return { escalate: "REVIEW", reason: `Cloud spend exceeds budget: $${fmt(b.spendUsd)} > $${BLAST_LIMITS.spendUsd}` };
+    return { escalate: "REVIEW", reason: `Money / spend exceeds budget: $${fmt(b.spendUsd)} > $${BLAST_LIMITS.spendUsd}` };
   }
   if (b.recipients !== undefined && b.recipients > BLAST_LIMITS.recipients) {
     return {
@@ -263,6 +264,7 @@ export function decide(req: ActionRequest, contracts: IntentContract[]): BrainRe
   // 7. Task Envelope: outside-envelope actions escalate.
   if (req.envelope && req.envelope.status === "active") {
     const env = req.envelope;
+    const resName = resourceById(req.resource)?.name ?? req.resource;
     // A scoped approval earlier in this task widens the envelope for that
     // resource + environment only, and only for this task.
     const granted = (env.grants ?? []).some((g) => g.resource === req.resource && g.environment === req.environment);
@@ -270,7 +272,7 @@ export function decide(req: ActionRequest, contracts: IntentContract[]): BrainRe
     const resourceAllowed = granted || env.allowedResources.some((r) => req.resource.includes(r) || r.includes(req.resource));
     const actionAllowed = granted || env.allowedActions.includes(req.action);
     const forbidden = !granted && env.forbidden.some((f) => req.resource.toLowerCase().includes(f.toLowerCase()) || req.environment === f);
-    if (granted) reasons.push(`Task Envelope: a scoped approval earlier in "${env.title}" covers ${req.resource} in ${req.environment}.`);
+    if (granted) reasons.push(`Task Envelope: a scoped approval earlier in "${env.title}" covers ${resName} in ${req.environment}.`);
     if (expired && DECISION_RANK[decision] < DECISION_RANK.REVIEW) {
       decision = "REVIEW";
       decidedBy = { layer: "envelope", label: `Task Envelope — the ${env.durationMin}-minute window for "${env.title}" has expired` };
@@ -279,16 +281,16 @@ export function decide(req: ActionRequest, contracts: IntentContract[]): BrainRe
     if (forbidden) {
       if (DECISION_RANK[decision] < DECISION_RANK.REVIEW) {
         decision = "REVIEW";
-        decidedBy = { layer: "envelope", label: `Task Envelope — "${req.resource}" is in forbidden scope` };
+        decidedBy = { layer: "envelope", label: `Task Envelope — ${resName} (${req.environment}) is outside this task's permission slip` };
       }
       if (DECISION_RANK[decision] < DECISION_RANK.BLOCK) {
-        reasons.push(`Task Envelope: "${req.resource}" is outside the envelope for task "${env.title}" (forbidden scope).`);
+        reasons.push(`Task Envelope: ${resName} in ${req.environment} is outside the permission slip for "${env.title}".`);
       }
     } else if (!resourceAllowed || !actionAllowed) {
       if (decision === "ALLOW") {
         decision = "REVIEW";
-        decidedBy = { layer: "envelope", label: `Task Envelope — ${req.action} on ${req.resource} is outside the envelope` };
-        reasons.push(`Task Envelope: ${req.action} on ${req.resource} exceeds envelope scope for "${env.title}" — re-authorization required.`);
+        decidedBy = { layer: "envelope", label: `Task Envelope — ${req.action} on ${resName} is outside this task's permission slip` };
+        reasons.push(`Task Envelope: ${req.action} on ${resName} is outside the permission slip for "${env.title}" — needs a yes.`);
       }
     }
     if (env.filesUsed >= env.fileBudget && req.action === "WRITE" && decision === "ALLOW") {

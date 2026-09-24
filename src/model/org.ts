@@ -46,6 +46,8 @@ export const USERS: OrgUser[] = [
   { id: "u-daniel", name: "Daniel Kim", role: "Developer", email: "daniel.kim@veridian.example" },
   { id: "u-maya", name: "Maya Chen", role: "Security Analyst", email: "maya.chen@veridian.example" },
   { id: "u-alex", name: "Alex Morgan", role: "Engineering Manager", email: "alex.morgan@veridian.example" },
+  { id: "u-sam", name: "Sam Rivera", role: "Finance Controller", email: "sam.rivera@veridian.example" },
+  { id: "u-jordan", name: "Jordan Lee", role: "Support Lead", email: "jordan.lee@veridian.example" },
 ];
 
 export const DEVICES: OrgDevice[] = [
@@ -53,6 +55,8 @@ export const DEVICES: OrgDevice[] = [
   { id: "d-daniel-mbp", name: "Daniel-MBP", owner: "u-daniel", os: "macOS 15.5", enrolled: true },
   { id: "d-maya-mbp", name: "Maya-MBP", owner: "u-maya", os: "macOS 15.6", enrolled: true },
   { id: "d-fin-07", name: "Finance-Laptop-07", owner: "u-alex", os: "macOS 14.7", enrolled: true },
+  { id: "d-sam-mbp", name: "Sam-MBP", owner: "u-sam", os: "macOS 15.6", enrolled: true },
+  { id: "d-jordan-mbp", name: "Jordan-MBP", owner: "u-jordan", os: "macOS 15.5", enrolled: true },
 ];
 
 export const AGENTS: OrgAgent[] = [
@@ -114,6 +118,7 @@ export const RESOURCES: OrgResource[] = [
   { id: "r-aws-prod", name: "AWS Production", kind: "cloud", environment: "production", sensitivity: "customer-impacting", detail: "Account 84115520 · us-east-1" },
   { id: "r-aws-staging", name: "AWS Staging", kind: "cloud", environment: "staging", sensitivity: "internal", detail: "Account 84115521 · us-east-1" },
   { id: "r-github", name: "GitHub Organization", kind: "saas", environment: "production", sensitivity: "sensitive", detail: "github.com/veridian · 38 repos" },
+  { id: "r-stripe", name: "Stripe payments", kind: "saas", environment: "production", sensitivity: "customer-impacting", detail: "Stripe · refunds and charges for Veridian customers" },
   { id: "r-support-saas", name: "Support SaaS", kind: "saas", environment: "production", sensitivity: "sensitive", detail: "Salesforce Service Cloud" },
   { id: "r-env-file", name: ".env", kind: "secret", environment: "local", sensitivity: "sensitive", detail: "Local secrets file · 6 credentials" },
   { id: "r-src", name: "src/", kind: "file", environment: "local", sensitivity: "internal", detail: "Local working tree of checkout-service" },
