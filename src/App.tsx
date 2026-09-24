@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bot, BrainCircuit, CirclePlay, FileCheck2, FlaskConical, Hand, KeyRound,
-  LayoutGrid, ListChecks, ListTree, Play, Plug, ScrollText, Settings as SettingsIcon,
-  ShieldCheck, Siren, Table2, Timer, Waypoints, type LucideIcon,
+  LayoutGrid, ListChecks, ListTree, Play, Plug, ScrollText, Search,
+  Settings as SettingsIcon, ShieldCheck, Siren, Table2, Timer, Waypoints,
+  type LucideIcon,
 } from "lucide-react";
 import { useAppState, metrics } from "./state/store";
-import { logoUrl } from "./ui/logos";
+import { WrapboxWordmark } from "./ui/logo";
+import { Avatar } from "./ui/kit";
 import { ControlRoom } from "./pages/control-room";
 import { LiveActions } from "./pages/live-actions";
 import { AgentsPage } from "./pages/agents";
@@ -26,10 +28,11 @@ import { CoreBrainPage } from "./pages/core-brain";
 import { SettingsPage } from "./pages/settings";
 import { DemoBar, DEMO_SCRIPT } from "./pages/demo";
 
-export type Route = string; // "control" | "live" | ... | "simlab/network"
+export type Route = string;
 
-const NAV: { group: string; items: { route: string; label: string; icon: LucideIcon }[] }[] = [
-  { group: "Overview", items: [{ route: "control", label: "Control Room", icon: LayoutGrid }] },
+interface NavItem { route: string; label: string; icon: LucideIcon }
+const NAV: { group?: string; items: NavItem[] }[] = [
+  { items: [{ route: "control", label: "Control Room", icon: LayoutGrid }] },
   {
     group: "Activity",
     items: [
@@ -69,10 +72,10 @@ const NAV: { group: string; items: { route: string; label: string; icon: LucideI
       { route: "integrations", label: "Integrations", icon: Plug },
       { route: "vault", label: "Token Vault", icon: KeyRound },
       { route: "brain", label: "Core Brain", icon: BrainCircuit },
-      { route: "settings", label: "Settings", icon: SettingsIcon },
     ],
   },
 ];
+const ALL_ITEMS: NavItem[] = [...NAV.flatMap((g) => g.items), { route: "settings", label: "Settings", icon: SettingsIcon }];
 
 function useRoute(): [Route, (r: Route) => void] {
   const [route, setRoute] = useState<Route>(() => location.hash.slice(1) || "control");
@@ -88,12 +91,124 @@ function useRoute(): [Route, (r: Route) => void] {
   return [route, nav];
 }
 
+/** ⌘K command palette — jump to any screen. */
+function Palette({ open, onClose, nav }: { open: boolean; onClose: () => void; nav: (r: string) => void }) {
+  const [q, setQ] = useState("");
+  const [sel, setSel] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const hits = useMemo(
+    () => ALL_ITEMS.filter((i) => i.label.toLowerCase().includes(q.toLowerCase())),
+    [q]
+  );
+  useEffect(() => {
+    if (open) { setQ(""); setSel(0); setTimeout(() => inputRef.current?.focus(), 10); }
+  }, [open]);
+  if (!open) return null;
+  const go = (r: string) => { onClose(); nav(r); };
+  return (
+    <>
+      <div className="drawer-veil" onClick={onClose} />
+      <div className="palette" role="dialog">
+        <div className="palette-input-row">
+          <Search size={15} style={{ color: "var(--fg-3)", flexShrink: 0 }} />
+          <input
+            ref={inputRef}
+            className="palette-input"
+            placeholder="Search screens…"
+            value={q}
+            onChange={(e) => { setQ(e.target.value); setSel(0); }}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown") { e.preventDefault(); setSel((s) => Math.min(hits.length - 1, s + 1)); }
+              if (e.key === "ArrowUp") { e.preventDefault(); setSel((s) => Math.max(0, s - 1)); }
+              if (e.key === "Enter" && hits[sel]) go(hits[sel].route);
+              if (e.key === "Escape") onClose();
+            }}
+          />
+          <kbd className="kbd">esc</kbd>
+        </div>
+        <div className="palette-list">
+          {hits.map((h, i) => (
+            <button key={h.route} className={`palette-item ${i === sel ? "sel" : ""}`} onMouseEnter={() => setSel(i)} onClick={() => go(h.route)}>
+              <h.icon size={15} style={{ color: "var(--fg-3)" }} />
+              {h.label}
+            </button>
+          ))}
+          {hits.length === 0 && <div className="empty" style={{ padding: 18 }}>No screens match.</div>}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Topbar({ nav, onPalette }: { nav: (r: string) => void; onPalette: () => void }) {
+  const s = useAppState();
+  const m = metrics(s);
+  const activeRules = s.contracts.filter((c) => c.status === "ACTIVE").reduce((n, c) => n + c.clauses.length, 0);
+  return (
+    <header className="topbar">
+      <a onClick={() => nav("control")} aria-label="Wrapbox home" style={{ cursor: "pointer", flexShrink: 0, display: "flex" }}>
+        <WrapboxWordmark tone="light" />
+      </a>
+      <span className="topbar-div" />
+      <button className="workspace-menu" onClick={() => nav("settings")}>
+        <span className="workspace-dot" />
+        Veridian Systems
+        <span className="faint" style={{ fontWeight: 400 }}>· Demo environment</span>
+      </button>
+      <button className="topbar-search" onClick={onPalette}>
+        <Search size={15} />
+        Search screens, agents, rules, evidence…
+        <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+          <kbd className="kbd">⌘</kbd>
+          <kbd className="kbd">K</kbd>
+        </span>
+      </button>
+      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+        {m.pendingReviews > 0 && (
+          <button className="pill pill-review" onClick={() => nav("reviews")}>
+            <span className="pill-dot" style={{ background: "var(--review)" }} />
+            {m.pendingReviews} pending {m.pendingReviews === 1 ? "review" : "reviews"}
+          </button>
+        )}
+        <span className="pill pill-ok">
+          <span className="pill-dot live-dot" style={{ background: "var(--allow)" }} />
+          Enforcing {activeRules} rules
+        </span>
+        <Avatar userId="u-priya" size={30} />
+      </div>
+    </header>
+  );
+}
+
+function NavLink({ it, active, onClick, badge }: { it: NavItem; active: boolean; onClick: () => void; badge?: number }) {
+  return (
+    <button className={`nav-item ${active ? "active" : ""}`} onClick={onClick}>
+      {active && <span className="nav-active-bar" />}
+      <it.icon size={16} strokeWidth={1.8} />
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.label}</span>
+      {badge !== undefined && badge > 0 && <span className="badge-count">{badge}</span>}
+    </button>
+  );
+}
+
 export function App() {
   const state = useAppState();
   const [route, nav] = useRoute();
+  const [palette, setPalette] = useState(false);
   const m = metrics(state);
   const base = route.split("/")[0];
   const demoOn = state.demoStep >= 0;
+
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPalette((p) => !p);
+      }
+    };
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, []);
 
   const page = (() => {
     switch (base) {
@@ -120,51 +235,46 @@ export function App() {
   })();
 
   return (
-    <div className="shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-mark">
-            <img src={logoUrl("wrapbox-mark")} alt="Wrapbox" />
-          </div>
-          <div>
-            <div className="brand-name">Wrapbox</div>
-            <div className="faint" style={{ fontSize: 10 }}>Veridian Systems</div>
-          </div>
-        </div>
-        <div className="brand-env">DEMO ENVIRONMENT</div>
-        {NAV.map((g) => (
-          <div className="nav-group" key={g.group}>
-            <div className="nav-group-label">{g.group}</div>
-            {g.items.map((it) => (
-              <button
-                key={it.route}
-                className={`nav-item ${base === it.route ? "active" : ""}`}
-                onClick={() => nav(it.route)}
-              >
-                <it.icon />
-                {it.label}
-                {it.route === "reviews" && m.pendingReviews > 0 && (
-                  <span className="badge-count">{m.pendingReviews}</span>
-                )}
-              </button>
+    <div className="shell-col">
+      <Topbar nav={nav} onPalette={() => setPalette(true)} />
+      <div className="shell">
+        <aside className="sidebar">
+          <nav className="sidebar-nav">
+            {NAV.map((g, gi) => (
+              <div key={gi} className={gi > 0 ? "nav-group" : "nav-group first"}>
+                {g.group && <div className="nav-group-label">{g.group}</div>}
+                <div className="nav-group-items">
+                  {g.items.map((it) => (
+                    <NavLink
+                      key={it.route}
+                      it={it}
+                      active={base === it.route}
+                      onClick={() => nav(it.route)}
+                      badge={it.route === "reviews" ? m.pendingReviews : undefined}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
+          </nav>
+          <div className="sidebar-bottom">
+            <NavLink it={{ route: "settings", label: "Settings", icon: SettingsIcon }} active={base === "settings"} onClick={() => nav("settings")} />
+            {!demoOn && (
+              <button className="btn btn-primary" style={{ width: "100%", marginTop: 8 }} onClick={() => DEMO_SCRIPT.start(nav)}>
+                <Play size={13} /> Demo Mode
+              </button>
+            )}
+            <div className="faint" style={{ fontSize: 10, marginTop: 8, lineHeight: 1.45 }}>
+              Wrapbox Real Prototype · integrations simulated · product behavior live
+            </div>
           </div>
-        ))}
-        <div className="sidebar-foot">
-          {!demoOn && (
-            <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => DEMO_SCRIPT.start(nav)}>
-              <Play size={13} /> Demo Mode
-            </button>
-          )}
-          <div className="faint" style={{ fontSize: 10, marginTop: 8 }}>
-            Wrapbox Real Prototype · all integrations simulated · product behavior live
-          </div>
-        </div>
-      </aside>
-      <main className="main" style={demoOn ? { paddingBottom: 90 } : undefined}>
-        {page}
-      </main>
+        </aside>
+        <main className="main" style={demoOn ? { paddingBottom: 90 } : undefined}>
+          {page}
+        </main>
+      </div>
       {demoOn && <DemoBar nav={nav} />}
+      <Palette open={palette} onClose={() => setPalette(false)} nav={nav} />
     </div>
   );
 }
