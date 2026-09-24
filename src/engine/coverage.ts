@@ -61,6 +61,8 @@ export interface CoverageRow {
   needs: { id: string; label: string; status: CoverageStatus }[];
   status: CoverageStatus; // what Wrapbox can deliver for this promise
   inactiveReason?: string; // for group === "inactive"
+  // For group === "gap": the live promises this weak skill is holding back.
+  affects?: { rules: CoverageRow[]; safety: CoverageRow[] };
 }
 
 // Skills each always-on Safety Kernel rule depends on.
@@ -145,18 +147,25 @@ export function buildCoverageMatrix(contracts: IntentContract[]) {
     };
   });
 
-  // Every skill that is not fully enforced is a gap, whether or not a rule uses it.
-  const gaps: CoverageRow[] = CAPABILITIES.filter((c) => c.status !== "ENFORCED").map((c) => ({
-    id: c.id,
-    group: "gap" as const,
-    title: c.label,
-    source: c.note,
-    dataClasses: [],
-    destination: "—",
-    planes: [c.plane],
-    needs: [{ id: c.id, label: c.label, status: c.status }],
-    status: c.status,
-  }));
+  // Every skill that is not fully enforced is a gap, whether or not a rule uses
+  // it. Each gap lists the switched-on promises it holds back, and gaps are
+  // sorted so the one hurting the most promises comes first (fix-first order).
+  const uses = (r: CoverageRow, capId: string) => r.needs.some((n) => n.id === capId);
+  const gaps: CoverageRow[] = CAPABILITIES.filter((c) => c.status !== "ENFORCED")
+    .map((c) => ({
+      id: c.id,
+      group: "gap" as const,
+      title: c.label,
+      source: c.note,
+      dataClasses: [],
+      destination: "—",
+      planes: [c.plane],
+      needs: [{ id: c.id, label: c.label, status: c.status }],
+      status: c.status,
+      affects: { rules: rules.filter((r) => uses(r, c.id)), safety: safety.filter((r) => uses(r, c.id)) },
+    }))
+    .sort((a, b) =>
+      (b.affects.rules.length + b.affects.safety.length) - (a.affects.rules.length + a.affects.safety.length));
 
   // Summary counts cover everything live: switched-on rules, always-on safety,
   // and known skill gaps. Drafts / switched-off rules are not counted.

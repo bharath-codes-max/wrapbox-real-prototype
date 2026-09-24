@@ -65,6 +65,23 @@ test("store refuses to activate a PENDING contract", async () => {
   assert.equal(store.setContractStatus("ic-hr-legal", "DEACTIVATED"), true);
 });
 
+test("each gap lists the live promises it holds back, worst first", () => {
+  const cs = seed();
+  const m = buildCoverageMatrix(cs);
+  const semantic = m.gaps.find((g) => g.id === "cap-semantic")!;
+  assert.deepEqual(semantic.affects!.rules.map((r) => r.source), ["HR & privileged material", "HR & privileged material"]);
+  const cloud = m.gaps.find((g) => g.id === "cap-gw-cloud")!;
+  assert.equal(cloud.affects!.rules.length, 1); // Engineering: production deploys
+  assert.equal(cloud.affects!.safety.length, 2); // destructive prod + permission escalation
+  const clipboard = m.gaps.find((g) => g.id === "cap-ep-clipboard")!;
+  assert.equal(clipboard.affects!.rules.length + clipboard.affects!.safety.length, 0);
+  const totals = m.gaps.map((g) => g.affects!.rules.length + g.affects!.safety.length);
+  assert.deepEqual(totals, [...totals].sort((a, b) => b - a));
+  // switching the HR contract off removes its rules from the semantic gap
+  byId(cs, "ic-hr-legal").status = "DEACTIVATED";
+  assert.equal(buildCoverageMatrix(cs).gaps.find((g) => g.id === "cap-semantic")!.affects!.rules.length, 0);
+});
+
 test("known gaps are every skill not fully enforced, and the counts add up", () => {
   const m = buildCoverageMatrix(seed());
   assert.equal(m.gaps.length, CAPABILITIES.filter((c) => c.status !== "ENFORCED").length);
