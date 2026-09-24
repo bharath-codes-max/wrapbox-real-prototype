@@ -1,0 +1,453 @@
+// ============================================================================
+// App store — single source of truth. Every screen derives from this state;
+// no screen keeps its own copy of events, reviews, contracts or tokens.
+// Persists to localStorage (Reset Demo Data restores the seed).
+// ============================================================================
+
+import { useSyncExternalStore } from "react";
+import type {
+  AutopilotRecommendation, BreakGlassSession, IntentContract, SimulationEvent,
+  StandingPermission, TaskEnvelope, VaultToken, Decision,
+} from "../model/types";
+import { SEED_CONTRACTS } from "../model/contracts";
+import { SCENARIOS, TASK_SCENARIO, scenarioById, type Scenario } from "../engine/scenarios";
+import { runScenario, setSeq, getSeq, setTokenCounter } from "../engine/simulate";
+import { decide } from "../engine/brain";
+
+export interface AppState {
+  events: SimulationEvent[];
+  contracts: IntentContract[];
+  tasks: TaskEnvelope[];
+  tokens: VaultToken[];
+  standing: StandingPermission[];
+  breakGlass: BreakGlassSession[];
+  autopilot: AutopilotRecommendation[];
+  lastHash: string;
+  demoStep: number; // -1 = demo mode off
+}
+
+const STORAGE_KEY = "wrapbox-real-prototype-v1";
+
+// ---------------------------------------------------------------------------
+// Seed generation — a believable few days of history, produced through the
+// real engine (never hand-written decisions).
+// ---------------------------------------------------------------------------
+
+function seedState(): AppState {
+  setSeq(0);
+  setTokenCounter(0);
+  const contracts = structuredClone(SEED_CONTRACTS) as IntentContract[];
+  const events: SimulationEvent[] = [];
+  const tokens: VaultToken[] = [];
+  let lastHash = "genesis0";
+
+  const h = 3600 * 1000;
+  const now = Date.now();
+  // History: scenario id + how long ago. Ordered oldest → newest.
+  const history: [string, number][] = [
+    ["ep-read-src", 52 * h], ["ep-run-tests", 51.5 * h], ["gw-push-feature", 50 * h],
+    ["net-code-approved", 47 * h], ["net-pii-approved", 44 * h], ["ep-read-env", 40 * h],
+    ["gw-select-50", 36 * h], ["ep-del-tmp", 33 * h], ["net-cred-approved", 28 * h],
+    ["ctx-del-testdb", 26 * h], ["gw-force-main", 22 * h], ["sk-privkey-exfil", 18 * h],
+    ["net-code-unapproved", 14 * h], ["gw-export-500k", 10 * h], ["net-encrypted", 7 * h],
+    ["gw-iam-admin", 5 * h], ["net-unknown-dest", 3 * h], ["ep-read-src", 1.2 * h],
+    ["gw-select-50", 0.6 * h], ["ep-run-tests", 0.3 * h],
+  ];
+  for (const [sid, ago] of history) {
+    const sc = scenarioById(sid)!;
+    const out = runScenario(sc, contracts, lastHash, { timestamp: now - ago });
+    events.push(out.event);
+    tokens.push(...out.tokens);
+    lastHash = out.event.evidence.hash;
+  }
+  // Resolve a couple of old reviews so history looks lived-in.
+  const oldForce = events.find((e) => e.scenario === "gw-force-main");
+  if (oldForce?.reviewState) {
+    oldForce.reviewState = {
+      ...oldForce.reviewState,
+      status: "denied",
+      reviewer: "u-alex",
+      note: "Rewrite history on main is not acceptable; open a revert PR instead.",
+      decidedAt: now - 21 * h,
+    };
+    oldForce.status = "blocked";
+  }
+  const oldExport = events.find((e) => e.scenario === "net-code-unapproved");
+  if (oldExport?.reviewState) {
+    oldExport.reviewState = {
+      ...oldExport.reviewState,
+      status: "approved_scoped",
+      reviewer: "u-maya",
+      scope: "This file only, this destination, valid 4h",
+      decidedAt: now - 13 * h,
+    };
+    oldExport.status = "completed";
+  }
+
+  const standing: StandingPermission[] = [
+    {
+      id: "sp-001",
+      agent: "a-claude-code",
+      scope: "repository checkout-service",
+      allowed: ["edit files on feature branches", "run tests", "commit"],
+      forbidden: ["push main", "access production", "read credentials"],
+      window: "business hours (09:00–18:00 PT)",
+      expiresAt: now + 5 * 24 * h,
+      maxFilesPerTask: 25,
+      grantedBy: "u-alex",
+      status: "active",
+    },
+    {
+      id: "sp-002",
+      agent: "a-support",
+      scope: "customer-db (read-only)",
+      allowed: ["SELECT ≤500 rows per query", "ticket lookups"],
+      forbidden: ["writes", "bulk export", "schema changes"],
+      window: "24/7",
+      expiresAt: now + 12 * 24 * h,
+      maxFilesPerTask: 0,
+      grantedBy: "u-priya",
+      status: "active",
+    },
+  ];
+
+  const autopilot: AutopilotRecommendation[] = [
+    {
+      id: "ap-001",
+      observation: "93% of code-agent pushes over 30 days target feature branches; force pushes to main were reviewed or denied every time.",
+      recommendation: "Restrict automated pushes to feature branches; require review for any push to main.",
+      basedOnEvents: 412,
+      status: "open",
+    },
+    {
+      id: "ap-002",
+      observation: "Support Agent queries have never exceeded 120 rows in normal operation.",
+      recommendation: "Lower Support Agent standing row budget from 500 to 200 rows per query.",
+      basedOnEvents: 1873,
+      status: "open",
+    },
+    {
+      id: "ap-003",
+      observation: "An unknown MCP server (tcp/7823) on Finance-Laptop-07 attempted 3 external transfers in 48h.",
+      recommendation: "Quarantine the unknown MCP agent pending identification; block its external destinations.",
+      basedOnEvents: 3,
+      status: "open",
+    },
+  ];
+
+  return {
+    events,
+    contracts,
+    tasks: [],
+    tokens,
+    standing,
+    breakGlass: [],
+    autopilot,
+    lastHash,
+    demoStep: -1,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Store plumbing
+// ---------------------------------------------------------------------------
+
+let state: AppState = load();
+const listeners = new Set<() => void>();
+
+function load(): AppState {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as AppState & { _seq?: number; _tok?: number };
+      setSeq(parsed._seq ?? parsed.events.length);
+      setTokenCounter(parsed._tok ?? parsed.tokens.length);
+      return parsed;
+    }
+  } catch {
+    /* corrupted state → reseed */
+  }
+  return seedState();
+}
+
+function persist() {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...state, _seq: getSeq(), _tok: state.tokens.length })
+    );
+  } catch {
+    /* storage unavailable — session-only state is fine */
+  }
+}
+
+function emit() {
+  persist();
+  for (const l of listeners) l();
+}
+
+function subscribe(l: () => void) {
+  listeners.add(l);
+  return () => listeners.delete(l);
+}
+
+export function getState(): AppState {
+  return state;
+}
+
+export function useAppState(): AppState {
+  return useSyncExternalStore(subscribe, getState);
+}
+
+function set(patch: Partial<AppState>) {
+  state = { ...state, ...patch };
+  emit();
+}
+
+// ---------------------------------------------------------------------------
+// Actions
+// ---------------------------------------------------------------------------
+
+export function resetDemoData() {
+  state = seedState();
+  emit();
+}
+
+export function simulate(sc: Scenario, opts?: { breakGlass?: boolean }): SimulationEvent {
+  const bg = opts?.breakGlass ?? state.breakGlass.some((b) => b.active && b.startedAt + b.durationMin * 60000 > Date.now());
+  const out = runScenario(sc, state.contracts, state.lastHash, { breakGlass: bg });
+  set({
+    events: [...state.events, out.event],
+    tokens: [...state.tokens, ...out.tokens],
+    lastHash: out.event.evidence.hash,
+  });
+  return out.event;
+}
+
+export function simulateById(id: string): SimulationEvent | undefined {
+  const sc = scenarioById(id);
+  if (!sc) return undefined;
+  return simulate(sc);
+}
+
+// What-if evaluation that does NOT record an event (Policy Simulator).
+export function shadowEvaluate(sc: Scenario, contracts: IntentContract[]): Decision {
+  const seqBefore = getSeq();
+  const out = runScenario(sc, contracts, "shadow", { timestamp: Date.now() });
+  setSeq(seqBefore);
+  return out.event.decision;
+}
+
+export function resolveReview(
+  eventId: string,
+  resolution: "approved" | "approved_scoped" | "constrained" | "denied",
+  reviewer: string,
+  note?: string,
+  scope?: string
+) {
+  const events = state.events.map((e) => {
+    if (e.id !== eventId || !e.reviewState) return e;
+    const approved = resolution === "approved" || resolution === "approved_scoped";
+    return {
+      ...e,
+      reviewState: { ...e.reviewState, status: resolution, reviewer, note, scope, decidedAt: Date.now() },
+      status: approved ? ("completed" as const) : resolution === "constrained" ? ("transformed" as const) : ("blocked" as const),
+      evidence: {
+        ...e.evidence,
+        chain: [
+          ...e.evidence.chain,
+          { label: "Review", detail: `${resolution.replaceAll("_", " ")} by ${reviewer}${scope ? ` · scope: ${scope}` : ""}` },
+          { label: "Outcome", detail: approved ? "Action executed after approval" : resolution === "constrained" ? "Constrained alternative executed" : "Action remained blocked" },
+        ],
+      },
+    };
+  });
+  set({ events });
+  // Resume any parked task step tied to this event.
+  const ev = events.find((e) => e.id === eventId);
+  if (ev?.taskId) resumeParkedStep(ev.taskId, eventId, resolution);
+}
+
+// ---------------------------------------------------------------------------
+// Task engine — envelope + park/resume (§25, §28)
+// ---------------------------------------------------------------------------
+
+export function startTask(): TaskEnvelope {
+  const t = TASK_SCENARIO;
+  const envelope: TaskEnvelope = {
+    taskId: `task-${Date.now().toString(36)}`,
+    title: t.title,
+    agent: t.agent,
+    user: t.user,
+    allowedResources: ["src/", "tests/", "tmp/", "CHANGELOG.md", "docs/", "checkout-service", "r-checkout"],
+    allowedActions: ["READ", "WRITE", "EXECUTE", "DELETE"],
+    environment: "development",
+    forbidden: ["production", ".env", "credentials"],
+    durationMin: 30,
+    startedAt: Date.now(),
+    fileBudget: 25,
+    filesUsed: 0,
+    status: "active",
+    steps: t.steps.map((s, i) => ({
+      index: i,
+      label: s.label,
+      action: s.action,
+      resource: s.resource,
+      dependsOn: s.dependsOn,
+      state: "pending",
+    })),
+  };
+  set({ tasks: [...state.tasks, envelope] });
+  return envelope;
+}
+
+// Advance the task: run every step whose dependencies are satisfied.
+export function advanceTask(taskId: string): void {
+  const task = state.tasks.find((t) => t.taskId === taskId);
+  if (!task || task.status !== "active") return;
+  const t = TASK_SCENARIO;
+  let tasks = state.tasks;
+  let events = state.events;
+  let lastHash = state.lastHash;
+  let updated = { ...task, steps: task.steps.map((s) => ({ ...s })) };
+
+  const stepDone = (i: number) => updated.steps[i].state === "done";
+
+  for (const step of updated.steps) {
+    if (step.state !== "pending") continue;
+    const depsMet = step.dependsOn.every(stepDone);
+    const depParked = step.dependsOn.some((d) => updated.steps[d].state === "parked" || updated.steps[d].state === "blocked");
+    if (!depsMet) {
+      if (depParked) step.state = "waiting_dependency";
+      continue;
+    }
+    const def = t.steps[step.index];
+    const sc: Scenario = {
+      id: `${taskId}-step-${step.index}`,
+      group: "TASK",
+      title: step.label,
+      narrative: step.label,
+      expected: "",
+      plane: def.environment === "production" ? "GATEWAY" : "ENDPOINT",
+      action: def.action,
+      actionRaw: def.actionRaw,
+      agent: t.agent,
+      user: t.user,
+      application: "Terminal",
+      resource: def.resource,
+      environment: def.environment,
+      sensitivity: def.sensitivity,
+    };
+    const out = runScenario(sc, state.contracts, lastHash);
+    out.event.taskId = taskId;
+    out.event.stepIndex = step.index;
+    out.event.dependsOn = step.dependsOn;
+    if (out.event.decision === "REVIEW") {
+      out.event.status = "parked";
+      step.state = "parked";
+    } else if (out.event.decision === "BLOCK") {
+      step.state = "blocked";
+    } else {
+      step.state = "done";
+      if (def.action === "WRITE") updated.filesUsed += 1;
+    }
+    step.decision = out.event.decision;
+    step.eventId = out.event.id;
+    events = [...events, out.event];
+    lastHash = out.event.evidence.hash;
+  }
+  // Mark waiting steps.
+  for (const step of updated.steps) {
+    if (step.state === "pending" && step.dependsOn.some((d) => updated.steps[d].state === "parked")) {
+      step.state = "waiting_dependency";
+    }
+  }
+  const allDone = updated.steps.every((s) => s.state === "done");
+  const anyParked = updated.steps.some((s) => s.state === "parked" || s.state === "waiting_dependency");
+  updated.status = allDone ? "completed" : anyParked ? "parked" : "active";
+  tasks = tasks.map((x) => (x.taskId === taskId ? updated : x));
+  set({ tasks, events, lastHash });
+}
+
+function resumeParkedStep(taskId: string, eventId: string, resolution: string) {
+  const approved = resolution === "approved" || resolution === "approved_scoped" || resolution === "constrained";
+  let tasks = state.tasks.map((task) => {
+    if (task.taskId !== taskId) return task;
+    const steps = task.steps.map((s) => {
+      if (s.eventId !== eventId) return s;
+      return { ...s, state: approved ? ("done" as const) : ("blocked" as const) };
+    });
+    return { ...task, steps, status: "active" as const };
+  });
+  state = { ...state, tasks };
+  // Waiting dependents become pending again and run.
+  tasks = state.tasks.map((task) => {
+    if (task.taskId !== taskId) return task;
+    const steps = task.steps.map((s) =>
+      s.state === "waiting_dependency" ? { ...s, state: "pending" as const } : s
+    );
+    return { ...task, steps };
+  });
+  state = { ...state, tasks };
+  emit();
+  advanceTask(taskId);
+}
+
+// ---------------------------------------------------------------------------
+// Contracts / standing / break-glass / autopilot / vault
+// ---------------------------------------------------------------------------
+
+export function upsertContract(c: IntentContract) {
+  const exists = state.contracts.some((x) => x.id === c.id);
+  set({
+    contracts: exists
+      ? state.contracts.map((x) => (x.id === c.id ? { ...c, version: x.version + 1 } : x))
+      : [...state.contracts, c],
+  });
+}
+
+export function setContractStatus(id: string, status: IntentContract["status"]) {
+  set({ contracts: state.contracts.map((c) => (c.id === id ? { ...c, status } : c)) });
+}
+
+export function startBreakGlass(requester: string, reason: string, scope: string, durationMin: number) {
+  const bg: BreakGlassSession = {
+    id: `bg-${Date.now().toString(36)}`,
+    requester, reason, scope, durationMin,
+    startedAt: Date.now(), active: true,
+  };
+  set({ breakGlass: [...state.breakGlass, bg] });
+}
+
+export function endBreakGlass(id: string) {
+  set({ breakGlass: state.breakGlass.map((b) => (b.id === id ? { ...b, active: false } : b)) });
+}
+
+export function setAutopilotStatus(id: string, status: AutopilotRecommendation["status"]) {
+  set({ autopilot: state.autopilot.map((a) => (a.id === id ? { ...a, status } : a)) });
+}
+
+export function revokeStanding(id: string) {
+  set({ standing: state.standing.map((s) => (s.id === id ? { ...s, status: "revoked" } : s)) });
+}
+
+// ---------------------------------------------------------------------------
+// Derived metrics — every dashboard number comes from here.
+// ---------------------------------------------------------------------------
+
+export function metrics(s: AppState) {
+  const counts: Record<Decision, number> = { ALLOW: 0, CONSTRAIN: 0, REVIEW: 0, BLOCK: 0 };
+  let secretsProtected = 0;
+  let transfersTransformed = 0;
+  let highRisk = 0;
+  for (const e of s.events) {
+    counts[e.decision] += 1;
+    if (e.decision === "BLOCK" && e.dataClasses.some((c) => c.startsWith("CREDENTIAL."))) secretsProtected += 1;
+    if (e.transformation && e.transformation.length > 0) transfersTransformed += 1;
+    if (e.risk === "high" || e.risk === "critical") highRisk += 1;
+  }
+  const pendingReviews = s.events.filter((e) => e.reviewState?.status === "pending").length;
+  return { counts, secretsProtected, transfersTransformed, highRisk, pendingReviews, total: s.events.length };
+}
+
+export { SCENARIOS };

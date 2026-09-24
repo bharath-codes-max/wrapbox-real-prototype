@@ -1,0 +1,398 @@
+// ============================================================================
+// Core Brain — the single deterministic decision engine.
+// Every plane (Endpoint / Network / Gateway) calls decide() with a normalized
+// ActionRequest. Precedence (blueprint §Week-3):
+//   explicit enterprise forbid (BLOCK clause)
+//   > safety invariant (Safety Kernel)
+//   > enterprise constrain
+//   > enterprise review
+//   > blast-radius governor
+//   > context escalation
+//   > enterprise permit / default
+// UNINSPECTABLE content with an applicable fail-closed protected clause fails
+// closed — inability to inspect is never "clean".
+// ============================================================================
+
+import type {
+  ActionVerb, BlastRadius, ContractClause, Decision, DestinationClass,
+  Environment, EventContext, IntentContract, InspectionResult, MatchedClause,
+  SafetyRuleHit, TaskEnvelope, TransformKind,
+} from "../model/types";
+
+export interface ActionRequest {
+  plane: "ENDPOINT" | "NETWORK" | "GATEWAY";
+  action: ActionVerb;
+  actionRaw?: string;
+  agent: string;
+  user: string;
+  resource: string;
+  environment: Environment;
+  destinationClass?: DestinationClass;
+  inspection?: InspectionResult; // content inspection result if content involved
+  context: EventContext;
+  blastRadius?: BlastRadius;
+  envelope?: TaskEnvelope | null;
+  breakGlass?: boolean;
+}
+
+export interface BrainResult {
+  decision: Decision;
+  reasons: string[];
+  matchedContracts: MatchedClause[];
+  safetyRules: SafetyRuleHit[];
+  transform?: TransformKind;
+  transformClasses: string[];
+  safeAlternative?: string;
+  risk: "low" | "moderate" | "high" | "critical";
+}
+
+// ---------------------------------------------------------------------------
+// Safety Kernel — baseline invariants that apply even with zero contracts.
+// Narrow, explainable; not a hidden giant ruleset.
+// ---------------------------------------------------------------------------
+
+export const SAFETY_RULES = [
+  {
+    ruleId: "sk-cred-exfil",
+    name: "Credential exfiltration",
+    description: "Credentials must not leave the device to any external destination.",
+  },
+  {
+    ruleId: "sk-destructive-prod",
+    name: "Destructive production mutation",
+    description: "Irreversible destructive operations against customer-impacting production resources.",
+  },
+  {
+    ruleId: "sk-security-change",
+    name: "Security-control change",
+    description: "Disabling or weakening a security control (SIP, Gatekeeper, EDR, Wrapbox itself).",
+  },
+  {
+    ruleId: "sk-perm-escalation",
+    name: "Dangerous permission change",
+    description: "Granting broad administrative authority to an identity or role.",
+  },
+  {
+    ruleId: "sk-mass-export",
+    name: "Mass data export",
+    description: "Bulk export of records far beyond normal working scope.",
+  },
+  {
+    ruleId: "sk-unknown-highrisk",
+    name: "Unknown high-risk external transfer",
+    description: "Sensitive data classes flowing to an unclassified external endpoint.",
+  },
+] as const;
+
+function safetyKernel(req: ActionRequest): SafetyRuleHit[] {
+  const hits: SafetyRuleHit[] = [];
+  const classes = req.inspection?.findings.map((f) => f.dataClass) ?? [];
+  const hasCred = classes.some((c) => c.startsWith("CREDENTIAL."));
+  const external =
+    req.destinationClass !== undefined && req.destinationClass !== "INTERNAL";
+
+  if (hasCred && (req.action === "NETWORK_SEND" || req.action === "DATA_EXPORT") && external) {
+    hits.push(rule("sk-cred-exfil"));
+  }
+  if (
+    req.action === "DELETE" &&
+    req.environment === "production" &&
+    req.context.resourceSensitivity === "customer-impacting"
+  ) {
+    hits.push(rule("sk-destructive-prod"));
+  }
+  if (req.action === "SECURITY_CHANGE") hits.push(rule("sk-security-change"));
+  if (req.action === "PERMISSION_CHANGE" && req.blastRadius?.severity === "critical") {
+    hits.push(rule("sk-perm-escalation"));
+  }
+  if (
+    req.action === "DATA_EXPORT" &&
+    (req.blastRadius?.rows ?? 0) >= 100_000
+  ) {
+    hits.push(rule("sk-mass-export"));
+  }
+  if (
+    req.destinationClass === "UNKNOWN_EXTERNAL" &&
+    classes.some((c) => sensitiveFamily(c))
+  ) {
+    hits.push(rule("sk-unknown-highrisk"));
+  }
+  return hits;
+}
+
+function rule(id: (typeof SAFETY_RULES)[number]["ruleId"]): SafetyRuleHit {
+  const r = SAFETY_RULES.find((x) => x.ruleId === id)!;
+  return { ruleId: r.ruleId, name: r.name, description: r.description };
+}
+
+function sensitiveFamily(c: string): boolean {
+  return (
+    c.startsWith("CREDENTIAL.") || c.startsWith("PCI.") || c.startsWith("HEALTH.") ||
+    c.startsWith("FINANCIAL.") || c.startsWith("LEGAL.") || c.startsWith("HR.") ||
+    c === "PII.SSN" || c === "CUSTOM.CUSTOMER_ID" || c === "COMPANY.TRADE_SECRET"
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Blast-Radius Governor — quantitative thresholds (blueprint §26).
+// ---------------------------------------------------------------------------
+
+export const BLAST_LIMITS = {
+  files: 25,
+  rows: 500,
+  exportRows: 500, // above → review; ≥100k → safety kernel mass export
+  spendUsd: 20,
+  recipients: 20,
+};
+
+function blastGovernor(req: ActionRequest): { escalate: Decision | null; reason?: string } {
+  const b = req.blastRadius;
+  if (!b) return { escalate: null };
+  if (b.files !== undefined && b.files > BLAST_LIMITS.files) {
+    return { escalate: "REVIEW", reason: `File-change budget exceeded: ${b.files} > ${BLAST_LIMITS.files} files` };
+  }
+  if (b.rows !== undefined && req.action === "DATA_EXPORT" && b.rows > BLAST_LIMITS.exportRows) {
+    return {
+      escalate: b.rows >= 100_000 ? "BLOCK" : "REVIEW",
+      reason: `Row export exceeds budget: ${fmt(b.rows)} > ${BLAST_LIMITS.exportRows} rows`,
+    };
+  }
+  if (b.rows !== undefined && req.action === "READ" && b.rows > BLAST_LIMITS.rows) {
+    return { escalate: "REVIEW", reason: `Row read exceeds budget: ${fmt(b.rows)} > ${BLAST_LIMITS.rows} rows` };
+  }
+  if (b.spendUsd !== undefined && b.spendUsd > BLAST_LIMITS.spendUsd) {
+    return { escalate: "REVIEW", reason: `Cloud spend exceeds budget: $${fmt(b.spendUsd)} > $${BLAST_LIMITS.spendUsd}` };
+  }
+  if (b.recipients !== undefined && b.recipients > BLAST_LIMITS.recipients) {
+    return {
+      escalate: b.recipients >= 1000 ? "BLOCK" : "REVIEW",
+      reason: `Recipient count exceeds budget: ${fmt(b.recipients)} > ${BLAST_LIMITS.recipients}`,
+    };
+  }
+  return { escalate: null };
+}
+
+function fmt(n: number): string {
+  return n.toLocaleString("en-US");
+}
+
+// ---------------------------------------------------------------------------
+// Contract matching
+// ---------------------------------------------------------------------------
+
+function clauseMatches(cl: ContractClause, req: ActionRequest, classes: string[]): boolean {
+  if (cl.actions !== "ANY" && !cl.actions.includes(req.action)) return false;
+  if (cl.environments && !cl.environments.includes(req.environment)) return false;
+  if (cl.destinations !== "ANY") {
+    if (!req.destinationClass) {
+      // Destination-scoped clauses only apply to flows that have a destination
+      if (req.action === "NETWORK_SEND" || req.action === "DATA_EXPORT") return false;
+      // Endpoint clauses (e.g. secret read) list destinations "ANY" normally;
+      // a destination-scoped clause without a destination in request: no match
+      return false;
+    }
+    if (!cl.destinations.includes(req.destinationClass)) return false;
+  }
+  if (cl.dataClasses.length > 0) {
+    if (!classes.some((c) => cl.dataClasses.includes(c))) return false;
+  }
+  return true;
+}
+
+// Does a protected (fail-closed) clause *potentially* apply if we cannot
+// inspect content? Match everything except data classes.
+function protectedClausePotentiallyApplies(cl: ContractClause, req: ActionRequest): boolean {
+  if (!cl.failClosed || cl.dataClasses.length === 0) return false;
+  if (cl.actions !== "ANY" && !cl.actions.includes(req.action)) return false;
+  if (cl.environments && !cl.environments.includes(req.environment)) return false;
+  if (cl.destinations !== "ANY") {
+    if (!req.destinationClass) return false;
+    if (!cl.destinations.includes(req.destinationClass)) return false;
+  }
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// decide() — the single decision function.
+// ---------------------------------------------------------------------------
+
+const DECISION_RANK: Record<Decision, number> = { ALLOW: 0, CONSTRAIN: 1, REVIEW: 2, BLOCK: 3 };
+
+export function decide(req: ActionRequest, contracts: IntentContract[]): BrainResult {
+  const reasons: string[] = [];
+  const matched: MatchedClause[] = [];
+  const classes = req.inspection?.inspectable
+    ? req.inspection.findings.map((f) => f.dataClass)
+    : [];
+
+  const active = contracts.filter((c) => c.status === "ACTIVE");
+
+  // 0. Break-glass: scoped emergency override downgrades REVIEW/BLOCK → ALLOW
+  //    with loud evidence, applied at the END so reasons still show.
+
+  // 1. UNINSPECTABLE + applicable fail-closed protected clause → fail closed.
+  if (req.inspection && !req.inspection.inspectable) {
+    const applicable = active.flatMap((c) =>
+      c.clauses.filter((cl) => protectedClausePotentiallyApplies(cl, req)).map((cl) => ({ c, cl }))
+    );
+    if (applicable.length > 0) {
+      for (const { c, cl } of applicable) {
+        matched.push({ contractId: c.id, contractName: c.name, clauseId: cl.id, clauseText: cl.text });
+      }
+      reasons.push(
+        `Content is UNINSPECTABLE (${req.inspection.reason ?? "unknown format"}) and a protected requirement applies — failing closed.`
+      );
+      return finish(req, {
+        decision: "BLOCK", reasons, matchedContracts: matched, safetyRules: [],
+        transformClasses: [], risk: "high",
+        safeAlternative: "Provide the content in an inspectable format, or request a scoped exception.",
+      });
+    }
+    reasons.push(`Content is UNINSPECTABLE (${req.inspection.reason ?? "unknown"}); no protected clause applies to this flow.`);
+  }
+
+  // 2. Collect matched clauses.
+  let contractDecision: Decision = "ALLOW";
+  let transform: TransformKind | undefined;
+  let transformClasses: string[] = [];
+  let safeAlternative: string | undefined;
+
+  for (const c of active) {
+    for (const cl of c.clauses) {
+      if (!clauseMatches(cl, req, classes)) continue;
+      matched.push({ contractId: c.id, contractName: c.name, clauseId: cl.id, clauseText: cl.text });
+      if (DECISION_RANK[cl.effect] > DECISION_RANK[contractDecision]) {
+        contractDecision = cl.effect;
+      }
+      if (cl.effect === "CONSTRAIN" && cl.transform) {
+        transform = cl.transform;
+        transformClasses = [...new Set([...transformClasses, ...cl.dataClasses.filter((dc) => classes.includes(dc))])];
+      }
+      if (cl.effect === "BLOCK") {
+        reasons.push(`Enterprise forbid: "${cl.text}" (${c.name})`);
+      } else if (cl.effect === "REVIEW") {
+        reasons.push(`Enterprise review requirement: "${cl.text}" (${c.name})`);
+      } else if (cl.effect === "CONSTRAIN") {
+        reasons.push(`Enterprise constraint: "${cl.text}" (${c.name})`);
+      }
+    }
+  }
+
+  // 3. Safety Kernel.
+  const safety = safetyKernel(req);
+  for (const s of safety) reasons.push(`Safety Kernel: ${s.name} — ${s.description}`);
+
+  // 4. Combine per precedence: explicit forbid > safety invariant > constrain > review.
+  let decision: Decision = contractDecision;
+  if (safety.length > 0 && decision !== "BLOCK") {
+    decision = "BLOCK";
+  }
+
+  // 5. Blast-Radius Governor (cannot downgrade, only escalate).
+  const blast = blastGovernor(req);
+  if (blast.escalate && DECISION_RANK[blast.escalate] > DECISION_RANK[decision]) {
+    decision = blast.escalate;
+    reasons.push(`Blast-Radius Governor: ${blast.reason}`);
+  } else if (blast.reason) {
+    reasons.push(`Blast-Radius Governor noted: ${blast.reason}`);
+  }
+
+  // 6. Context escalation: privileged/production sensitivity raises risk;
+  //    destructive verbs in production without explicit clause still review.
+  if (
+    decision === "ALLOW" &&
+    req.environment === "production" &&
+    (req.action === "DELETE" || req.action === "DEPLOY" || req.action === "PERMISSION_CHANGE")
+  ) {
+    decision = "REVIEW";
+    reasons.push(
+      `Context Engine: ${req.action} in production against ${req.context.resourceSensitivity} resource requires authorization.`
+    );
+  }
+
+  // 7. Task Envelope: outside-envelope actions escalate.
+  if (req.envelope && req.envelope.status === "active") {
+    const env = req.envelope;
+    const resourceAllowed = env.allowedResources.some((r) => req.resource.includes(r) || r.includes(req.resource));
+    const actionAllowed = env.allowedActions.includes(req.action);
+    const forbidden = env.forbidden.some((f) => req.resource.toLowerCase().includes(f.toLowerCase()) || req.environment === f);
+    if (forbidden) {
+      if (DECISION_RANK[decision] < DECISION_RANK.BLOCK) {
+        decision = DECISION_RANK[decision] < DECISION_RANK.REVIEW ? "REVIEW" : decision;
+        reasons.push(`Task Envelope: "${req.resource}" is outside the envelope for task "${env.title}" (forbidden scope).`);
+      }
+    } else if (!resourceAllowed || !actionAllowed) {
+      if (decision === "ALLOW") {
+        decision = "REVIEW";
+        reasons.push(`Task Envelope: ${req.action} on ${req.resource} exceeds envelope scope for "${env.title}" — re-authorization required.`);
+      }
+    }
+    if (env.filesUsed >= env.fileBudget && req.action === "WRITE" && decision === "ALLOW") {
+      decision = "REVIEW";
+      reasons.push(`Task Envelope: file-change budget (${env.fileBudget}) exhausted — re-authorization required.`);
+    }
+  }
+
+  // 8. Default allow reason.
+  if (decision === "ALLOW" && reasons.length === 0) {
+    reasons.push(
+      matched.length > 0
+        ? "Permitted by enterprise policy; no safety invariant or limit triggered."
+        : "No policy or safety invariant restricts this action; within normal working scope."
+    );
+  }
+  if (decision === "CONSTRAIN" && transform) {
+    safeAlternative = `Automatic ${transform.replaceAll("_", " ").toLowerCase()} lets the work continue safely without review.`;
+  }
+  if (decision === "REVIEW") {
+    safeAlternative = suggestAlternative(req);
+  }
+  if (decision === "BLOCK" && !safeAlternative) {
+    safeAlternative = suggestAlternative(req);
+  }
+
+  // 9. Break-glass override (scoped, loud).
+  if (req.breakGlass && (decision === "REVIEW" || decision === "BLOCK") && safety.every((s) => s.ruleId !== "sk-cred-exfil")) {
+    reasons.push("BREAK-GLASS override active: decision executed under emergency authority with high-visibility evidence and automatic expiry.");
+    decision = "ALLOW";
+  }
+
+  return finish(req, {
+    decision, reasons, matchedContracts: matched, safetyRules: safety,
+    transform, transformClasses, safeAlternative,
+    risk: riskOf(req, decision, safety.length > 0),
+  });
+}
+
+function suggestAlternative(req: ActionRequest): string {
+  switch (req.action) {
+    case "DELETE":
+      return req.environment === "production"
+        ? "Safer alternative: soft-delete with retention, or run against staging first."
+        : "Safer alternative: move to trash / snapshot before delete.";
+    case "WRITE":
+      return "Safer alternative: push to a new feature branch and open a pull request.";
+    case "DATA_EXPORT":
+      return "Safer alternative: export an aggregated or row-limited sample (≤500 rows).";
+    case "DEPLOY":
+      return "Safer alternative: deploy to staging and request a scoped production window.";
+    case "PERMISSION_CHANGE":
+      return "Safer alternative: grant a narrowly scoped role with expiry instead of admin.";
+    case "SECRET_ACCESS":
+      return "Safer alternative: continue without the secret, or request a scoped exception.";
+    default:
+      return "Request a scoped, time-limited approval in Review Center.";
+  }
+}
+
+function riskOf(req: ActionRequest, decision: Decision, safetyHit: boolean): "low" | "moderate" | "high" | "critical" {
+  if (safetyHit) return "critical";
+  if (decision === "BLOCK") return "high";
+  if (decision === "REVIEW") return req.environment === "production" ? "high" : "moderate";
+  if (decision === "CONSTRAIN") return "moderate";
+  return "low";
+}
+
+function finish(_req: ActionRequest, r: BrainResult): BrainResult {
+  return r;
+}
