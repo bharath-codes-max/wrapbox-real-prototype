@@ -12,6 +12,7 @@ import type {
 import { SEED_CONTRACTS } from "../model/contracts";
 import { deviceOfUser, userById } from "../model/org";
 import { canActivate, contractCoverage } from "../engine/coverage";
+import { BASELINE_KERNEL, enforceRule, installRelease, pendingRelease, type KernelState } from "../engine/kernel";
 import { SCENARIOS, TASK_SCENARIO, scenarioById, type Scenario } from "../engine/scenarios";
 import { runScenario, setSeq, getSeq, setTokenCounter, getTokenCounter } from "../engine/simulate";
 import { decide } from "../engine/brain";
@@ -26,6 +27,7 @@ export interface AppState {
   autopilot: AutopilotRecommendation[];
   lastHash: string;
   demoStep: number; // -1 = demo mode off
+  kernel: KernelState; // installed Wrapbox Safety Kernel pack
 }
 
 const STORAGE_KEY = "wrapbox-real-prototype-v1";
@@ -147,6 +149,7 @@ function seedState(): AppState {
     autopilot,
     lastHash,
     demoStep: -1,
+    kernel: BASELINE_KERNEL,
   };
 }
 
@@ -190,7 +193,7 @@ function load(): AppState {
         }
         return out;
       });
-      return { ...parsed, events, demoStep: -1 }; // demo mode never persists across reloads
+      return { ...parsed, events, kernel: parsed.kernel ?? BASELINE_KERNEL, demoStep: -1 }; // demo mode never persists across reloads
     }
   } catch {
     /* corrupted state → reseed */
@@ -236,6 +239,23 @@ function set(patch: Partial<AppState>) {
 // Actions
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Safety Kernel updates (Wrapbox-managed rule pack)
+// ---------------------------------------------------------------------------
+
+/** Install the next Wrapbox Safety Kernel release; its new rules start in observe mode. */
+export function installKernelUpdate(): boolean {
+  const rel = pendingRelease(state.kernel);
+  if (!rel) return false;
+  set({ kernel: installRelease(state.kernel, rel, Date.now()) });
+  return true;
+}
+
+/** Move an observing kernel rule to enforcing ahead of its observation window. */
+export function enforceKernelRule(ruleId: string) {
+  set({ kernel: enforceRule(state.kernel, ruleId) });
+}
+
 export function setDemoStep(n: number) {
   set({ demoStep: n });
 }
@@ -247,7 +267,7 @@ export function resetDemoData() {
 
 export function simulate(sc: Scenario, opts?: { breakGlass?: boolean }): SimulationEvent {
   const bg = opts?.breakGlass ?? state.breakGlass.some((b) => b.active && b.startedAt + b.durationMin * 60000 > Date.now());
-  const out = runScenario(sc, state.contracts, state.lastHash, { breakGlass: bg });
+  const out = runScenario(sc, state.contracts, state.lastHash, { breakGlass: bg, kernel: state.kernel });
   set({
     events: [...state.events, out.event],
     tokens: [...state.tokens, ...out.tokens],
@@ -266,17 +286,17 @@ export function simulateById(id: string): SimulationEvent | undefined {
 /** Pure what-if through the real brain — nothing is recorded. Restores the
  *  event sequence and token counter so a preview never consumes ids that a
  *  real run will later show. */
-export function shadowEvent(sc: Scenario, contracts: IntentContract[]): SimulationEvent {
+export function shadowEvent(sc: Scenario, contracts: IntentContract[], kernel: KernelState = state.kernel): SimulationEvent {
   const seqBefore = getSeq();
   const tokBefore = getTokenCounter();
-  const out = runScenario(sc, contracts, "shadow", { timestamp: Date.now() });
+  const out = runScenario(sc, contracts, "shadow", { timestamp: Date.now(), kernel });
   setSeq(seqBefore);
   setTokenCounter(tokBefore);
   return out.event;
 }
 
-export function shadowEvaluate(sc: Scenario, contracts: IntentContract[]): Decision {
-  return shadowEvent(sc, contracts).decision;
+export function shadowEvaluate(sc: Scenario, contracts: IntentContract[], kernel?: KernelState): Decision {
+  return shadowEvent(sc, contracts, kernel).decision;
 }
 
 export function resolveReview(
@@ -379,7 +399,7 @@ export function advanceTask(taskId: string): void {
       environment: def.environment,
       sensitivity: def.sensitivity,
     };
-    const out = runScenario(sc, state.contracts, lastHash);
+    const out = runScenario(sc, state.contracts, lastHash, { kernel: state.kernel });
     out.event.taskId = taskId;
     out.event.stepIndex = step.index;
     out.event.dependsOn = step.dependsOn;

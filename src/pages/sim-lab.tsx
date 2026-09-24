@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppState, simulate, shadowEvaluate } from "../state/store";
 import { SEED_CONTRACTS } from "../model/contracts";
+import { BASELINE_KERNEL } from "../engine/kernel";
 import { PageHead, Chip, DecisionChip, SimNote, Payload, names, Avatar, AgentMark, DestMark, SectionHead } from "../ui/kit";
 import { EventDetail } from "../ui/event-detail";
 import { SCENARIOS, type Scenario } from "../engine/scenarios";
@@ -97,10 +98,10 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
   const outlook = useMemo(() => {
     const out: Record<string, { current: Decision; baseline: Decision }> = {};
     for (const x of SCENARIOS.filter((y) => y.group === group)) {
-      out[x.id] = { current: shadowEvaluate(x, s.contracts), baseline: shadowEvaluate(x, SEED_CONTRACTS) };
+      out[x.id] = { current: shadowEvaluate(x, s.contracts), baseline: shadowEvaluate(x, SEED_CONTRACTS, BASELINE_KERNEL) };
     }
     return out;
-  }, [group, s.contracts]);
+  }, [group, s.contracts, s.kernel]);
 
   return (
     <div className="page">
@@ -146,10 +147,10 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
                   const note = x.expected.includes(" — ") ? x.expected.split(" — ")[1] : "";
                   return (
                     <div className="row small" style={{ marginTop: 6, gap: 6 }}>
-                      <span className="faint">With your rules:</span>
+                      <span className="faint">Right now:</span>
                       <DecisionChip d={now.current} small />
                       {changed
-                        ? <span style={{ color: "var(--review)" }}>changed by your rules (was {now.baseline})</span>
+                        ? <span style={{ color: "var(--review)" }}>changed by current policy (was {now.baseline})</span>
                         : note && <span className="faint">{note}</span>}
                     </div>
                   );

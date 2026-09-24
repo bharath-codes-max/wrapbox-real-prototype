@@ -12,6 +12,7 @@ import type {
 } from "../model/types";
 import { detectorFor, destById } from "../model/registries";
 import { agentById, deviceOfUser, resourceById, userById } from "../model/org";
+import type { KernelState } from "./kernel";
 
 let tokenCounter = 0;
 export function setTokenCounter(n: number) { tokenCounter = n; }
@@ -121,7 +122,7 @@ export function runScenario(
   sc: Scenario,
   contracts: IntentContract[],
   prevHash: string,
-  opts?: { breakGlass?: boolean; timestamp?: number }
+  opts?: { breakGlass?: boolean; timestamp?: number; kernel?: KernelState }
 ): SimOutcome {
   seq += 1;
   const id = `evt-${String(seq).padStart(5, "0")}`;
@@ -147,6 +148,8 @@ export function runScenario(
       ? { ...sc.blast }
       : undefined,
     breakGlass: opts?.breakGlass,
+    kernel: opts?.kernel,
+    now: opts?.timestamp ?? Date.now(),
   };
 
   const result = decide(req, contracts);
@@ -181,6 +184,9 @@ export function runScenario(
     ...(destN ? [{ label: "Destination", detail: `${destN} (${sc.destinationClass})` }] : []),
     ...(result.safetyRules.length > 0
       ? [{ label: "Safety Kernel", detail: result.safetyRules.map((s) => s.name).join(", ") }]
+      : []),
+    ...(result.safetyObserved.length > 0
+      ? [{ label: "Safety Kernel (observing)", detail: `Would have blocked: ${result.safetyObserved.map((s) => s.name).join(", ")} — not enforced yet` }]
       : []),
     ...(result.matchedContracts.length > 0
       ? [{ label: "Rules matched", detail: `${result.matchedContracts.length} Intent Contract rule(s)` }]
@@ -217,6 +223,7 @@ export function runScenario(
     inspection,
     matchedContracts: result.matchedContracts,
     safetyRules: result.safetyRules,
+    safetyObserved: result.safetyObserved.length ? result.safetyObserved : undefined,
     decidedBy: result.decidedBy,
     context: req.context,
     blastRadius: req.blastRadius,
@@ -331,6 +338,12 @@ export function pipelineFor(sc: Scenario, ev: SimulationEvent): PipelineStage[] 
       source: "Safety Kernel",
       effect: "BLOCK" as Decision,
       decided: d?.layer === "safety" && d.ruleId === r.ruleId,
+    })),
+    ...(ev.safetyObserved ?? []).map((r) => ({
+      text: `${r.name} — would have blocked (observing, not enforced yet)`,
+      source: "Safety Kernel · new rule in observe mode",
+      effect: "BLOCK" as Decision,
+      decided: false,
     })),
   ];
   const ruleCount = items.length;

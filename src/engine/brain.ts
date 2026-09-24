@@ -18,6 +18,7 @@ import type {
   DecidedBy, Environment, EventContext, IntentContract, InspectionResult, MatchedClause,
   SafetyRuleHit, TaskEnvelope, TransformKind,
 } from "../model/types";
+import { BASELINE_KERNEL, kernelHits, type KernelFacts, type KernelState } from "./kernel";
 
 export interface ActionRequest {
   plane: "ENDPOINT" | "NETWORK" | "GATEWAY";
@@ -33,6 +34,8 @@ export interface ActionRequest {
   blastRadius?: BlastRadius;
   envelope?: TaskEnvelope | null;
   breakGlass?: boolean;
+  kernel?: KernelState; // installed Safety Kernel pack (defaults to the baseline)
+  now?: number; // decision time (observe windows)
 }
 
 export interface BrainResult {
@@ -40,6 +43,7 @@ export interface BrainResult {
   reasons: string[];
   matchedContracts: MatchedClause[];
   safetyRules: SafetyRuleHit[];
+  safetyObserved: SafetyRuleHit[]; // observe-mode kernel rules that would have fired
   decidedBy: DecidedBy;
   transform?: TransformKind;
   transformClasses: string[];
@@ -48,90 +52,22 @@ export interface BrainResult {
 }
 
 // ---------------------------------------------------------------------------
-// Safety Kernel — baseline invariants that apply even with zero contracts.
-// Narrow, explainable; not a hidden giant ruleset.
+// Safety Kernel — the Wrapbox-managed, versioned rule pack lives in kernel.ts.
+// Enforcing rules change the decision; observing rules (just installed from
+// an update) are recorded as "would have blocked" only.
 // ---------------------------------------------------------------------------
 
-export const SAFETY_RULES = [
-  {
-    ruleId: "sk-cred-exfil",
-    name: "Credential exfiltration",
-    description: "Credentials must not leave the device to any external destination.",
-  },
-  {
-    ruleId: "sk-destructive-prod",
-    name: "Destructive production mutation",
-    description: "Irreversible destructive operations against customer-impacting production resources.",
-  },
-  {
-    ruleId: "sk-security-change",
-    name: "Security-control change",
-    description: "Disabling or weakening a security control (SIP, Gatekeeper, EDR, Wrapbox itself).",
-  },
-  {
-    ruleId: "sk-perm-escalation",
-    name: "Dangerous permission change",
-    description: "Granting broad administrative authority to an identity or role.",
-  },
-  {
-    ruleId: "sk-mass-export",
-    name: "Mass data export",
-    description: "Bulk export of records far beyond normal working scope.",
-  },
-  {
-    ruleId: "sk-unknown-highrisk",
-    name: "Unknown high-risk external transfer",
-    description: "Sensitive data classes flowing to an unclassified external endpoint.",
-  },
-] as const;
-
-function safetyKernel(req: ActionRequest): SafetyRuleHit[] {
-  const hits: SafetyRuleHit[] = [];
-  const classes = req.inspection?.findings.map((f) => f.dataClass) ?? [];
-  const hasCred = classes.some((c) => c.startsWith("CREDENTIAL."));
-  const external =
-    req.destinationClass !== undefined && req.destinationClass !== "INTERNAL";
-
-  if (hasCred && (req.action === "NETWORK_SEND" || req.action === "DATA_EXPORT") && external) {
-    hits.push(rule("sk-cred-exfil"));
-  }
-  if (
-    req.action === "DELETE" &&
-    req.environment === "production" &&
-    req.context.resourceSensitivity === "customer-impacting"
-  ) {
-    hits.push(rule("sk-destructive-prod"));
-  }
-  if (req.action === "SECURITY_CHANGE") hits.push(rule("sk-security-change"));
-  if (req.action === "PERMISSION_CHANGE" && req.blastRadius?.severity === "critical") {
-    hits.push(rule("sk-perm-escalation"));
-  }
-  if (
-    req.action === "DATA_EXPORT" &&
-    (req.blastRadius?.rows ?? 0) >= 100_000
-  ) {
-    hits.push(rule("sk-mass-export"));
-  }
-  if (
-    req.destinationClass === "UNKNOWN_EXTERNAL" &&
-    classes.some((c) => sensitiveFamily(c))
-  ) {
-    hits.push(rule("sk-unknown-highrisk"));
-  }
-  return hits;
-}
-
-function rule(id: (typeof SAFETY_RULES)[number]["ruleId"]): SafetyRuleHit {
-  const r = SAFETY_RULES.find((x) => x.ruleId === id)!;
-  return { ruleId: r.ruleId, name: r.name, description: r.description };
-}
-
-function sensitiveFamily(c: string): boolean {
-  return (
-    c.startsWith("CREDENTIAL.") || c.startsWith("PCI.") || c.startsWith("HEALTH.") ||
-    c.startsWith("FINANCIAL.") || c.startsWith("LEGAL.") || c.startsWith("HR.") ||
-    c === "PII.SSN" || c === "CUSTOM.CUSTOMER_ID" || c === "COMPANY.TRADE_SECRET"
-  );
+function kernelFacts(req: ActionRequest): KernelFacts {
+  return {
+    action: req.action,
+    actionRaw: req.actionRaw,
+    environment: req.environment,
+    destinationClass: req.destinationClass,
+    dataClasses: req.inspection?.findings.map((f) => f.dataClass) ?? [],
+    sensitivity: req.context.resourceSensitivity,
+    rows: req.blastRadius?.rows,
+    severity: req.blastRadius?.severity,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -244,7 +180,7 @@ export function decide(req: ActionRequest, contracts: IntentContract[]): BrainRe
         `Content is UNINSPECTABLE (${req.inspection.reason ?? "unknown format"}) and a protected requirement applies — failing closed.`
       );
       return finish(req, {
-        decision: "BLOCK", reasons, matchedContracts: matched, safetyRules: [],
+        decision: "BLOCK", reasons, matchedContracts: matched, safetyRules: [], safetyObserved: [],
         decidedBy: { layer: "uninspectable", label: `Fail closed — content could not be inspected (${req.inspection.reason ?? "unknown format"})` },
         transformClasses: [], risk: "high",
         safeAlternative: "Provide the content in an inspectable format, or request a scoped exception.",
@@ -288,8 +224,9 @@ export function decide(req: ActionRequest, contracts: IntentContract[]): BrainRe
     : { layer: "default", label: "No rule restricts this action" };
 
   // 3. Safety Kernel.
-  const safety = safetyKernel(req);
+  const { enforced: safety, observed: safetyObserved } = kernelHits(kernelFacts(req), req.kernel ?? BASELINE_KERNEL, req.now ?? Date.now());
   for (const s of safety) reasons.push(`Safety Kernel: ${s.name} — ${s.description}`);
+  for (const s of safetyObserved) reasons.push(`Safety Kernel (observing, not enforced yet): ${s.name} would have blocked this.`);
 
   // 4. Combine per precedence: explicit forbid > safety invariant > constrain > review.
   //    An explicit enterprise BLOCK keeps the credit when both apply.
@@ -377,7 +314,7 @@ export function decide(req: ActionRequest, contracts: IntentContract[]): BrainRe
   }
 
   return finish(req, {
-    decision, reasons, matchedContracts: matched, safetyRules: safety, decidedBy,
+    decision, reasons, matchedContracts: matched, safetyRules: safety, safetyObserved, decidedBy,
     transform, transformClasses, safeAlternative,
     risk: riskOf(req, decision, safety.length > 0),
   });

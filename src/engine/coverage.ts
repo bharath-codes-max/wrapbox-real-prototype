@@ -8,7 +8,7 @@
 
 import type { ContractClause, CoverageStatus, DestinationClass, IntentContract } from "../model/types";
 import { CAPABILITIES, type CapabilityDef } from "../model/registries";
-import { SAFETY_RULES } from "./brain";
+import { BASELINE_KERNEL, effectiveMode, installedRules, type KernelState } from "./kernel";
 
 type Plane = CapabilityDef["plane"];
 
@@ -65,15 +65,6 @@ export interface CoverageRow {
   affects?: { rules: CoverageRow[]; safety: CoverageRow[] };
 }
 
-// Skills each always-on Safety Kernel rule depends on.
-const SAFETY_NEEDS: Record<string, string[]> = {
-  "sk-cred-exfil": ["cap-net-https", "cap-net-file"],
-  "sk-destructive-prod": ["cap-gw-sql", "cap-gw-cloud"],
-  "sk-security-change": ["cap-ep-exec"],
-  "sk-perm-escalation": ["cap-gw-cloud"],
-  "sk-mass-export": ["cap-gw-sql"],
-  "sk-unknown-highrisk": ["cap-net-https"],
-};
 
 const DEST_LABEL: Record<DestinationClass, string> = {
   APPROVED_AI: "approved AI",
@@ -123,7 +114,7 @@ function ruleRow(c: IntentContract, cl: ContractClause, group: "rule" | "inactiv
   };
 }
 
-export function buildCoverageMatrix(contracts: IntentContract[]) {
+export function buildCoverageMatrix(contracts: IntentContract[], kernel: KernelState = BASELINE_KERNEL, now = Date.now()) {
   const rules = contracts
     .filter((c) => c.status === "ACTIVE")
     .flatMap((c) => c.clauses.map((cl) => ruleRow(c, cl, "rule")));
@@ -132,13 +123,14 @@ export function buildCoverageMatrix(contracts: IntentContract[]) {
     .filter((c) => c.status !== "ACTIVE")
     .flatMap((c) => c.clauses.map((cl) => ruleRow(c, cl, "inactive")));
 
-  const safety: CoverageRow[] = SAFETY_RULES.map((r) => {
-    const ids = SAFETY_NEEDS[r.ruleId] ?? [];
+  const safety: CoverageRow[] = installedRules(kernel).map((r) => {
+    const ids = r.needs;
+    const observing = effectiveMode(kernel, r.ruleId, now) === "observing";
     return {
       id: r.ruleId,
       group: "safety" as const,
       title: `${r.name} — ${r.description}`,
-      source: "Safety Kernel · always on",
+      source: observing ? `Safety Kernel · observing (not blocking yet) · v${r.since}` : `Safety Kernel · always on · v${r.since}`,
       dataClasses: [],
       destination: "Anywhere",
       planes: planesOf(ids),

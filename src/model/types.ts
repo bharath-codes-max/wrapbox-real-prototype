@@ -152,6 +152,7 @@ export interface SimulationEvent {
   inspection?: InspectionResult;
   matchedContracts: MatchedClause[];
   safetyRules: SafetyRuleHit[];
+  safetyObserved?: SafetyRuleHit[]; // kernel rules in observe mode that would have fired
   decidedBy?: DecidedBy;
   context: EventContext;
   blastRadius?: BlastRadius;

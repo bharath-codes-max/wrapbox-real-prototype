@@ -77,7 +77,7 @@ function RuleTable({ rows, showReason }: { rows: CoverageRow[]; showReason?: boo
 
 export function CoverageMap({ nav }: { nav: (r: string) => void }) {
   const s = useAppState();
-  const m = useMemo(() => buildCoverageMatrix(s.contracts), [s.contracts]);
+  const m = useMemo(() => buildCoverageMatrix(s.contracts, s.kernel), [s.contracts, s.kernel]);
   const [tab, setTab] = useState<Tab>("rules");
   // "Show me the promises this weak skill is holding back" (from Known gaps).
   const [skill, setSkill] = useState<{ id: string; label: string } | null>(null);

@@ -237,6 +237,23 @@ export function EventDetail({ e, onClose, onNavigate }: {
           </div>
         </>
       )}
+      {(e.safetyObserved?.length ?? 0) > 0 && (
+        <>
+          <hr className="divider" />
+          <SectionLabel icon={<ShieldAlert size={15} />}>Safety Kernel — observing</SectionLabel>
+          <div className="grid" style={{ gap: 10 }}>
+            {e.safetyObserved!.map((s) => (
+              <div key={s.ruleId} className="card kernel-observing">
+                <b className="small">{s.name}</b>
+                <div className="small dim" style={{ marginTop: 2 }}>{s.description}</div>
+                <div className="small faint" style={{ marginTop: 4 }}>
+                  New rule from a Wrapbox update, still in observe mode: it <b>would have blocked</b> this, but did not change the decision.
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <hr className="divider" />
       <SectionLabel icon={<Link2 size={15} />} meta={<span className="mono">hash {e.evidence.hash} ← {e.evidence.prevHash}</span>}>
