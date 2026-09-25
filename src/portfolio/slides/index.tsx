@@ -25,7 +25,8 @@ const USECASE_SLIDES: SlideDef[] = USECASES.length
 
 // The design-process spine. Product-slide numbers are computed from the codebase;
 // every external figure cites a source-verified claim (data/research.json).
-export const SLIDES: SlideDef[] = [
+// v1 and v2 share everything except the use-case section.
+export const CORE_BEFORE: SlideDef[] = [
   { id: "cover", phase: "understand", title: "Wrapbox", Component: Cover },
   { id: "understand", phase: "understand", title: "Agents act", Component: Understand },
   { id: "numbers", phase: "research", title: "By the numbers", Component: Numbers },
@@ -37,7 +38,9 @@ export const SLIDES: SlideDef[] = [
   { id: "architecture", phase: "prototype", title: "Architecture", Component: Architecture },
   { id: "intent", phase: "prototype", title: "Intent Studio, live", Component: IntentLive },
   { id: "decision", phase: "prototype", title: "The decision, live", Component: DecisionLive },
-  ...USECASE_SLIDES,
+];
+export const CORE_AFTER: SlideDef[] = [
   { id: "tested", phase: "test", title: "Tested, not claimed", Component: Tested },
   { id: "close", phase: "test", title: "To production", Component: Close },
 ];
+export const SLIDES: SlideDef[] = [...CORE_BEFORE, ...USECASE_SLIDES, ...CORE_AFTER];
