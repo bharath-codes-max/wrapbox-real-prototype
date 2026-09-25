@@ -33,15 +33,15 @@
   --c-k: #c792ea; --c-s: #c3e88d; --c-c: #676e7a; --c-n: #f78c6c; --c-t: #82aaff; --c-f: #ffcb6b; --c-p: #89ddff;
   --acc-ink: #000000;
 }
-/* one accent per phase */
+/* one accent per phase — no terracotta anywhere */
 body[data-phase="portfolio"] { --acc: #2563eb; }
-body[data-phase="understand"] { --acc: #e4572e; }
+body[data-phase="understand"] { --acc: #3730a3; }
 body[data-phase="research"] { --acc: #2563eb; }
 body[data-phase="synthesize"] { --acc: #7c3aed; }
-body[data-phase="ideate"] { --acc: #d97706; }
+body[data-phase="ideate"] { --acc: #b45309; }
 body[data-phase="prototype"] { --acc: #059669; }
 body[data-phase="test"] { --acc: #0d9488; }
-:root[data-theme="dark"] body[data-phase="understand"] { --acc: #ff7a59; }
+:root[data-theme="dark"] body[data-phase="understand"] { --acc: #818cf8; }
 :root[data-theme="dark"] body[data-phase="research"] { --acc: #4d8dff; }
 :root[data-theme="dark"] body[data-phase="portfolio"] { --acc: #4d8dff; }
 :root[data-theme="dark"] body[data-phase="synthesize"] { --acc: #a78bfa; }
@@ -54,7 +54,7 @@ body { --acc-soft: color-mix(in oklab, var(--acc) 9%, var(--bg)); --acc-line: co
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body {
-  background: radial-gradient(1100px 700px at 4% -6%, var(--acc-soft), transparent 68%), var(--bg);
+  background: var(--bg);
   color: var(--ink); font-family: var(--sans); font-size: 20px; line-height: 1.5;
   -webkit-font-smoothing: antialiased; overflow: hidden; transition: background 0.5s var(--ease);
 }
@@ -165,7 +165,12 @@ html[data-shot] .stage-inner [style*="opacity: 0"] { opacity: 1 !important; tran
 .sources a:hover { color: var(--ink); }
 
 /* code — autoplay typing (themed) */
-.code { background: var(--t-bg); color: var(--t-fg); border: 1px solid var(--t-line); border-radius: 16px; font: 400 15px/1.65 var(--mono); overflow: hidden; }
+/* Autoplay code snippets are ALWAYS dark — black on light theme too. */
+.code {
+  --t-bg: #0a0a0a; --t-bg2: #141414; --t-line: #232323; --t-fg: #e8e8e8; --t-muted: #8a8a8f;
+  --c-k: #c792ea; --c-s: #c3e88d; --c-c: #676e7a; --c-n: #f78c6c; --c-t: #82aaff; --c-f: #ffcb6b; --c-p: #89ddff;
+  background: var(--t-bg); color: var(--t-fg); border: 1px solid var(--t-line); border-radius: 16px; font: 400 15px/1.65 var(--mono); overflow: hidden;
+}
 .code .cbar { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 14px; border-bottom: 1px solid var(--t-line); color: var(--t-muted); font-size: 13px; }
 .code .cbar .lights { display: flex; gap: 6px; } .code .cbar .lights i { width: 10px; height: 10px; border-radius: 50%; display: block; }
 .code .cbar .lights i:nth-child(1) { background: #ff5f57; } .code .cbar .lights i:nth-child(2) { background: #febc2e; } .code .cbar .lights i:nth-child(3) { background: #28c840; }
@@ -175,7 +180,12 @@ html[data-shot] .stage-inner [style*="opacity: 0"] { opacity: 1 !important; tran
 @keyframes blink { 50% { opacity: 0; } }
 
 /* agent terminal (same class names as the product; themed) */
-.aterm { background: var(--t-bg); border: 1px solid var(--t-line); border-radius: 18px; overflow: hidden; font-family: var(--mono); color: var(--t-fg); font-size: 14px; line-height: 1.6; display: flex; flex-direction: column; min-height: 0; }
+/* The agent terminal is ALWAYS dark — a black terminal reads clean on the white slide too. */
+.aterm {
+  --t-bg: #0a0a0a; --t-bg2: #141414; --t-line: #232323; --t-fg: #e8e8e8; --t-muted: #8a8a8f; --t-tab: #262626; --t-tab-fg: #ffffff;
+  --acc: #4d8dff; --allow: #3fcf7a; --constrain: #2fd1c0; --review: #f5b400; --block: #ff4d4f;
+  background: var(--t-bg); border: 1px solid var(--t-line); border-radius: 18px; overflow: hidden; font-family: var(--mono); color: var(--t-fg); font-size: 14px; line-height: 1.6; display: flex; flex-direction: column; min-height: 0;
+}
 .aterm-bar { display: flex; align-items: center; height: 42px; padding: 0 14px; border-bottom: 1px solid var(--t-line); position: relative; flex-shrink: 0; }
 .aterm-bar .lights { display: flex; gap: 7px; } .aterm-bar .lights i { width: 11px; height: 11px; border-radius: 50%; display: block; }
 .aterm-bar .lights i:nth-child(1) { background: #ff5f57; } .aterm-bar .lights i:nth-child(2) { background: #febc2e; } .aterm-bar .lights i:nth-child(3) { background: #28c840; }

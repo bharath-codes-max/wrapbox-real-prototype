@@ -1,7 +1,7 @@
 // Cover · Understand · Research (numbers, the gap)
 import { useEffect, useMemo, useState } from "react";
 import type { SlideProps } from "../deck";
-import { Display, Eyebrow, Lead, Reveal, Head, Stat, Sources, Pill, Brand, Donut, claimById, fmtDate } from "../ui";
+import { Display, Eyebrow, Lead, Reveal, Head, Stat, Sources, Brand, Donut, claimById, fmtDate } from "../ui";
 import { research } from "../data/research";
 import { decideOnce, scenario } from "../live";
 import { pipelineFor } from "../../engine/simulate";
@@ -28,14 +28,11 @@ function AutoTerm({ active }: { active: boolean }) {
 export function Cover({ active }: SlideProps) {
   return (
     <div className="cols cols-53" style={{ height: "100%", alignItems: "stretch", gap: 56 }}>
-      <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 28 }}>
-        <Reveal><Eyebrow>Product portfolio · Bharath Salla · 2026</Eyebrow></Reveal>
-        <Reveal i={1}><Display>Runtime authorization for <span className="prism-text">AI agents.</span></Display></Reveal>
-        <Reveal i={2}><Lead>A working prototype that decides — at the moment an agent reads, uploads, pushes, queries or deploys — whether it may. Intent in plain English. Evidence for every decision.</Lead></Reveal>
-        <Reveal i={3} className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-          {["Understand", "Research", "Synthesize", "Ideate", "Prototype", "Test"].map((p, k) => <Pill key={p} acc={k === 0}>{p}</Pill>)}
-        </Reveal>
-        <Reveal i={4} className="row" style={{ gap: 14, marginTop: 6 }}>
+      <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 30 }}>
+        <Reveal><Eyebrow>Product portfolio · Bharath Salla</Eyebrow></Reveal>
+        <Reveal i={1}><Display>Runtime authorization for <em>AI agents.</em></Display></Reveal>
+        <Reveal i={2}><Lead>Every consequential action an agent takes — checked before it runs.</Lead></Reveal>
+        <Reveal i={3} className="row" style={{ gap: 14, marginTop: 6 }}>
           <span className="small">Governs</span>
           <div className="brand-row">{["claudecode", "codex", "cursor", "githubcopilot", "openai", "microsoft", "mcp"].map((l) => <Brand key={l} name={l} size={38} />)}</div>
           <span className="small">and your own agents</span>
@@ -43,7 +40,6 @@ export function Cover({ active }: SlideProps) {
       </div>
       <Reveal i={2} style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
         <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}><AutoTerm active={active} /></div>
-        <div className="small mono" style={{ marginTop: 10, fontSize: 14 }}>↑ the product's real decision engine, running inside this deck</div>
       </Reveal>
     </div>
   );
