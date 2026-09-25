@@ -53,7 +53,10 @@ const c: TourCase = {
       action: "click",
       title: "Now a riskier request",
       body: "Chasing a config problem, the agent tries to open .env, a file of passwords and keys. 'Right now: BLOCK' predicts it will be stopped under today's rules.",
-      waitFor: { selector: ".card", text: "attempts to read .env" },
+      // Keep the spotlight on the picked row: it carries the live "Right now · BLOCK" forecast.
+      waitFor: { selector: ".stream-item", text: "Agent reads .env" },
+      // Below the row, so the picked scenario's card (Agent reads .env, Run) stays uncovered.
+      placement: "bottom",
     },
     {
       target: { selector: "button", text: "Run", exact: true },

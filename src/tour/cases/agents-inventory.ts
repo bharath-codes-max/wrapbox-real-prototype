@@ -36,7 +36,7 @@ const c: TourCase = {
       target: { selector: ".ecard", text: "Unknown MCP agent" },
       action: "click",
       title: "See what Wrapbox knows about it",
-      body: "Priya opens it. It was seen on Alex Morgan's finance laptop, working through a connector nobody registered, and it sends to an internet address nobody recognises.",
+      body: "Priya opens it. It was seen on Alex Morgan's finance laptop, working through a connector nobody registered, and its only destination is an internet address nobody recognises.",
       waitFor: { within: ".drawer", selector: "dl.kv" },
     },
     {
@@ -53,7 +53,7 @@ const c: TourCase = {
       target: { within: ".drawer", selector: "button", text: "Open Evidence" },
       action: "click",
       title: "Follow it to the evidence",
-      body: "Priya opens Evidence: the record of every decision Wrapbox has made. Each record is sealed and linked to the one before, so any later change shows.",
+      body: "Priya opens Evidence, the record of every decision. Each record carries a seal, a fingerprint of its facts linked to the one before, so any later edit shows.",
       waitFor: { selector: ".overview-card", text: "Tamper-evident ledger" },
     },
     {
@@ -61,7 +61,7 @@ const c: TourCase = {
       action: "select",
       value: "a-unknown-mcp",
       title: "Just this agent's records",
-      body: "Priya narrows the list to the unknown agent: two records, both blocked. Each names the laptop's user, the data found inside, and its seal.",
+      body: "Priya narrows the list to the unknown agent: two records, both blocked. Each names the laptop's user and the agent, the data found inside, and its seal.",
       waitFor: ".ecard-grid",
     },
     {

@@ -77,8 +77,11 @@ const c: TourCase = {
       target: { within: ".scroll-thin", selector: "div", text: "Export every customer" },
       action: "click",
       title: "A record of who decided",
-      body: "Clicking the export step opens its record: constrained by Maya Chen, under the rule that held it. The 50,000 above is what the agent first asked for.",
-      waitFor: { within: ".drawer", selector: "dl.kv", text: "Reviewer" },
+      // Lands on the last lines of the evidence chain, where the record itself states the rule that
+      // decided, who decided ("Review: constrained by Maya Chen") and what ran ("Outcome: Constrained
+      // alternative executed"). The spotlight sits on the Outcome line so the Review line above stays clear.
+      body: "Clicking the export step opens its record: held by the company rule, then constrained by Maya Chen. Only the safer version ran; the full 50,000-row export never did.",
+      waitFor: { within: ".drawer", selector: ".pipe-stage", text: "Constrained alternative executed" },
     },
   ],
 };

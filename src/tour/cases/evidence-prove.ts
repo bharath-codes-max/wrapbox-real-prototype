@@ -15,7 +15,7 @@ const c: TourCase = {
   persona: { userId: "u-maya", name: "Maya Chen", role: "Security Analyst" },
   title: "Prove what happened",
   goal: "An auditor asks Maya to prove that no passwords or keys have left the company through an AI agent.",
-  outcome: "Maya shows that every record involving a password or key was blocked, and hands the auditor a sealed record proving Alex Morgan's private key never left the laptop.",
+  outcome: "Maya shows that every record involving a password or key was blocked, and shows the auditor a sealed record proving Alex Morgan's private key never left the laptop.",
   start: "control",
   poster: 6,
   steps: [
@@ -36,7 +36,7 @@ const c: TourCase = {
       action: "type",
       text: "credential",
       title: "Search for passwords and keys",
-      body: "Four matches, all BLOCK: stopped. One is a locked zip that could hide a key.",
+      body: "Four matches, all stopped (BLOCK). One is a locked zip that could hide a key.",
       waitFor: ".ecard-grid",
     },
     {
@@ -73,8 +73,8 @@ const c: TourCase = {
     },
     {
       target: { within: ".drawer", selector: ".row", text: "Evidence chain" },
-      title: "Sealed proof, not a recollection",
-      body: "The first code seals this record's facts, from who and what to the decision; the second is the previous record's seal. Change any fact and it stops matching.",
+      title: "Sealed proof for the auditor",
+      body: "This record is Maya's answer. Its first code seals who, which agent, what, where and the decision, plus the previous record's seal. Change one and it stops matching.",
       pad: 10,
     },
   ],

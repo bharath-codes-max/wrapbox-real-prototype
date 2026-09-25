@@ -17,7 +17,7 @@ const c: TourCase = {
       target: { selector: ".rail-item", text: "Trust Graph" },
       action: "click",
       title: "Open the Trust Graph",
-      body: "Maya, a security analyst, needs one picture of who uses which AI agents and what those agents try to reach. Wrapbox builds it from every action they attempted.",
+      body: "Maya, a security analyst, needs one picture of who uses which AI agents and what those agents try to reach. Wrapbox builds it from every action agents attempted.",
       waitFor: { selector: ".page-head", text: "Trust Graph" },
     },
     {
@@ -28,7 +28,7 @@ const c: TourCase = {
     {
       target: ".tg-canvas",
       title: "Read the map left to right",
-      body: "People on the left, their AI agents in the middle, what the agents tried to reach on the right. Red lines mean high-risk activity.",
+      body: "People → their AI agents → what the agents tried to reach. Red lines mean high risk.",
     },
     {
       target: { selector: "svg text", text: "Unknown MCP agent" },

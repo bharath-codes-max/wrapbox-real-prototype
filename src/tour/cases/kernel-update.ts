@@ -47,7 +47,7 @@ const c: TourCase = {
     {
       target: { selector: ".ecard", text: "Protected history rewrite" },
       title: "At first, it only watches",
-      body: "OBSERVING means the rule only records what it would have blocked; it stops nothing yet. On the date shown, a week away, it starts blocking by itself.",
+      body: "OBSERVING: from now on the rule only counts what it would have blocked (none yet) and stops nothing. On the date shown, a week away, it starts blocking.",
     },
     {
       target: { selector: ".ecard button", text: "Start enforcing now" },

@@ -1,8 +1,8 @@
 import type { TourCase } from "../types";
 
 // Priya checks where Wrapbox is plugged in and how much it can stop in each place,
-// then sees what Wrapbox knows about every action and how one rule covers every
-// way of doing the same thing. Everything shown lives on the Integrations page.
+// then sees what Wrapbox knows about every action and how one rule can cover many
+// ways of doing the same thing. Everything shown lives on the Integrations page.
 // Statuses come from the capability registry (4 enforced, 2 degraded, 1 understood
 // only); counts and the replayed action (evt-00020) come from the demo workspace.
 const c: TourCase = {
@@ -10,8 +10,8 @@ const c: TourCase = {
   order: 105,
   persona: { userId: "u-priya", name: "Priya Menon", role: "Admin" },
   title: "See where Wrapbox is plugged in",
-  goal: "Priya, the admin, wants to know where Wrapbox sits today, how much it can really stop in each place, and what it knows about every action.",
-  outcome: "Priya knows where Wrapbox can stop actions and where it only watches, who is behind each action, and that one rule covers every way of doing the same thing.",
+  goal: "Priya, the admin, wants to know where Wrapbox sits today, how much it can really stop in each place, what it knows about every action, and how one rule can cover many ways of doing the same thing.",
+  outcome: "Priya knows where Wrapbox can stop actions and where it only watches, who is behind each action, and that one rule can cover many ways of doing the same thing.",
   start: "control",
   poster: 2,
   steps: [
@@ -25,7 +25,9 @@ const c: TourCase = {
     {
       target: ".metricband",
       title: "How strong is each connection?",
-      body: "Four connections are enforced: Wrapbox can stop a bad action there before it runs. Two are degraded, stopping most but not all, and one can only watch.",
+      // The band's own note for Degraded is "some parts only watched" (AWS governs only IAM,
+      // S3 and ECS deploys; everything else there is watched), so no "most" here.
+      body: "Four are enforced: Wrapbox can stop a bad action there before it runs. Two are degraded, stopping some parts and only watching others, and one only watches.",
     },
     {
       // Also resets the page to this tab if an earlier run left another one open.
@@ -57,13 +59,16 @@ const c: TourCase = {
       target: { selector: "button.tab", text: "Identity model" },
       action: "click",
       title: "Who is behind every action",
-      body: "Priya opens the Identity model. It shows what every decision knows: who acted, on which laptop, with which agent, through which tool, and on which system.",
-      waitFor: { selector: ".card", text: "is never an identity" },
+      body: "Priya opens the Identity model. The action the terminal replayed is traced end to end: Daniel Kim, on Daniel-MBP, with Claude Code, through the terminal, on checkout-service.",
+      // The tabs + panel (only once the Identity tab is showing): its centre falls in the blank
+      // gap above the chain, so the cursor doesn't cover the "Through: Terminal" chip.
+      waitFor: { selector: ".page-tabs", text: "is never an identity" },
     },
     {
-      target: { selector: ".card", text: "is never an identity" },
-      title: "One action, fully traced",
-      body: "The same action the terminal replayed: Daniel Kim, on Daniel-MBP, with Claude Code, through the terminal, on checkout-service. Every decision and evidence record carries this chain.",
+      // The card's own footnote: the user comes from company sign-in, never from the app.
+      target: { selector: ".small.dim", text: "is never an identity" },
+      title: "A real person, not an app",
+      body: "Daniel's name comes from the company sign-in (Okta), not from the app the traffic came through. Every decision and evidence record carries this full chain.",
     },
     {
       target: { selector: "button.tab", text: "Action ontology" },
@@ -76,7 +81,7 @@ const c: TourCase = {
       target: { within: ".fbar", selector: ".fsearch" },
       action: "type",
       text: "tmp.txt",
-      title: "One rule covers every way",
+      title: "Three ways, one rule",
       body: "Priya searches for one file. Deleting it with a shell command, Python or Node.js is the same DELETE, so one rule about deleting covers all three.",
       waitFor: ".ecard-grid",
       hold: 1800,

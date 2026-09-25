@@ -19,6 +19,7 @@ const c: TourCase = {
       text: "SEV-1: checkout down, hotfix v2.14.1 must ship now",
       title: "An emergency, in plain words",
       body: "Checkout is down. Priya, the admin, opens Break Glass, Wrapbox's emergency override, for Alex's team. It won't start without a written reason, which stays on record.",
+      placement: "top",
     },
     {
       target: { selector: ".field", text: "Covers only" },
@@ -33,7 +34,7 @@ const c: TourCase = {
       target: { selector: "button", text: "Activate break-glass" },
       action: "click",
       title: "Switch it on, loudly",
-      body: "One click and it's live: a countdown that can't be extended, and a record of the reason, who asked, and who was notified: Maya in security, and Alex.",
+      body: "One click and it's live, with a countdown already running. It records the reason, who asked, and who was notified: Maya in security, and Alex.",
       waitFor: { selector: "section.card", text: "BREAK-GLASS ACTIVE" },
     },
     {
@@ -78,7 +79,7 @@ const c: TourCase = {
       target: { selector: ".rail-item", text: "Break Glass" },
       action: "click",
       title: "Everything it let through",
-      body: "Back on Break Glass, everything the override let through fits on one line: the deploy. It's also stamped BREAK-GLASS in Evidence, Wrapbox's permanent record.",
+      body: "Back on Break Glass, everything the override let through fits on one line: the deploy. It's also stamped BREAK-GLASS in Evidence, the record of every decision Wrapbox makes.",
       waitFor: { selector: "section.card > div", text: "Overridden under this session" },
     },
     {

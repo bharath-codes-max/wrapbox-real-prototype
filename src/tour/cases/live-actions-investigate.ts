@@ -7,7 +7,7 @@ const c: TourCase = {
   persona: { userId: "u-maya", name: "Maya Chen", role: "Security Analyst" },
   title: "Investigate a blocked action",
   goal: "Maya wants to understand exactly why an AI agent was stopped from moving customer data out of the company.",
-  outcome: "Maya knows who asked, what the agent tried, which rule stopped it and the safer path, all kept in one sealed evidence record.",
+  outcome: "Maya knows who asked, what the agent tried, which rule stopped it and the safer path. The decision's key facts are sealed in the evidence chain.",
   start: "control",
   poster: 5,
   steps: [
@@ -46,7 +46,7 @@ const c: TourCase = {
     {
       target: { within: ".drawer", selector: "ul" },
       title: "Three checks raised a flag",
-      body: "Veridian's own rule asks for a security review of bulk exports, a built-in safety rule flags mass exports, and 500,000 rows is far over the 500-row limit.",
+      body: "The company's own rule asks for a security review of bulk exports, a built-in safety rule flags mass exports, and 500,000 rows is far over the 500-row limit.",
     },
     {
       target: { within: ".drawer", selector: ".card", text: "Safe alternative" },
@@ -56,17 +56,17 @@ const c: TourCase = {
     {
       target: { within: ".drawer", selector: ".card", text: "This rule made the decision" },
       title: "The strictest rule decided",
-      body: "Veridian's own rule would only have held it for a person to approve. Wrapbox's Safety Kernel, built-in rules no one can switch off, blocked it outright.",
+      body: "The company's own rule would only have held it for a person to approve. Wrapbox's Safety Kernel, built-in rules no one can switch off, blocked it outright.",
     },
     {
       target: { within: ".drawer", selector: ".pipe" },
       title: "The whole story, one record",
-      body: "Everything Maya just read is kept as one evidence record: the person, agent, tool, data found, destination, the rule that decided and the outcome.",
+      body: "The evidence chain keeps the story in one place: the person, agent, tool, data found, destination, the rule that decided and the outcome.",
     },
     {
       target: { within: ".drawer", selector: ".row", text: "Evidence chain" },
       title: "Sealed, so any edit shows",
-      body: "The code on the right seals the record's key facts and links to the previous record. Change any of those facts later and the seal stops matching.",
+      body: "The code on the right seals who asked, the agent, action, destination, decision and deciding rule, plus the previous record's seal. Change any and it stops matching.",
     },
   ],
 };

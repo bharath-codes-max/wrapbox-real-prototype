@@ -48,15 +48,16 @@ const c: TourCase = {
       placement: "top",
     },
     {
-      target: { selector: ".card", text: "Waiting for approval to deploy" },
-      title: "Everything needed to decide",
-      body: "The exact command, the rule that held it, and a safer path: deploy to staging, then ask for a short production window. Alex sees it all before choosing.",
+      target: { selector: ".grid.g3 > div", text: "Production deployments require SRE approval" },
+      title: "Why the deploy is waiting",
+      body: "A company rule held it: production deploys need sign-off from site reliability (SRE). Alex is the approver this job names for that sign-off.",
+      pad: 10,
     },
     {
       target: { selector: "button", text: "Approve scoped" },
       action: "click",
       title: "Yes, for this job only",
-      body: "Approve scoped says yes to the deploy and lets this job alone use AWS Production until it ends. The queue empties; the health check won't ask again.",
+      body: "Approve scoped: yes to the deploy, and this job alone may use AWS Production until it ends. The queue empties; the health check needs no second yes.",
       waitFor: { selector: ".card", text: "Nothing waiting" },
     },
     {

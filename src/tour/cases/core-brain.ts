@@ -40,7 +40,7 @@ const c: TourCase = {
     {
       target: { selector: ".card", text: "Latest action on your checkout code" },
       title: "Start with a real decision",
-      body: "Daniel's coding agent, Claude Code, ran the checkout tests. ALLOW means it ran as asked: no check objected, so the last one, “Nothing objected”, let it through.",
+      body: "Daniel's coding agent, Claude Code, ran the checkout tests. ALLOW means it ran as asked; “No rule restricts this action” means none of the checks objected.",
     },
     {
       target: { selector: ".ecard", text: "Can we see inside?" },

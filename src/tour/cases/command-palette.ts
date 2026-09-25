@@ -5,7 +5,8 @@ import type { TourCase } from "../types";
 // screen names only), a few letters narrow it, one click lands on Evidence, and
 // Evidence's own search finds the one record tagged as financial data — the
 // unregistered agent on Alex's finance laptop trying to send customer account
-// numbers to an unknown address (EVT-00017). No other case opens this record.
+// numbers to an unknown address (EVT-00017). agents-inventory reaches the same
+// record through the Agent filter; this case reaches it by search.
 const c: TourCase = {
   id: "command-palette",
   order: 120,
@@ -30,7 +31,7 @@ const c: TourCase = {
       action: "type",
       text: "evid",
       title: "Type a few letters",
-      body: "The list shrinks with each letter. After four letters, only one screen is left: Evidence, the record of every decision Wrapbox has made.",
+      body: "The list narrows as Sam types. After four letters, only one screen is left: Evidence, the record of every decision Wrapbox has made.",
       waitFor: { selector: ".palette:has(.palette-item:only-child)", text: "Evidence" },
     },
     {

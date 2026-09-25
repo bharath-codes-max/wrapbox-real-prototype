@@ -17,7 +17,7 @@ const c: TourCase = {
       target: { selector: ".stream-item", text: "Customer PII → approved AI" },
       action: "click",
       title: "Replay an everyday moment",
-      body: "The Simulation Lab replays everyday work against today's rules. Priya picks a customer list (PII: personal details) going to the approved AI. Forecast: CONSTRAIN, allowed but changed first.",
+      body: "Priya replays an everyday moment: a customer list with PII (personal details) going to the approved AI. The forecast is CONSTRAIN: allowed, but changed first.",
       waitFor: { selector: ".card", text: "Expected under the brief" },
     },
     {
@@ -32,21 +32,25 @@ const c: TourCase = {
       body: "Run plays Priya pressing Send in the AI chat. Before the file leaves Priya's laptop, Wrapbox stops it for a check.",
       waitFor: { selector: ".pipe-stage", text: "intercepts traffic" },
       hold: 2600,
+      pad: 0,
     },
     {
       target: { selector: ".pipe-stage", text: "Content inspection" },
       title: "Wrapbox reads what's inside",
       body: "Wrapbox opens the file and finds personal details about real people: three customer names, three email addresses and three phone numbers.",
+      pad: 0,
     },
     {
       target: { selector: ".pipe-stage", text: "Core Brain evaluation" },
       title: "The stricter rule wins",
       body: "Wrapbox's rule checker, Core Brain, finds two company rules. One allows approved AI for normal work; the other says customer emails and phones must be swapped out first.",
+      pad: 0,
     },
     {
       target: { selector: ".pipe-stage", text: "Transform applied" },
       title: "Allowed, but changed on the way",
       body: "The decision is CONSTRAIN: the file still goes, but each email and phone number becomes a token, a harmless stand-in Wrapbox can swap back later.",
+      pad: 0,
     },
     {
       target: { selector: ".chat-bubble", text: "Delivered — protected" },
@@ -64,7 +68,7 @@ const c: TourCase = {
       target: { selector: "button", text: "Vault contents" },
       action: "click",
       title: "Every stand-in, on record",
-      body: "Vault contents lists every value Wrapbox has swapped out, newest first. The six from this run, three emails and three phone numbers, sit at the top.",
+      body: "Vault contents lists every value Wrapbox has swapped out, newest first. This run's six sit at the top, starting with PHONE_TOKEN_012.",
       waitFor: { selector: ".ecard", text: "PHONE_TOKEN_012" },
     },
     {

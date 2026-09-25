@@ -24,11 +24,11 @@ const c: TourCase = {
       pad: 10,
     },
     {
-      target: { selector: "[role=tab]", text: "In progress" },
-      action: "click",
+      // Starting the job already opens it under "In progress"; the timeline is
+      // below, so this step scrolls to it rather than clicking an open tab.
+      target: { selector: ".scroll-thin", text: "Refund $1,240" },
       title: "Every step is checked first",
       body: "ALLOW: ran as asked. CONSTRAIN: ran with a change — the AI drafted the reply without seeing the customer's real email or phone. REVIEW: waits for a person.",
-      waitFor: { selector: ".scroll-thin", text: "Refund $1,240" },
     },
     {
       target: { selector: ".card .card", text: "Safe Continuation active" },
@@ -45,11 +45,11 @@ const c: TourCase = {
       waitFor: { selector: ".sim-note", text: "never the requester" },
     },
     {
-      target: { selector: "[role=tab]", text: "Awaiting your decision" },
-      action: "click",
+      // The Review Center opens on "Awaiting your decision"; point straight at
+      // the request's who-asked / who-decides / progress rows.
+      target: { selector: ".ecard-fields", text: "Finance Controller" },
       title: "Waiting for Sam, not Jordan",
       body: "The request arrives with its context: Jordan asked, Sam in Finance decides, and three of the job's six steps are already done.",
-      waitFor: { selector: ".ecard-fields", text: "Finance Controller" },
       pad: 12,
     },
     {

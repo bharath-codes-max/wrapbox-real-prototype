@@ -39,7 +39,7 @@ const c: TourCase = {
       action: "select",
       value: "BLOCK",
       title: "Show only what was stopped",
-      body: "Maya keeps only the blocked actions. The counter shows how many records are left out of the full log.",
+      body: "Maya keeps only the blocked actions. The counter shows how many records match out of the whole log — the same number the Control Room listed as Blocked.",
       waitFor: ".fcount",
     },
     {

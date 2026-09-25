@@ -39,9 +39,9 @@ const c: TourCase = {
       body: "The suggested rule: whenever a coding agent pushes to main, an engineer must review it first.",
     },
     {
-      target: { selector: "dd", text: "switched off until you activate it" },
+      target: { selector: ".section-head", text: "never switches anything on by itself" },
       title: "What accepting will do",
-      body: "Accepting doesn't switch anything on. It only creates a draft rule, which stays off until a person activates it.",
+      body: "Accepting never switches anything on by itself. For the push-to-main suggestion it creates a draft rule, which stays off until a person activates it.",
     },
     {
       target: { within: ".ecard", selector: "button", text: "Accept", exact: true },
@@ -54,7 +54,7 @@ const c: TourCase = {
       target: { selector: "[role=tab]", text: "Intent contracts" },
       action: "click",
       title: "Find it with the other rules",
-      body: "Back on the rules list, the count went from 5 to 6. The card names Priya only because this demo files new rules under the admin's name.",
+      body: "The new rule now sits with the company's other rules, 6 in total. The card shows Priya, the admin, because this demo files new rules under the admin's name.",
       waitFor: { selector: ".ecard", text: "Autopilot · Protect main branch" },
     },
     {
@@ -66,13 +66,13 @@ const c: TourCase = {
       target: { selector: ".ecard", text: "Autopilot · Protect main branch" },
       action: "click",
       title: "What the rule would do",
-      body: "Maya opens the draft. Source-code changes in production, like a push to main, wait for a person's OK (REVIEW). 'Fail closed': a push Wrapbox can't read is blocked.",
+      body: "Maya opens the draft: code changes in production, like a push to main, wait for a person's OK (REVIEW). Fail closed means a push Wrapbox can't read is blocked.",
       waitFor: { within: ".drawer", selector: ".card", text: "Only in" },
     },
     {
       target: { within: ".drawer", selector: ".row", text: "Simulate impact" },
       title: "Ready to test, still switched off",
-      body: "Simulate impact lets Maya replay past agent actions with this rule on, before anything changes. Activate switches it on for real. Autopilot did neither by itself.",
+      body: "Simulate impact replays past agent actions with this rule on, changing nothing. Only Activate switches it on for real — Autopilot did neither by itself.",
     },
   ],
 };

@@ -31,7 +31,7 @@ const c: TourCase = {
       target: { selector: ".palette-item", text: "Coverage Map" },
       action: "click",
       title: "Open the Coverage Map",
-      body: "Priya opens it. Every grade is worked out live from the switched-on rules and Wrapbox's skills. Nobody types them in.",
+      body: "Priya opens it. Every grade is worked out live from the switched-on rules and Wrapbox's skills — never typed in.",
       waitFor: { selector: ".card", text: "Coverage posture" },
     },
     {
@@ -46,11 +46,13 @@ const c: TourCase = {
       title: "Open the known gaps",
       body: "Every skill that isn't fully ready is listed openly, with the one holding back the most promises at the top.",
       waitFor: { selector: ".ecard", text: "Cloud (AWS) gateway" },
+      placement: "bottom",
     },
     {
       target: { selector: ".ecard", text: "Cloud (AWS) gateway" },
       title: "The first thing to fix",
-      body: "Wrapbox controls AWS permissions, file storage and container deploys, but other AWS services are only watched. This gap weakens one company rule and two always-on safety rules.",
+      body: "Wrapbox controls AWS permissions, storage and container deploys, but only watches other AWS services. That weakens one rule and two always-on safety rules.",
+      placement: "bottom",
     },
     {
       target: { within: ".ecard", selector: "a", text: "1 rule" },
@@ -64,14 +66,14 @@ const c: TourCase = {
       target: { selector: ".rail-item", text: "Intent Studio" },
       action: "click",
       title: "Where rules are switched on",
-      body: "Rules are written and switched on in Intent Studio. Earlier, Maya Chen from security drafted a health-data rule there. It is still a draft.",
+      body: "Rules are written and switched on in Intent Studio. Earlier, Maya Chen from security drafted a health-data rule that isn't switched on yet.",
       waitFor: { selector: ".ecard", text: "PHI handling (draft)" },
     },
     {
       target: { selector: ".ecard", text: "PHI handling (draft)" },
       action: "click",
       title: "One part needs a missing skill",
-      body: "Priya opens the draft. Removing health data from scanned files would be fully enforced. Blocking encrypted attachments needs a skill Wrapbox lacks: seeing inside encrypted files.",
+      body: "In the draft, removing health data from scanned files would be fully enforced. Spotting health data inside encrypted files needs a skill Wrapbox lacks.",
       waitFor: { within: ".drawer", selector: ".card", text: "Uninspectable encrypted attachments" },
     },
     {
