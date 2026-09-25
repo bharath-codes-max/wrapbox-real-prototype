@@ -62,11 +62,36 @@ export function Stat({
       ) : (
         <div className="stat-label">{label}</div>
       )}
-      <div className="stat-value" style={tone ? { color: `var(--${tone})` } : undefined}>{value}</div>
+      <div className="stat-value" style={tone ? { color: `var(--${tone})` } : undefined}>{shownValue(value)}</div>
       {note && <div className="stat-note">{note}</div>}
     </div>
   );
 }
+
+/** Integer that counts up to its value on first paint and eases between later values. */
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+export function CountUp({ value }: { value: number }) {
+  const animate = Number.isInteger(value) && !prefersReducedMotion();
+  const [shown, setShown] = React.useState(animate ? 0 : value);
+  const from = React.useRef(animate ? 0 : value);
+  React.useEffect(() => {
+    // Hidden tabs pause animation frames — show the real value straight away there.
+    if (!animate || document.hidden) { setShown(value); from.current = value; return; }
+    const a = from.current, b = value, start = performance.now(), dur = 700;
+    let raf = 0;
+    const tick = (t: number) => {
+      const k = Math.min(1, (t - start) / dur);
+      setShown(Math.round(a + (b - a) * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    const settle = setTimeout(() => setShown(b), dur + 150); // always land on the true value
+    return () => { cancelAnimationFrame(raf); clearTimeout(settle); from.current = b; };
+  }, [value, animate]);
+  return <>{Number.isInteger(shown) ? shown.toLocaleString("en-US") : shown}</>;
+}
+const shownValue = (v: React.ReactNode) => (typeof v === "number" ? <CountUp value={v} /> : v);
 
 export interface MetricItem { label: string; value: React.ReactNode; note?: string; tone?: string; onClick?: () => void }
 /** Inline KPIs. `band` = borderless straight on the canvas; default = one carded strip. */
@@ -79,7 +104,7 @@ export function MetricBar({ items, band }: { items: MetricItem[]; band?: boolean
             <span className="metric-label">{it.label}</span>
             {it.tone && <span className="metric-dot" style={{ background: `var(--${it.tone})` }} />}
           </div>
-          <span className="metric-value">{it.value}</span>
+          <span className="metric-value">{shownValue(it.value)}</span>
           {it.note && <span className="metric-note">{it.note}</span>}
         </div>
       ))}
@@ -116,7 +141,7 @@ export function PageTabs({ tabs, storageKey }: { tabs: PageTab[]; storageKey?: s
           </button>
         ))}
       </div>
-      <div role="tabpanel">{current?.content}</div>
+      <div role="tabpanel" key={current?.id} className="tabpanel-anim">{current?.content}</div>
     </div>
   );
 }

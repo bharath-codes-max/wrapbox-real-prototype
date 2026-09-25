@@ -220,6 +220,24 @@ export function App() {
   const [palette, setPalette] = useState(false);
   const m = metrics(state);
   const base = route.split("/")[0];
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Parallax: publish the scroll offset of the content area as --sy.
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const onScroll = () => el.style.setProperty("--sy", String(Math.round(el.scrollTop)));
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Every page opens at the top — no scroll position carried over from the previous page.
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    el.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+    el.style.setProperty("--sy", "0");
+  }, [base]);
   const demoOn = state.demoStep >= 0;
 
   useEffect(() => {
@@ -292,8 +310,9 @@ export function App() {
             </div>
           </div>
         </aside>
-        <main className="main" style={demoOn ? { paddingBottom: 90 } : undefined}>
-          {page}
+        <main className="main" ref={mainRef} style={demoOn ? { paddingBottom: 90 } : undefined}>
+          <div className="parallax-bg" aria-hidden="true" />
+          <div key={base} className="route-anim">{page}</div>
         </main>
       </div>
       {demoOn && <DemoBar nav={nav} />}

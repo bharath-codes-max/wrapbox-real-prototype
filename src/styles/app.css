@@ -121,27 +121,59 @@
   --shadow-lg: 0 24px 60px -24px rgba(0, 0, 0, 0.75);
   color-scheme: dark;
 }
-/* Dark theme header — Terracotta Dusk #4D260F with a gradient glass finish:
-   a warm glow from the left, a soft top sheen, frosted blur, and a lit edge. */
-:root[data-theme="dark"] { --header: #4d260f; }
-:root[data-theme="dark"] .topbar {
+/* Dark theme header — plain matte grey, no gradient, no tint. */
+:root[data-theme="dark"] { --header: #2f3033; }
+:root[data-theme="dark"] .topbar { border-bottom-color: rgba(255, 255, 255, 0.07); }
+
+/* ==========================================================================
+   Motion — page entrance, staggered reveals, tab transitions, parallax.
+   Fill mode is `backwards` so hover transforms still work after the entrance.
+   ========================================================================== */
+@keyframes routeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes growX { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.route-anim { position: relative; z-index: 1; animation: routeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.route-anim .page > * { animation: rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.route-anim .page > *:nth-child(2) { animation-delay: 0.05s; }
+.route-anim .page > *:nth-child(3) { animation-delay: 0.1s; }
+.route-anim .page > *:nth-child(4) { animation-delay: 0.15s; }
+.route-anim .page > *:nth-child(n + 5) { animation-delay: 0.2s; }
+.tabpanel-anim > * { animation: rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.grid > .card { animation: rise 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.grid > .card:nth-child(2) { animation-delay: 0.06s; }
+.grid > .card:nth-child(3) { animation-delay: 0.12s; }
+.grid > .card:nth-child(4) { animation-delay: 0.18s; }
+.grid > .card:nth-child(n + 5) { animation-delay: 0.24s; }
+.tbl tbody tr, .stream-item { animation: fadeIn 0.5s ease-out backwards; }
+.tbl tbody tr:nth-child(2), .stream-item:nth-child(2) { animation-delay: 0.03s; }
+.tbl tbody tr:nth-child(3), .stream-item:nth-child(3) { animation-delay: 0.06s; }
+.tbl tbody tr:nth-child(4), .stream-item:nth-child(4) { animation-delay: 0.09s; }
+.tbl tbody tr:nth-child(5), .stream-item:nth-child(5) { animation-delay: 0.12s; }
+.tbl tbody tr:nth-child(n + 6), .stream-item:nth-child(n + 6) { animation-delay: 0.15s; }
+.decision-track { transform-origin: left center; animation: growX 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards; }
+.metric, .stat { transition: background 0.15s, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* Parallax — a soft ambient glow drifts slower than the content, and the
+   page heading eases back as you scroll. --sy is the scroll offset of .main. */
+.parallax-bg {
+  position: absolute; inset: 0 0 auto 0; height: 760px; pointer-events: none; z-index: 0;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.02) 48%, rgba(255, 255, 255, 0) 100%),
-    radial-gradient(120% 260% at 12% -60%, rgba(217, 132, 99, 0.38) 0%, rgba(217, 132, 99, 0) 58%),
-    linear-gradient(100deg, rgba(77, 38, 15, 0.94) 0%, rgba(104, 53, 24, 0.9) 52%, rgba(77, 38, 15, 0.94) 100%);
-  backdrop-filter: saturate(160%) blur(18px);
-  -webkit-backdrop-filter: saturate(160%) blur(18px);
-  border-bottom: 1px solid rgba(255, 196, 160, 0.14);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 28px -14px rgba(0, 0, 0, 0.7);
+    radial-gradient(640px 340px at 10% -4%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 70%),
+    radial-gradient(560px 320px at 90% 6%, color-mix(in oklab, var(--constrain) 11%, transparent), transparent 70%);
+  transform: translate3d(0, calc(var(--sy, 0) * 0.45px), 0);
+  will-change: transform;
 }
-:root[data-theme="dark"] .topbar-search,
-:root[data-theme="dark"] .theme-toggle {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 214, 190, 0.2);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+.page-head {
+  transform: translate3d(0, calc(var(--sy, 0) * 0.1px), 0);
+  opacity: max(0, calc(1 - var(--sy, 0) / 320));
 }
-:root[data-theme="dark"] .topbar-search:hover,
-:root[data-theme="dark"] .theme-toggle:hover { background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 214, 190, 0.34); }
+
+@media (prefers-reduced-motion: reduce) {
+  .route-anim, .route-anim .page > *, .tabpanel-anim > *, .grid > .card,
+  .tbl tbody tr, .stream-item, .decision-track { animation: none !important; }
+  .parallax-bg, .page-head { transform: none !important; opacity: 1 !important; }
+}
 
 /* Page tabs + pager — one section at a time, no long scroll */
 .page-tabs > .tabs { margin-bottom: 18px; }
@@ -287,7 +319,7 @@ button { font-family: var(--sans); }
   font-variant-numeric: tabular-nums;
 }
 .sidebar-bottom { padding: 10px 12px 16px; border-top: 1px solid var(--line); }
-.main { flex: 1; overflow-y: auto; min-width: 0; scroll-behavior: smooth; }
+.main { flex: 1; overflow-y: auto; min-width: 0; scroll-behavior: smooth; position: relative; scrollbar-gutter: stable; }
 
 /* Command palette */
 .palette {
@@ -311,7 +343,8 @@ button { font-family: var(--sans); }
 /* ==========================================================================
    Page scaffolding — generous, ElevenLabs-grade rhythm
    ========================================================================== */
-.page { padding: 32px 40px 100px; max-width: 1200px; margin: 0 auto; }
+/* One content width for every page, so edges never jump when switching pages. */
+.page { padding: 32px 40px 100px; max-width: 1360px; margin: 0 auto; }
 .page-wide { max-width: 1360px; }
 .page-head { margin-bottom: 26px; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
 .page-eyebrow {
@@ -414,6 +447,9 @@ button { font-family: var(--sans); }
 .clickable-card:hover { border-color: var(--line-strong); box-shadow: var(--shadow-md); transform: translateY(-2px); }
 .plane-icon { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--surface-2); color: var(--fg-2); flex-shrink: 0; }
 .card + .card { margin-top: 16px; }
+/* Cards laid out side by side (grids, flex rows) must line up — no stacking margin there. */
+.grid > .card, .reality > .card, .row > .card, .spread > .card,
+[style*="display: grid"] > .card, [style*="display: flex"] > .card { margin-top: 0; }
 /* Wide tables scroll sideways inside their card instead of clipping columns. */
 .card-pad-0 { padding: 0; overflow-x: auto; overflow-y: hidden; }
 .card-pad-0 > .tbl { min-width: 720px; }
