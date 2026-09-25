@@ -318,7 +318,7 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
             <div className="row" style={{ alignItems: "flex-start", gap: 10, flexWrap: "nowrap" }}>
               <ShieldAlert size={18} style={{ color: "var(--bad)", flexShrink: 0, marginTop: 1 }} />
               <div className="small dim" style={{ lineHeight: 1.55 }}>
-                <b style={{ color: "var(--bad)" }}>Heads up:</b> {weakened.length} action{weakened.length === 1 ? "" : "s"} that are
+                <b style={{ color: "var(--bad)" }}>Heads up:</b> {weakened.length} action{weakened.length === 1 ? " that is" : "s that are"}
                 protected today would simply be <b>allowed</b>. Safety Kernel rules still apply either way — for example, secret
                 keys stay blocked even if every company rule is switched off.{" "}
                 <a onClick={() => nav("safety")}>Safety Kernel</a>

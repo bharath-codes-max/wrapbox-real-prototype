@@ -150,11 +150,16 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
                       eyebrow={`Step ${i + 1}`}
                       title={o.name}
                       status={<Chip tone={n > 0 ? "violet" : "neutral"}>Decided {n}</Chip>}
-                      action={o.page ? (
-                        <button className="btn btn-sm" onClick={() => nav(o.page![0])}>{o.page[1]} <ArrowRight size={12} /></button>
-                      ) : undefined}
                       fields={[{ label: "What it asks", value: <span className="dim">{o.asks}</span> }]}
-                    />
+                    >
+                      {/* The link sits under the card body: in a three-column grid a button beside the
+                          title squeezed short names like "Context" into two broken lines. */}
+                      {o.page && (
+                        <div style={{ marginTop: 12 }}>
+                          <button className="btn btn-sm" onClick={() => nav(o.page![0])}>{o.page[1]} <ArrowRight size={12} /></button>
+                        </div>
+                      )}
+                    </EntityCard>
                   );
                 })}
               </CardGrid>

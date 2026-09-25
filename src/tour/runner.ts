@@ -75,13 +75,24 @@ export function resolve(t: Target): HTMLElement | null {
 
 const describe = (t: Target) => (typeof t === "string" ? t : JSON.stringify(t));
 
-/** Scroll only when the element isn't already comfortably on screen — panels shouldn't jump. */
+/** The nearest ancestor that actually scrolls (the page body, a drawer, a list). */
+function scroller(el: HTMLElement): HTMLElement | null {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const o = getComputedStyle(p).overflowY;
+    if ((o === "auto" || o === "scroll") && p.scrollHeight > p.clientHeight + 1) return p;
+  }
+  return null;
+}
+
+/** Scroll only when the element isn't already comfortably inside its scroll area
+ *  (below the sticky top bars, inside the window) — panels shouldn't jump. */
 function ensureVisible(el: HTMLElement, smooth: boolean) {
   const r = el.getBoundingClientRect();
-  const M = 72;
-  const inView = r.top >= M && r.bottom <= window.innerHeight - 24 && r.left >= 0 && r.right <= window.innerWidth;
+  const box = scroller(el)?.getBoundingClientRect() ?? { top: 0, bottom: window.innerHeight, left: 0, right: window.innerWidth };
+  const top = Math.max(box.top, 0) + 12, bottom = Math.min(box.bottom, window.innerHeight) - 12;
+  const inView = r.top >= top && r.bottom <= bottom && r.left >= 0 && r.right <= window.innerWidth;
   if (inView) return false;
-  el.scrollIntoView({ block: r.height > window.innerHeight - 2 * M ? "start" : "center", inline: "nearest", behavior: (smooth ? "smooth" : "instant") as ScrollBehavior });
+  el.scrollIntoView({ block: r.height > bottom - top ? "start" : "center", inline: "nearest", behavior: (smooth ? "smooth" : "instant") as ScrollBehavior });
   return true;
 }
 
@@ -175,6 +186,9 @@ export class Runner {
     el.dispatchEvent(new Ctor(type, { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, button: 0, view: window }));
   }
   private click(el: HTMLElement) {
+    // A real click moves focus off whatever field was being typed in.
+    const active = document.activeElement as HTMLElement | null;
+    if (active && active !== el && active !== document.body && typeof active.blur === "function") active.blur();
     for (const t of ["pointerover", "mouseover", "pointerdown", "mousedown", "pointerup", "mouseup"]) this.dispatchMouse(el, t);
     if (typeof el.focus === "function" && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT")) el.focus({ preventScroll: true });
     el.click();
@@ -254,6 +268,7 @@ export class Runner {
         const w = await this.find(step.waitFor, 4000);
         res.waitFor = !!w;
         if (!w) throw new Error(`waitFor not found: ${describe(step.waitFor)}`);
+        ensureVisible(w, false);
       }
     } catch (e) {
       res.error = (e as Error).message;
@@ -332,6 +347,7 @@ export class Runner {
         try { await this.act(step, el, true); } catch (e) { overlay.set({ error: (e as Error).message }); }
         await this.settle();
         if (step.waitFor) { const w = await this.find(step.waitFor, 4000); if (w) { ensureVisible(w, false); spot = w; } }
+        this.railHover(null, false); // the action is done — the rail folds away, as in play
       }
       await this.settle();
       const p = spot ? this.point(spot, step.action === "type" && !this.opt.shotAfter) : null;

@@ -4,6 +4,7 @@
 // steps share: selectable choice cards, toggles, segmented pickers, modals,
 // and "tick" lines that go from spinner to check.
 import React from "react";
+import { createPortal } from "react-dom";
 import { Check, CircleCheck, Loader2, X } from "lucide-react";
 import { Avatar } from "./kit";
 
@@ -132,12 +133,14 @@ export function Segmented<T extends string | number>({
   );
 }
 
+/** Rendered at the document root, above the sticky top bars (see Drawer). */
 export function Modal({ onClose, width = 520, children }: { onClose: () => void; width?: number; children: React.ReactNode }) {
-  return (
+  return createPortal(
     <>
       <div className="drawer-veil" onClick={onClose} />
       <div className="modal" role="dialog" style={{ width: `min(${width}px, 94vw)` }}>{children}</div>
-    </>
+    </>,
+    document.body,
   );
 }
 

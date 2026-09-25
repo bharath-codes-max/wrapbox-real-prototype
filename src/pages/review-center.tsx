@@ -81,7 +81,7 @@ export function ReviewCenter({ nav }: { nav: (r: string) => void }) {
                 const n = names(first);
                 const task = first.taskId ? s.tasks.find((t) => t.taskId === first.taskId) : undefined;
                 return (
-                  <div key={key}>
+                  <div key={key} className="rc-bundle">
                     {/* Bundle header — what, who asked, who decides, risk & expiry */}
                     <EntityCard
                       icon={<AgentMark agentId={first.agent} size={26} />}

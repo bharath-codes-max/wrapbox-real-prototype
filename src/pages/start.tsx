@@ -155,23 +155,27 @@ const PRISM_INK: CSSProperties = {
 const PLAT_ICON: Record<string, string> = { macOS: "", Windows: "", Linux: "" };
 
 function GovernedBanner({ s, nav }: { s: AppState; nav: (r: string) => void }) {
-  const total = AGENTS.length;
-  const discovered = AGENTS.filter((a) => a.discovered).length;
+  // Everything here is what THIS workspace has connected — day one shows nothing
+  // governed until the admin connects a runtime; the seeded company shows its fleet.
+  const connected = ROLLOUT.filter((t) => s.onboarding.connected.includes(t.id));
+  const seen = AGENTS.filter((a) => connected.some((t) => t.governs.includes(a.kind)) && (a.discovered || s.onboarding.categories.includes(a.kind)));
+  const total = seen.length;
+  const discovered = seen.filter((a) => a.discovered).length;
   const governed = total - discovered;
-  const devices = DEVICES.length;
-  const gateways = CAPABILITIES.filter((c) => c.plane === "GATEWAY" && c.status === "ENFORCED").length;
+  const devices = connected.some((t) => t.plane === "ENDPOINT" || t.plane === "NETWORK") ? DEVICES.filter((d) => d.enrolled).length : 0;
+  const gateways = new Set(connected.filter((t) => t.plane === "GATEWAY").flatMap((t) => t.caps).filter((id) => CAPABILITIES.find((c) => c.id === id)?.status === "ENFORCED")).size;
   const rules = s.contracts.filter((c) => c.status === "ACTIVE").reduce((n, c) => n + c.clauses.length, 0);
   const decided = s.events.length;
   const refused = s.events.filter((e) => e.decision === "BLOCK").length;
 
   const plat: Record<string, number> = { macOS: 0, Windows: 0, Linux: 0 };
-  DEVICES.forEach((d) => { const os = d.os.split(" ")[0]; plat[os === "macOS" || os === "Windows" ? os : "Linux"] += 1; });
+  if (devices > 0) DEVICES.filter((d) => d.enrolled).forEach((d) => { const os = d.os.split(" ")[0]; plat[os === "macOS" || os === "Windows" ? os : "Linux"] += 1; });
   const platforms = (Object.entries(plat) as [string, number][]).filter(([, n]) => n > 0);
 
   const codeLines: { label: string; cmd: string; out: string; route: string }[] = [
-    { label: "wrapboxd · runtime", cmd: "wrapbox fleet --status", out: `✓ ${devices} device${devices === 1 ? "" : "s"} reporting · runtime healthy`, route: "integrations" },
-    { label: "wrapbox · gateway", cmd: "wrapbox gw ls --enforced", out: `✓ ${gateways} gateway${gateways === 1 ? "" : "s"} enforcing`, route: "coverage" },
-    { label: "wrapbox · policy", cmd: "wrapbox policy show", out: `✓ contract active · ${rules} rule${rules === 1 ? "" : "s"}`, route: "intent" },
+    { label: "wrapboxd · runtime", cmd: "wrapbox fleet --status", out: devices > 0 ? `✓ ${devices} device${devices === 1 ? "" : "s"} reporting · runtime healthy` : "no runtime connected yet", route: "integrations" },
+    { label: "wrapbox · gateway", cmd: "wrapbox gw ls --enforced", out: gateways > 0 ? `✓ ${gateways} gateway${gateways === 1 ? "" : "s"} enforcing` : "no gateway connected yet", route: "coverage" },
+    { label: "wrapbox · policy", cmd: "wrapbox policy show", out: rules > 0 ? `✓ contract active · ${rules} rule${rules === 1 ? "" : "s"}` : "no active contract yet", route: "intent" },
   ];
 
   return (
@@ -188,12 +192,16 @@ function GovernedBanner({ s, nav }: { s: AppState; nav: (r: string) => void }) {
             <span style={{ width: 7, height: 7, borderRadius: 999, background: "#1b0f33" }} /> Enforcement Fabric
           </span>
           <h1 style={{ fontSize: "clamp(32px, 3.8vw, 50px)", lineHeight: 1.02, letterSpacing: "-0.035em", fontWeight: 700, margin: "18px 0 0", color: "#1b0f33" }}>
-            {governed} of {total} agents governed.
+            {total === 0 ? "No agents governed yet." : <>{governed} of {total} agent{total === 1 ? "" : "s"} governed.</>}
           </h1>
           <p style={{ margin: "16px 0 0", fontSize: 16, lineHeight: 1.55, color: "var(--fg-2)", maxWidth: "58ch" }}>
-            {total} agents were discovered across {devices} devices by one Runtime per machine. {governed} are governed — wrapped or carrying a Wrapbox hook, so every tool call is decided before it runs.
-            {discovered > 0 && <> The other {discovered} {discovered === 1 ? "is" : "are"} inventory only, not covered until <code style={{ fontFamily: "var(--mono)", fontSize: 13, background: "rgba(27,15,51,0.08)", padding: "1px 5px", borderRadius: 5 }}>wrapboxd wrap</code> covers {discovered === 1 ? "it" : "them"}.</>}
-            {" "}So far {decided} action{decided === 1 ? "" : "s"} from governed agents were decided and {refused} refused.
+            {total === 0
+              ? <>Nothing is connected in this workspace yet. Connect a runtime during setup and Wrapbox discovers the agents on each machine — then every tool call they make is decided before it runs.</>
+              : <>
+                  {total} agent{total === 1 ? " was" : "s were"} discovered across {devices} device{devices === 1 ? "" : "s"} by one Runtime per machine. {governed} {governed === 1 ? "is" : "are"} governed — wrapped or carrying a Wrapbox hook, so every tool call is decided before it runs.
+                  {discovered > 0 && <> The other {discovered} {discovered === 1 ? "is" : "are"} inventory only, not covered until <code style={{ fontFamily: "var(--mono)", fontSize: 13, background: "rgba(27,15,51,0.08)", padding: "1px 5px", borderRadius: 5 }}>wrapboxd wrap</code> covers {discovered === 1 ? "it" : "them"}.</>}
+                  {" "}So far {decided} action{decided === 1 ? "" : "s"} from governed agents {decided === 1 ? "was" : "were"} decided and {refused} refused.
+                </>}
           </p>
           <div className="row" style={{ gap: 8, marginTop: 20, flexWrap: "wrap" }}>
             {platforms.map(([os, n]) => (

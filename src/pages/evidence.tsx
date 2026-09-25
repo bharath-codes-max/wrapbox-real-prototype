@@ -122,7 +122,7 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
                   tone={e.decision === "BLOCK" ? "block" : e.decision === "REVIEW" ? "review" : undefined}
                   onClick={() => setOpen(e)}
                   fields={[
-                    { label: "Actor", value: <><Avatar userId={e.user} size={16} />{n.user}<span className="faint">· {n.agent}{e.application ? ` · ${e.application}` : ""}</span></> },
+                    { label: "Actor", value: <><Avatar userId={e.user} size={16} />{n.user}<span className="faint">via {n.agent}{e.application ? ` (${e.application})` : ""}</span></> },
                     { label: "Data", value: e.dataClasses.length === 0
                       ? <span className="faint">—</span>
                       : <>{e.dataClasses.slice(0, 2).map((c) => <Chip key={c} tone="violet">{c}</Chip>)}{e.dataClasses.length > 2 && <span className="faint small">+{e.dataClasses.length - 2}</span>}</> },

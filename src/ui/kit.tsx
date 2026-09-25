@@ -1,5 +1,6 @@
 // Shared UI kit — decision chips, cards, tables, drawer, payload views.
 import React from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Search, X } from "lucide-react";
 import type { Decision, SimulationEvent } from "../model/types";
 import { agentById, resourceById, userById } from "../model/org";
@@ -82,7 +83,8 @@ export function CountUp({ value }: { value: number }) {
     const a = from.current, b = value, start = performance.now(), dur = 700;
     let raf = 0;
     const tick = (t: number) => {
-      const k = Math.min(1, (t - start) / dur);
+      // A frame can be stamped slightly before `start`; never run the easing backwards (no "-1").
+      const k = Math.min(1, Math.max(0, (t - start) / dur));
       setShown(Math.round(a + (b - a) * (1 - Math.pow(1 - k, 3))));
       if (k < 1) raf = requestAnimationFrame(tick);
     };
@@ -377,8 +379,10 @@ export function SectionHead({ title, sub, right }: { title: string; sub?: string
   );
 }
 
+/** Side panel. Rendered at the document root so it always sits above the sticky
+ *  top bars (inside the page it was trapped under them by the page's stacking context). */
 export function Drawer({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
-  return (
+  return createPortal(
     <>
       <div className="drawer-veil" onClick={onClose} />
       <div className="drawer" role="dialog">
@@ -387,7 +391,8 @@ export function Drawer({ onClose, children }: { onClose: () => void; children: R
         </div>
         {children}
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
 

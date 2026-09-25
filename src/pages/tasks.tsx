@@ -45,10 +45,11 @@ function StepState({ s }: { s: string }) {
 }
 
 /** Slim progress meter — token-coloured, no big number box. */
-function Meter({ pct }: { pct: number }) {
+function Meter({ pct, done }: { pct: number; done?: boolean }) {
+  // A finished task used its window — that isn't a warning, so it never turns red.
   return (
     <div style={{ marginTop: 7 }}>
-      <Progress value={pct} max={100} size="sm" tone={pct >= 90 ? "block" : pct >= 75 ? "review" : undefined} />
+      <Progress value={pct} max={100} size="sm" tone={done ? undefined : pct >= 90 ? "block" : pct >= 75 ? "review" : undefined} />
     </div>
   );
 }
@@ -172,7 +173,7 @@ function EnvelopeCard({ t, nav }: { t: TaskEnvelope; nav: (r: string) => void })
               <span>{t.durationMin} min envelope</span>
               <span className="faint">{finished ? "finished" : `${remaining} min remaining`}</span>
             </div>
-            <Meter pct={timePct} />
+            <Meter pct={timePct} done={finished} />
             <div className="small faint" style={{ marginTop: 5 }}>an approval renews it</div>
           </div>
           <div style={{ minWidth: 0 }}>
@@ -266,7 +267,7 @@ function Launcher({ run, busyMorning }: { run: (jobId?: string) => void; busyMor
               { label: "Asked by", value: <><Avatar userId={j.user} size={16} />{userById(j.user)?.name} <span className="faint">({userById(j.user)?.role})</span></> },
               { label: "Approver", value: <><Avatar userId={j.approver} size={16} />{userById(j.approver)?.name} <span className="faint">({j.approverRole})</span></> },
               { label: "Envelope", value: `${j.envelope.name} · ${j.envelope.durationMin} min` },
-              { label: "Never", value: j.envelope.forbidden.map((f, i) => <Chip key={i} tone="block">{resourceById(f)?.name ?? f}</Chip>) },
+              { label: "Needs a yes", value: j.envelope.forbidden.map((f, i) => <Chip key={i} tone="block">{resourceById(f)?.name ?? f}</Chip>) },
             ]}
           />
         ))}

@@ -228,7 +228,7 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
           </div>
           <dl className="kv">
             <dt>Owner</dt><dd>{open.owner ? `${userById(open.owner)?.name} (registered it, accountable)` : "unknown — no registered owner"}</dd>
-            <dt>Registered on</dt><dd>{open.device ? deviceById(open.device)?.name : "—"}</dd>
+            <dt>{open.discovered ? "Seen on" : "Registered on"}</dt><dd>{open.device ? deviceById(open.device)?.name : "—"}</dd>
             <dt>Used by</dt>
             <dd>
               {usersOf(open.id).length === 0 ? "nobody yet" : usersOf(open.id).map((u) => (

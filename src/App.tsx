@@ -320,7 +320,7 @@ function Topbar({ nav, onPalette }: { nav: (r: string) => void; onPalette: () =>
       <WorkspaceMenu nav={nav} />
       <button className="topbar-search" onClick={onPalette}>
         <Search size={15} />
-        Search screens, agents, rules, evidence…
+        Search screens…
         <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
           <kbd className="kbd">⌘</kbd>
           <kbd className="kbd">K</kbd>

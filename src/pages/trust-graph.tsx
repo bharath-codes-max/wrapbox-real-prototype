@@ -212,7 +212,7 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
       </div>
 
         ) },
-        { id: "flagged", label: "Flagged relationships", count: riskyEdges, content: !nodes.some((n) => n.risky)
+        { id: "flagged", label: "Flagged relationships", count: flagged.length, content: !nodes.some((n) => n.risky)
           ? <div className="card empty">No risky relationships right now — every edge is low or moderate risk.</div>
           : (
         <div>

@@ -519,10 +519,14 @@ export function simulateById(id: string): SimulationEvent | undefined {
  *  real run will later show. */
 export function shadowEvent(
   sc: Scenario, contracts: IntentContract[], kernel: KernelState = state.kernel, standing: StandingPermission[] = state.standing,
+  opts?: { withLiveOverride?: boolean },
 ): SimulationEvent {
   const seqBefore = getSeq();
   const tokBefore = getTokenCounter();
-  const out = runScenario(sc, contracts, "shadow", { timestamp: Date.now(), kernel, standing });
+  // "What would Run do right now" must include an active break-glass override, exactly as simulate() does.
+  const live = opts?.withLiveOverride ? activeBreakGlass() : undefined;
+  const breakGlass = live ? { resource: live.scopeResource!, environment: live.scopeEnvironment! } : undefined;
+  const out = runScenario(sc, contracts, "shadow", { timestamp: Date.now(), kernel, standing, breakGlass });
   setSeq(seqBefore);
   setTokenCounter(tokBefore);
   return out.event;
@@ -530,6 +534,12 @@ export function shadowEvent(
 
 export function shadowEvaluate(sc: Scenario, contracts: IntentContract[], kernel?: KernelState, standing?: StandingPermission[]): Decision {
   return shadowEvent(sc, contracts, kernel, standing).decision;
+}
+
+/** The decision a real Run would return right now — live rules, kernel, standing
+ *  permissions and any active break-glass override — without recording anything. */
+export function decisionNow(sc: Scenario): Decision {
+  return shadowEvent(sc, state.contracts, state.kernel, state.standing, { withLiveOverride: true }).decision;
 }
 
 /** Who must decide a review: the job's approver for task steps, otherwise the

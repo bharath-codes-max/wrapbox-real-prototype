@@ -33,8 +33,10 @@
 .rail[data-tour-hover] .rail-label { opacity: 1; }
 .rail[data-tour-hover] .rail-item .rail-dot { left: auto; right: 14px; }
 
-/* Still frames (captures, checks): no motion anywhere, so what is captured is the settled UI. */
+/* Still frames (captures, checks): no motion anywhere, so what is captured is the settled UI.
+   (Headless virtual time never advances CSS animations, so they are removed, not shortened.) */
 html[data-tour-still] *, html[data-tour-still] *::before, html[data-tour-still] *::after {
-  transition-duration: 0s !important; transition-delay: 0s !important;
-  animation-duration: 0.001s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important;
+  transition: none !important; animation: none !important; scroll-behavior: auto !important;
 }
+/* The one element whose resting state is hidden until its entrance animation runs. */
+html[data-tour-still] .pipe-stage { opacity: 1 !important; transform: none !important; }

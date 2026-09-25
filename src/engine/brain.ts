@@ -374,8 +374,19 @@ function suggestAlternative(req: ActionRequest): string {
       return req.environment === "production"
         ? "Safer alternative: soft-delete with retention, or run against staging first."
         : "Safer alternative: move to trash / snapshot before delete.";
-    case "WRITE":
-      return "Safer alternative: push to a new feature branch and open a pull request.";
+    case "WRITE": {
+      // The safer path depends on WHAT is being written: money, code, data or a record.
+      const kind = resourceById(req.resource)?.kind;
+      if ((req.blastRadius?.spendUsd ?? 0) > 0)
+        return "Safer alternative: ask the budget owner to approve this one payment — the agent's own spending limit stays as it is.";
+      if (kind === "repo" || /\bgit\b/.test(req.actionRaw ?? ""))
+        return "Safer alternative: push to a new feature branch and open a pull request.";
+      if (kind === "database")
+        return "Safer alternative: run the change on staging first, or ship it as a reviewed migration.";
+      return req.environment === "production"
+        ? "Safer alternative: make the change outside production first, then request a scoped, time-limited approval."
+        : "Safer alternative: request a scoped, time-limited approval in Review Center.";
+    }
     case "DATA_EXPORT":
       return "Safer alternative: export an aggregated or row-limited sample (≤500 rows).";
     case "DEPLOY":

@@ -591,6 +591,12 @@ button { font-family: var(--sans); }
 .c-high { background: var(--review-soft); color: var(--review); }
 .c-moderate { background: var(--accent-soft); color: var(--accent); }
 .c-low { background: var(--surface-2); color: var(--fg-2); }
+/* Review, event and contract states — same four-tone language as decisions. */
+.c-approved, .c-approved_scoped, .c-completed, .c-active, .c-accepted { background: var(--allow-soft); color: var(--allow); }
+.c-constrained, .c-transformed, .c-modified { background: var(--constrain-soft); color: var(--constrain); }
+.c-pending_review, .c-parked, .c-in_progress, .c-open { background: var(--review-soft); color: var(--review); }
+.c-denied, .c-blocked, .c-revoked, .c-stopped { background: var(--block-soft); color: var(--block); }
+.c-expired, .c-draft, .c-deactivated, .c-dismissed { background: var(--surface-2); color: var(--fg-3); }
 
 /* Decision pills carry the mono look for that "systems" feel */
 .chip.c-allow, .chip.c-constrain, .chip.c-review, .chip.c-block { font-family: var(--mono); letter-spacing: 0.02em; }
@@ -1025,6 +1031,8 @@ textarea.input { resize: vertical; line-height: 1.6; }
 .ecard-grid > .ecard:nth-child(4) { animation-delay: 0.12s; }
 .ecard-grid > .ecard:nth-child(n + 5) { animation-delay: 0.16s; }
 .ecard { display: flex; flex-direction: column; padding: 24px 26px; height: 100%; min-width: 0; }
+/* A bundle header sits above its own action cards — it must size to its content, not fill the bundle. */
+.rc-bundle > .ecard { height: auto; }
 .ecard-head { display: flex; gap: 12px; align-items: flex-start; }
 .ecard-icon { flex-shrink: 0; display: grid; place-items: center; min-width: 28px; min-height: 28px; }
 .ecard-icon .logo-img { width: 26px !important; height: 26px !important; }

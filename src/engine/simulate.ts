@@ -202,7 +202,14 @@ export function runScenario(
   ];
 
   const ts = opts?.timestamp ?? Date.now();
-  const hash = simpleHash(prevHash + id + result.decision + ts);
+  // The seal covers the facts of the decision (who, which agent, what, where, what
+  // was decided and by which layer, what left) plus the previous seal — change any
+  // of them and this record, and every one after it, stops matching.
+  const device = deviceOfUser(sc.user)?.id ?? agentById(sc.agent)?.device ?? "unknown-device";
+  const hash = simpleHash(JSON.stringify([
+    prevHash, id, ts, sc.user, device, sc.agent, sc.plane, sc.action, sc.actionRaw ?? "", sc.resource, sc.environment,
+    sc.destination ?? "", result.decision, result.decidedBy.label, payloadAfter ?? sc.payload ?? "",
+  ]));
 
   const event: SimulationEvent = {
     id,
@@ -211,7 +218,7 @@ export function runScenario(
     scenario: sc.id,
     user: sc.user,
     // The action happens on the person's own laptop (identity: user + their device + agent).
-    device: deviceOfUser(sc.user)?.id ?? agentById(sc.agent)?.device ?? "unknown-device",
+    device,
     agent: sc.agent,
     application: sc.application,
     plane: sc.plane,
