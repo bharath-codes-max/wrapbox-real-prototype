@@ -440,7 +440,9 @@ html[data-shot="1"] .aterm-line { animation: none; }
 .lvface { border-radius: 50%; object-fit: cover; flex-shrink: 0; box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--line-strong); }
 .lvface-mono { display: grid; place-items: center; background: var(--acc); color: var(--acc-ink); font: 700 12px var(--mono); }
 .lvwrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; }
-.lvtitle { font-size: 36px; line-height: 1.1; letter-spacing: -0.025em; font-weight: 900; margin: 0; text-align: center; }
+.lvtitle { font-size: 36px; line-height: 1.1; letter-spacing: -0.025em; font-weight: 900; margin: 0; text-align: left; width: 1373px; }
+/* Use-case slides: square corners on the product window, the side card and everything in it. */
+.lvframe, .lvside, .lvsteps li, .lvctl button, .lvout, .lvurl, .lvview, .lvview iframe { border-radius: 0 !important; }
 .lvbody { display: flex; gap: 28px; align-items: stretch; justify-content: center; }
 .lvframe { flex-shrink: 0; border-radius: 18px; overflow: hidden; border: 1px solid var(--line-strong); background: #faf9f5; box-shadow: 0 34px 80px -44px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.06); align-self: flex-start; }
 .lvbar { height: 34px; display: flex; align-items: center; gap: 12px; padding: 0 12px; background: #1c1c1f; color: #a3a3a8; font: 500 12px var(--mono); }
