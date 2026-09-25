@@ -5,7 +5,7 @@
 // or recorded from this page — changes become real in Intent Studio.
 import { useMemo, useState, type ReactNode } from "react";
 import { useAppState, shadowEvaluate } from "../state/store";
-import { PageHead, DecisionChip, Chip, SimNote, Avatar, timeAgo } from "../ui/kit";
+import { PageHead, DecisionChip, Chip, SimNote, Avatar, timeAgo, PageTabs, usePaged, Pager } from "../ui/kit";
 import { SCENARIOS, scenarioById, type Scenario } from "../engine/scenarios";
 import { canActivate } from "../engine/coverage";
 import { describe } from "../ui/describe";
@@ -89,23 +89,14 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
 
   const orderedRows = [...changed, ...rows.filter((r) => r.current === r.prop)];
 
-  // Numbered "act" section heading — signals the guided two-act flow.
-  const actHead = (n: number, title: string, sub: string, right?: ReactNode) => (
-    <div className="section-head">
-      <div className="row" style={{ gap: 12, alignItems: "flex-start", flexWrap: "nowrap" }}>
-        <span
-          style={{
-            width: 26, height: 26, borderRadius: 8, display: "grid", placeItems: "center",
-            background: "var(--accent-soft)", color: "var(--accent)", fontWeight: 700, fontSize: 13, flexShrink: 0,
-          }}
-        >
-          {n}
-        </span>
-        <div>
-          <div className="section-title">{title}</div>
-          <div className="section-sub">{sub}</div>
-        </div>
-      </div>
+  // Replay table pagination — back to page 1 whenever the source or the proposal changes.
+  const pageKey = `${source}|${[...removed].sort().join(",")}|${[...added].sort().join(",")}`;
+  const paged = usePaged(orderedRows, 10, pageKey);
+
+  // One-line intro at the top of each tab (the tab label carries the act number and title).
+  const tabIntro = (sub: string, right?: ReactNode) => (
+    <div className="section-head" style={{ alignItems: "center" }}>
+      <div className="section-sub" style={{ marginTop: 0 }}>{sub}</div>
       {right && <div className="row" style={{ flexShrink: 0 }}>{right}</div>}
     </div>
   );
@@ -151,11 +142,16 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
         right={<SimNote>Replays run through the live Core Brain — nothing is recorded</SimNote>}
       />
 
-      {/* ── Act 1 · Propose a change ─────────────────────────────────────── */}
-      <div className="section" style={{ marginTop: 8 }}>
-        {actHead(
-          1,
-          "Propose a change",
+      <PageTabs
+        storageKey="simulator"
+        tabs={[
+          {
+            id: "propose",
+            label: "1 · Propose a change",
+            count: edits,
+            content: (
+      <div>
+        {tabIntro(
           "Untick a rule to try switching it off. Tick a switched-off contract to try switching it on.",
           edits ? (
             <Chip tone="review">
@@ -247,21 +243,27 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
           ))}
         </div>
       </div>
+            ),
+          },
+          {
+            id: "impact",
+            label: "2 · See what would happen",
+            count: changed.length,
+            content: (
+      <div>
+        {tabIntro(
+          "Every action replayed under your rules today and under your proposal.",
+          <div className="tabs" style={{ marginBottom: 0, borderBottom: "none" }}>
+            <button className={`tab ${source === "history" ? "active" : ""}`} onClick={() => setSource("history")}>
+              <History size={14} /> Your history <span className="tab-count tnum">{history.length}</span>
+            </button>
+            <button className={`tab ${source === "library" ? "active" : ""}`} onClick={() => setSource("library")}>
+              <Library size={14} /> Scenario library <span className="tab-count tnum">{SCENARIOS.length}</span>
+            </button>
+          </div>
+        )}
 
-      {/* ── Act 2 · See what would happen ────────────────────────────────── */}
-      <div className="section">
-        {actHead(2, "See what would happen", "Every action replayed under your rules today and under your proposal.")}
-
-        <div className="tabs">
-          <button className={`tab ${source === "history" ? "active" : ""}`} onClick={() => setSource("history")}>
-            <History size={14} /> Your history <span className="tab-count tnum">{history.length}</span>
-          </button>
-          <button className={`tab ${source === "library" ? "active" : ""}`} onClick={() => setSource("library")}>
-            <Library size={14} /> Scenario library <span className="tab-count tnum">{SCENARIOS.length}</span>
-          </button>
-        </div>
-
-        {/* Before / after decision-mix — same width, stacked, for a clean diff */}
+        {/* Before / after decision-mix — same width, side by side, for a clean diff */}
         <div className="card">
           <div className="spread" style={{ marginBottom: 20 }}>
             <div className="row" style={{ gap: 9 }}>
@@ -276,19 +278,22 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
             </span>
           </div>
 
-          <div className="spread" style={{ marginBottom: 10 }}>
-            <b className="small">Your rules today</b>
-            <span className="faint small">what Wrapbox enforces now</span>
+          <div className="grid g2" style={{ gap: "24px 40px" }}>
+            <div>
+              <div className="spread" style={{ marginBottom: 10 }}>
+                <b className="small">Your rules today</b>
+                <span className="faint small">what Wrapbox enforces now</span>
+              </div>
+              {renderDist("current")}
+            </div>
+            <div>
+              <div className="spread" style={{ marginBottom: 10 }}>
+                <b className="small">With your proposal</b>
+                <Chip tone={changed.length ? "review" : "allow"}>{changed.length} would change</Chip>
+              </div>
+              {renderDist("prop")}
+            </div>
           </div>
-          {renderDist("current")}
-
-          <div style={{ height: 1, background: "var(--line)", margin: "22px 0" }} />
-
-          <div className="spread" style={{ marginBottom: 10 }}>
-            <b className="small">With your proposal</b>
-            <Chip tone={changed.length ? "review" : "allow"}>{changed.length} would change</Chip>
-          </div>
-          {renderDist("prop")}
         </div>
 
         {weakened.length > 0 && (
@@ -305,6 +310,12 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
           </div>
         )}
 
+        {rows.length === 0 ? (
+          <div className="card empty" style={{ marginTop: 16 }}>
+            No recorded actions to replay yet — run something in the Simulation Lab.
+          </div>
+        ) : (
+        <>
         <div className="card card-pad-0" style={{ marginTop: 16 }}>
           <table className="tbl">
             <thead>
@@ -316,7 +327,7 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
               </tr>
             </thead>
             <tbody>
-              {orderedRows.map((r) => (
+              {paged.rows.map((r) => (
                 <tr key={r.key} style={r.current !== r.prop ? { background: "var(--warn-soft)" } : undefined}>
                   <td>
                     <div className="row" style={{ gap: 9, flexWrap: "nowrap", alignItems: "flex-start" }}>
@@ -338,24 +349,22 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
                   <td><DecisionChip d={r.prop} small /></td>
                 </tr>
               ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={4}>
-                    <div className="empty">No recorded actions to replay yet — run something in the Simulation Lab.</div>
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
+          <Pager {...paged} />
         </div>
         <div className="small faint" style={{ marginTop: 8 }}>Rows that would change are listed first.</div>
+        </>
+        )}
       </div>
-
-      {/* ── Act 3 · Make it real ─────────────────────────────────────────── */}
-      <div className="section">
-        {actHead(
-          3,
-          "Make it real",
+            ),
+          },
+          {
+            id: "apply",
+            label: "3 · Make it real",
+            content: (
+      <div>
+        {tabIntro(
           "This page never changes enforcement. When you're happy with the result, switch the rules on or off in Intent Studio."
         )}
         <div className="card">
@@ -369,6 +378,10 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
           </div>
         </div>
       </div>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

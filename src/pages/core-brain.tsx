@@ -2,7 +2,7 @@
 // in engine/brain.ts decide(), and each count is how many recorded actions that
 // step decided (event.decidedBy), so the page can't drift from the engine.
 import { useAppState } from "../state/store";
-import { PageHead, SectionHead, Chip, StatusChip, SimNote, DecisionChip, MetricBar, Avatar, AgentMark, DestMark, timeAgo } from "../ui/kit";
+import { PageHead, SectionHead, Chip, StatusChip, SimNote, DecisionChip, MetricBar, Avatar, AgentMark, DestMark, PageTabs, timeAgo } from "../ui/kit";
 import { describe } from "../ui/describe";
 import type { DecidedBy } from "../model/types";
 import { DETECTORS, CAPABILITIES, TRANSFORMS } from "../model/registries";
@@ -42,6 +42,8 @@ const PLANES = [
   { icon: <Server size={17} />, name: "Gateway", desc: "resources & systems" },
 ];
 
+const INPUTS = ["WHO", "DEVICE", "AGENT", "ACTION", "RESOURCE", "DATA", "DESTINATION", "CONTEXT", "INTENT CONTRACT", "SAFETY KERNEL", "TASK / STANDING AUTHORITY"];
+
 export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
   const s = useAppState();
   const decided = (l: string) => s.events.filter((e) => e.decidedBy?.layer === l).length;
@@ -51,6 +53,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
   const transformsReversible = TRANSFORMS.filter((t) => t.reversible).length;
   const capsEnforced = CAPABILITIES.filter((c) => c.status === "ENFORCED").length;
   const planeCount = new Set(CAPABILITIES.filter((c) => c.plane !== "BRAIN").map((c) => c.plane)).size;
+  const capabilityGaps = CAPABILITIES.filter((c) => c.status !== "ENFORCED");
 
   return (
     <div className="page">
@@ -61,80 +64,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
         right={<SimNote>Architecture view — components simulated, decision flow real</SimNote>}
       />
 
-      {/* Lead — the decision console: a proven decision, then every gate it ran through */}
-      <SectionHead
-        title="How the brain decides"
-        sub="Every action runs through these gates in this exact order. The first one that objects wins. The count is how many of your recorded actions each gate decided."
-      />
-
-      {root && (
-        <div
-          className="card"
-          style={{ background: "var(--accent-soft)", borderColor: "color-mix(in oklab, var(--accent) 28%, var(--surface))" }}
-        >
-          <div className="spread">
-            <span className="eyebrow" style={{ color: "var(--accent)" }}>Latest action on your checkout code</span>
-            <span className="small faint mono">{timeAgo(root.timestamp)}</span>
-          </div>
-          <div className="row" style={{ gap: 10, marginTop: 12 }}>
-            <Avatar userId={root.user} size={26} />
-            <AgentMark agentId={root.agent} size={18} />
-            {root.destination && <DestMark destId={root.destination} size={16} />}
-            <DecisionChip d={root.decision} />
-            <b style={{ minWidth: 0 }}>{describe(root)}</b>
-          </div>
-          <div className="row small" style={{ gap: 8, marginTop: 10 }}>
-            <span className="faint">Decided by</span>
-            <span className="dim" style={{ fontWeight: 550 }}>{root.decidedBy?.label ?? "—"}</span>
-            <span className="faint mono">· {root.id}</span>
-          </div>
-        </div>
-      )}
-
-      <div className="card card-pad-0" style={{ marginTop: 16 }}>
-        <table className="tbl">
-          <thead>
-            <tr>
-              <th style={{ width: 1 }}></th>
-              <th>Gate</th>
-              <th>What it checks</th>
-              <th style={{ textAlign: "right" }}>Decided</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {ORDER.map((o, i) => {
-              const n = decided(o.layer);
-              return (
-                <tr key={o.layer}>
-                  <td>
-                    <span
-                      className="tnum"
-                      style={{ display: "inline-grid", placeItems: "center", width: 22, height: 22, borderRadius: "50%", background: "var(--surface-2)", color: "var(--fg-3)", fontSize: 11, fontWeight: 600 }}
-                    >
-                      {i + 1}
-                    </span>
-                  </td>
-                  <td><b className="small">{o.name}</b></td>
-                  <td className="small dim" style={{ maxWidth: 460 }}>{o.asks}</td>
-                  <td className="tnum" style={{ textAlign: "right" }}>
-                    {n > 0 ? <b>{n}</b> : <span className="faint">{n}</span>}
-                  </td>
-                  <td>
-                    {o.page && (
-                      <a className="small row" style={{ gap: 4, justifyContent: "flex-end", flexWrap: "nowrap" }} onClick={() => nav(o.page![0])}>
-                        {o.page[1]} <ArrowRight size={12} />
-                      </a>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="card" style={{ marginTop: 16, padding: "10px 22px" }}>
+      <div className="card" style={{ padding: "10px 22px" }}>
         <MetricBar
           band
           items={[
@@ -146,139 +76,235 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
         />
       </div>
 
-      <div className="section">
-        <SectionHead title="One brain, three arms" sub="Every plane routes to a single deterministic decision engine that returns one of four outcomes" />
-        <div className="card">
-          <div className="grid g3">
-            {PLANES.map((p) => (
+      <PageTabs storageKey="brain" tabs={[
+        { id: "decides", label: "How it decides", count: ORDER.length, content: (
+          <div>
+            {/* Lead — the decision console: a proven decision, then every gate it ran through */}
+            <SectionHead
+              title="How the brain decides"
+              sub="Every action runs through these gates in this exact order. The first one that objects wins. The count is how many of your recorded actions each gate decided."
+            />
+
+            {root && (
               <div
-                key={p.name}
-                className="row"
-                style={{ gap: 12, justifyContent: "center", padding: "12px 14px", border: "1px solid var(--line)", borderRadius: "var(--r)", background: "var(--surface-2)" }}
+                className="card"
+                style={{ background: "var(--accent-soft)", borderColor: "color-mix(in oklab, var(--accent) 28%, var(--surface))" }}
               >
-                <span className="plane-icon">{p.icon}</span>
-                <div style={{ minWidth: 0 }}>
-                  <div className="small" style={{ fontWeight: 600 }}>{p.name}</div>
-                  <div className="small faint">{p.desc}</div>
+                <div className="spread">
+                  <span className="eyebrow" style={{ color: "var(--accent)" }}>Latest action on your checkout code</span>
+                  <span className="small faint mono">{timeAgo(root.timestamp)}</span>
+                </div>
+                <div className="row" style={{ gap: 10, marginTop: 12 }}>
+                  <Avatar userId={root.user} size={26} />
+                  <AgentMark agentId={root.agent} size={18} />
+                  {root.destination && <DestMark destId={root.destination} size={16} />}
+                  <DecisionChip d={root.decision} />
+                  <b style={{ minWidth: 0 }}>{describe(root)}</b>
+                </div>
+                <div className="row small" style={{ gap: 8, marginTop: 10 }}>
+                  <span className="faint">Decided by</span>
+                  <span className="dim" style={{ fontWeight: 550 }}>{root.decidedBy?.label ?? "—"}</span>
+                  <span className="faint mono">· {root.id}</span>
                 </div>
               </div>
-            ))}
-          </div>
+            )}
 
-          <div className="row" style={{ justifyContent: "center", padding: "8px 0" }}>
-            <ArrowDown size={18} style={{ color: "var(--fg-4)" }} />
-          </div>
-
-          <div
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 13, padding: "16px 20px", borderRadius: "var(--r)", background: "var(--accent-soft)", border: "1px solid color-mix(in oklab, var(--accent) 25%, var(--surface))" }}
-          >
-            <span style={{ width: 38, height: 38, borderRadius: 11, display: "grid", placeItems: "center", background: "var(--accent)", color: "var(--accent-fg)", flexShrink: 0 }}>
-              <Cpu size={21} />
-            </span>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 700, letterSpacing: "-0.01em" }}>Wrapbox Core Brain</div>
-              <div className="small dim">One decision engine · three enforcement arms · same order every time</div>
+            <div className="card card-pad-0" style={{ marginTop: root ? 16 : 0 }}>
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th style={{ width: 1 }}></th>
+                    <th>Gate</th>
+                    <th>What it checks</th>
+                    <th style={{ textAlign: "right" }}>Decided</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ORDER.map((o, i) => {
+                    const n = decided(o.layer);
+                    return (
+                      <tr key={o.layer}>
+                        <td>
+                          <span
+                            className="tnum"
+                            style={{ display: "inline-grid", placeItems: "center", width: 22, height: 22, borderRadius: "50%", background: "var(--surface-2)", color: "var(--fg-3)", fontSize: 11, fontWeight: 600 }}
+                          >
+                            {i + 1}
+                          </span>
+                        </td>
+                        <td><b className="small">{o.name}</b></td>
+                        <td className="small dim" style={{ maxWidth: 460 }}>{o.asks}</td>
+                        <td className="tnum" style={{ textAlign: "right" }}>
+                          {n > 0 ? <b>{n}</b> : <span className="faint">{n}</span>}
+                        </td>
+                        <td>
+                          {o.page && (
+                            <a className="small row" style={{ gap: 4, justifyContent: "flex-end", flexWrap: "nowrap" }} onClick={() => nav(o.page![0])}>
+                              {o.page[1]} <ArrowRight size={12} />
+                            </a>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
+        ) },
+        { id: "architecture", label: "Architecture", content: (
+          <div>
+            <SectionHead title="One brain, three arms" sub="Every plane routes to a single deterministic decision engine that returns one of four outcomes" />
+            <div className="card">
+              <div className="grid g3">
+                {PLANES.map((p) => (
+                  <div
+                    key={p.name}
+                    className="row"
+                    style={{ gap: 12, justifyContent: "center", padding: "12px 14px", border: "1px solid var(--line)", borderRadius: "var(--r)", background: "var(--surface-2)" }}
+                  >
+                    <span className="plane-icon">{p.icon}</span>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="small" style={{ fontWeight: 600 }}>{p.name}</div>
+                      <div className="small faint">{p.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-          <div className="row" style={{ justifyContent: "center", padding: "8px 0" }}>
-            <ArrowDown size={18} style={{ color: "var(--fg-4)" }} />
+              <div className="row" style={{ justifyContent: "center", padding: "8px 0" }}>
+                <ArrowDown size={18} style={{ color: "var(--fg-4)" }} />
+              </div>
+
+              <div
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 13, padding: "16px 20px", borderRadius: "var(--r)", background: "var(--accent-soft)", border: "1px solid color-mix(in oklab, var(--accent) 25%, var(--surface))" }}
+              >
+                <span style={{ width: 38, height: 38, borderRadius: 11, display: "grid", placeItems: "center", background: "var(--accent)", color: "var(--accent-fg)", flexShrink: 0 }}>
+                  <Cpu size={21} />
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, letterSpacing: "-0.01em" }}>Wrapbox Core Brain</div>
+                  <div className="small dim">One decision engine · three enforcement arms · same order every time</div>
+                </div>
+              </div>
+
+              <div className="row" style={{ justifyContent: "center", padding: "8px 0" }}>
+                <ArrowDown size={18} style={{ color: "var(--fg-4)" }} />
+              </div>
+
+              <div className="row" style={{ justifyContent: "center", gap: 10 }}>
+                <DecisionChip d="ALLOW" />
+                <DecisionChip d="CONSTRAIN" />
+                <DecisionChip d="REVIEW" />
+                <DecisionChip d="BLOCK" />
+              </div>
+            </div>
+
+            <div className="section">
+              <SectionHead title="Four stages" sub="From natural-language policy to a deterministic, explainable decision" />
+              <div className="grid g4">
+                <Block title="1 · Policy Compiler" items={["Intent Parser (NL → policy)", "Policy IR", "Policy Validator", "Versioned Policy Store"]} />
+                <Block title="2 · Registries (pluggable)" items={["Data Type Registry", "Detector Registry", "Parser/Extractor Registry", "Destination Registry", "Transform Registry", "Capability Registry", "Action Ontology", "Safety Kernel Rules"]} />
+                <Block title="3 · Analysis & Classification" items={["Content Analysis", "Detectors (PII/secrets/EDM)", "Parsers & OCR", "Semantic Classification", "Source-Code Analysis", "Action Understanding", "Context Enrichment"]} />
+                <Block title="4 · Decision Engine" items={["Policy Evaluation", "Safety Kernel", "Risk & Context", "Blast-Radius Governor", "Transform Planning", "Standing Permissions", "Task Envelopes", "Break-Glass", "Park / Resume"]} tone="accent" />
+              </div>
+            </div>
           </div>
-
-          <div className="row" style={{ justifyContent: "center", gap: 10 }}>
-            <DecisionChip d="ALLOW" />
-            <DecisionChip d="CONSTRAIN" />
-            <DecisionChip d="REVIEW" />
-            <DecisionChip d="BLOCK" />
+        ) },
+        { id: "inputs", label: "Decision inputs", count: INPUTS.length, content: (
+          <div>
+            <SectionHead title="Decision inputs" sub="Every consequential action is judged against this full set of signals" />
+            <div className="card">
+              <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+                {INPUTS.map((x, i, arr) => (
+                  <span key={x} className="row" style={{ gap: 6 }}>
+                    <Chip tone="violet">{x}</Chip>{i < arr.length - 1 ? <span className="faint">+</span> : <span className="faint">→ DECISION</span>}
+                  </span>
+                ))}
+              </div>
+              <div className="small dim" style={{ marginTop: 14 }}>
+                Decisions are deterministic and explainable. Semantic/ML signals are inputs; the final decision always carries
+                explicit reasons — no opaque risk scores.
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-
-      <div className="section">
-        <SectionHead title="Architecture" sub="Four stages from natural-language policy to a deterministic, explainable decision" />
-        <div className="grid g2">
-          <Block title="1 · Policy Compiler" items={["Intent Parser (NL → policy)", "Policy IR", "Policy Validator", "Versioned Policy Store"]} />
-          <Block title="2 · Registries (pluggable)" items={["Data Type Registry", "Detector Registry", "Parser/Extractor Registry", "Destination Registry", "Transform Registry", "Capability Registry", "Action Ontology", "Safety Kernel Rules"]} />
-          <Block title="3 · Analysis & Classification" items={["Content Analysis", "Detectors (PII/secrets/EDM)", "Parsers & OCR", "Semantic Classification", "Source-Code Analysis", "Action Understanding", "Context Enrichment"]} />
-          <Block title="4 · Decision Engine" items={["Policy Evaluation", "Safety Kernel", "Risk & Context", "Blast-Radius Governor", "Transform Planning", "Standing Permissions", "Task Envelopes", "Break-Glass", "Park / Resume"]} tone="accent" />
-        </div>
-      </div>
-
-      <div className="section">
-        <SectionHead title="Decision inputs" sub="Every consequential action is judged against this full set of signals" />
-        <div className="card">
-          <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
-            {["WHO", "DEVICE", "AGENT", "ACTION", "RESOURCE", "DATA", "DESTINATION", "CONTEXT", "INTENT CONTRACT", "SAFETY KERNEL", "TASK / STANDING AUTHORITY"].map((x, i, arr) => (
-              <span key={x} className="row" style={{ gap: 6 }}>
-                <Chip tone="violet">{x}</Chip>{i < arr.length - 1 ? <span className="faint">+</span> : <span className="faint">→ DECISION</span>}
-              </span>
-            ))}
+        ) },
+        { id: "detectors", label: "Detectors", count: DETECTORS.length, content: (
+          <div>
+            <SectionHead title="Detector Registry" sub="Pluggable analyzers that classify content into typed data findings" right={<span className="row" style={{ gap: 6 }}><ScanSearch size={13} /><span className="small dim">{DETECTORS.length} registered</span></span>} />
+            {DETECTORS.length === 0 ? (
+              <div className="card empty">No detectors registered.</div>
+            ) : (
+              <div className="card card-pad-0">
+                <table className="tbl">
+                  <thead><tr><th>Detector</th><th>Method</th><th>Detects</th><th>Status</th></tr></thead>
+                  <tbody>
+                    {DETECTORS.map((d) => (
+                      <tr key={d.id}>
+                        <td className="mono small">{d.id} <span className="faint">v{d.version}</span></td>
+                        <td className="small dim">{d.method}</td>
+                        <td><div className="row" style={{ gap: 4 }}>{d.detects.map((x) => <Chip key={x} tone="violet">{x}</Chip>)}</div></td>
+                        <td><StatusChip s={d.status} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-          <div className="small dim" style={{ marginTop: 14 }}>
-            Decisions are deterministic and explainable. Semantic/ML signals are inputs; the final decision always carries
-            explicit reasons — no opaque risk scores.
+        ) },
+        { id: "transforms", label: "Transforms", count: TRANSFORMS.length, content: (
+          <div>
+            <SectionHead title="Transform Registry" sub="How sensitive data is neutralized when an action is constrained rather than blocked" right={<span className="row" style={{ gap: 6 }}><Shuffle size={13} /><span className="small dim">{TRANSFORMS.length} kinds</span></span>} />
+            {TRANSFORMS.length === 0 ? (
+              <div className="card empty">No transforms registered.</div>
+            ) : (
+              <div className="card card-pad-0">
+                <table className="tbl">
+                  <thead><tr><th>Transform</th><th>Reversible</th><th>Example</th></tr></thead>
+                  <tbody>
+                    {TRANSFORMS.map((t) => (
+                      <tr key={t.kind}>
+                        <td><Chip tone="constrain">{t.kind}</Chip></td>
+                        <td>{t.reversible ? <Chip tone="allow">yes · Token Vault</Chip> : <Chip tone="neutral">no</Chip>}</td>
+                        <td className="mono small dim">{t.example}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        </div>
-      </div>
-
-      <div className="section">
-        <SectionHead title="Detector Registry" sub="Pluggable analyzers that classify content into typed data findings" right={<span className="row" style={{ gap: 6 }}><ScanSearch size={13} /><span className="small dim">{DETECTORS.length} registered</span></span>} />
-        <div className="card card-pad-0">
-          <table className="tbl">
-            <thead><tr><th>Detector</th><th>Method</th><th>Detects</th><th>Status</th></tr></thead>
-            <tbody>
-              {DETECTORS.map((d) => (
-                <tr key={d.id}>
-                  <td className="mono small">{d.id} <span className="faint">v{d.version}</span></td>
-                  <td className="small dim">{d.method}</td>
-                  <td><div className="row" style={{ gap: 4 }}>{d.detects.map((x) => <Chip key={x} tone="violet">{x}</Chip>)}</div></td>
-                  <td><StatusChip s={d.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="section">
-        <SectionHead title="Transform Registry" sub="How sensitive data is neutralized when an action is constrained rather than blocked" right={<span className="row" style={{ gap: 6 }}><Shuffle size={13} /><span className="small dim">{TRANSFORMS.length} kinds</span></span>} />
-        <div className="card card-pad-0">
-          <table className="tbl">
-            <thead><tr><th>Transform</th><th>Reversible</th><th>Example</th></tr></thead>
-            <tbody>
-              {TRANSFORMS.map((t) => (
-                <tr key={t.kind}>
-                  <td><Chip tone="constrain">{t.kind}</Chip></td>
-                  <td>{t.reversible ? <Chip tone="allow">yes · Token Vault</Chip> : <Chip tone="neutral">no</Chip>}</td>
-                  <td className="mono small dim">{t.example}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="section">
-        <SectionHead
-          title="Capability truthfulness"
-          sub="Capabilities that are not fully enforced gate contract activation honestly — nothing claims coverage it lacks"
-          right={<><span className="row" style={{ gap: 6 }}><ShieldCheck size={13} style={{ color: "var(--allow)" }} /><span className="small dim">{capsEnforced} of {CAPABILITIES.length} enforced</span></span><button className="btn btn-sm" onClick={() => nav("coverage")}>Coverage Map <ArrowRight size={13} /></button></>}
-        />
-        <div className="card card-pad-0">
-          <table className="tbl">
-            <thead><tr><th>Capability</th><th>Plane</th><th>Status</th></tr></thead>
-            <tbody>
-              {CAPABILITIES.filter((c) => c.status !== "ENFORCED").map((c) => (
-                <tr key={c.id}>
-                  <td className="small">{c.label}</td>
-                  <td><Chip tone="neutral">{c.plane}</Chip></td>
-                  <td><StatusChip s={c.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        ) },
+        { id: "capabilities", label: "Capability truthfulness", count: capabilityGaps.length, content: (
+          <div>
+            <SectionHead
+              title="Capability truthfulness"
+              sub="Capabilities that are not fully enforced gate contract activation honestly — nothing claims coverage it lacks"
+              right={<><span className="row" style={{ gap: 6 }}><ShieldCheck size={13} style={{ color: "var(--allow)" }} /><span className="small dim">{capsEnforced} of {CAPABILITIES.length} enforced</span></span><button className="btn btn-sm" onClick={() => nav("coverage")}>Coverage Map <ArrowRight size={13} /></button></>}
+            />
+            {capabilityGaps.length === 0 ? (
+              <div className="card empty">Every capability is enforced — no gaps gate contract activation.</div>
+            ) : (
+              <div className="card card-pad-0">
+                <table className="tbl">
+                  <thead><tr><th>Capability</th><th>Plane</th><th>Status</th></tr></thead>
+                  <tbody>
+                    {capabilityGaps.map((c) => (
+                      <tr key={c.id}>
+                        <td className="small">{c.label}</td>
+                        <td><Chip tone="neutral">{c.plane}</Chip></td>
+                        <td><StatusChip s={c.status} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) },
+      ]} />
     </div>
   );
 }

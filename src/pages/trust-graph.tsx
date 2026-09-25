@@ -2,7 +2,7 @@
 // resources/destinations, with new/risky edges highlighted. Pure SVG.
 import { useMemo, useState } from "react";
 import { useAppState } from "../state/store";
-import { PageHead, SectionHead, Chip, SimNote, MetricBar, AgentMark, DestMark } from "../ui/kit";
+import { PageHead, SectionHead, Chip, SimNote, MetricBar, AgentMark, DestMark, PageTabs } from "../ui/kit";
 import { AGENTS, USERS, resourceById, userById } from "../model/org";
 import { destById } from "../model/registries";
 import { ShieldAlert } from "lucide-react";
@@ -25,13 +25,13 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
       else { const ne = { from, to, risky, count: 1 }; eKey.set(k, ne); edges.push(ne); }
     };
     // Columns: users | agents | resources+destinations
-    USERS.forEach((u, i) => nodes.push({ id: u.id, label: u.name, kind: "user", x: 100, y: 70 + i * 92 }));
-    AGENTS.forEach((a, i) => nodes.push({ id: a.id, label: a.name, kind: "agent", x: 370, y: 46 + i * 52, risky: a.discovered }));
+    USERS.forEach((u, i) => nodes.push({ id: u.id, label: u.name, kind: "user", x: 100, y: 62 + i * 70 }));
+    AGENTS.forEach((a, i) => nodes.push({ id: a.id, label: a.name, kind: "agent", x: 370, y: 50 + i * 44, risky: a.discovered }));
     const targets = new Map<string, Node>();
     let ti = 0;
     const targetNode = (id: string, label: string, kind: "resource" | "dest", risky = false) => {
       if (!targets.has(id)) {
-        const n: Node = { id, label, kind, x: 640, y: 46 + ti * 46, risky };
+        const n: Node = { id, label, kind, x: 640, y: 50 + ti * 33, risky };
         targets.set(id, n); nodes.push(n); ti += 1;
       } else if (risky) targets.get(id)!.risky = true;
       return id;
@@ -52,7 +52,7 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
     return { nodes, edges };
   }, [s.events]);
 
-  const height = Math.max(480, ...nodes.map((n) => n.y + 50));
+  const height = Math.max(440, ...nodes.map((n) => n.y + 34));
   const colors = { user: "#5b8def", agent: "#a78bfa", resource: "#34c98e", dest: "#e8b542" };
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const selEdges = selected ? edges.filter((e) => e.from === selected || e.to === selected) : edges;
@@ -74,8 +74,22 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
         right={<SimNote />}
       />
 
-      {/* Hero — the relationship map is the point of this page. */}
-      <div className="section" style={{ marginTop: 4 }}>
+      {/* At-a-glance strip — small, refined numbers, not big boxes. */}
+      <div className="card">
+        <MetricBar
+          band
+          items={[
+            { label: "Identities", value: userCount, note: "human principals observed" },
+            { label: "Agents", value: agentCount, tone: riskyAgents > 0 ? "warn" : undefined, note: riskyAgents > 0 ? `${riskyAgents} unregistered (stranger)` : "all registered", onClick: () => nav("agents") },
+            { label: "Resources & destinations", value: targetCount, note: "tools, files and endpoints reached" },
+            { label: "High-risk edges", value: riskyEdges, tone: riskyEdges > 0 ? "bad" : "good", note: "relationships carrying high/critical activity", onClick: () => nav("evidence") },
+          ]}
+        />
+      </div>
+
+      <PageTabs storageKey="trust" tabs={[
+        { id: "map", label: "Relationship map", count: edges.length, content: (
+      <div>
         <SectionHead
           title="Relationship map"
           sub="Every edge is an observed event; thicker lines carry more traffic. Click any node to focus its neighbourhood."
@@ -142,7 +156,7 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
                   <circle cx={n.x} cy={n.y} r={r} fill={fill} stroke="rgba(255,255,255,0.55)" strokeWidth={focused ? 1.6 : 1} />
                   <text className="tg-label" x={n.kind === "user" ? n.x - 13 : n.x + 13} y={n.y + 3.5}
                     textAnchor={n.kind === "user" ? "end" : "start"}
-                    style={{ fill: n.risky ? "#ff8f9c" : undefined, fontWeight: n.risky || focused ? 600 : 400 }}>
+                    style={{ fill: n.risky ? "var(--block)" : undefined, fontWeight: n.risky || focused ? 600 : 400 }}>
                     {n.label}
                   </text>
                 </g>
@@ -173,23 +187,11 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
         </div>
       </div>
 
-      {/* At-a-glance strip — small, refined numbers, not big boxes. */}
-      <div className="section">
-        <div className="card">
-          <MetricBar
-            band
-            items={[
-              { label: "Identities", value: userCount, note: "human principals observed" },
-              { label: "Agents", value: agentCount, tone: riskyAgents > 0 ? "warn" : undefined, note: riskyAgents > 0 ? `${riskyAgents} unregistered (stranger)` : "all registered", onClick: () => nav("agents") },
-              { label: "Resources & destinations", value: targetCount, note: "tools, files and endpoints reached" },
-              { label: "High-risk edges", value: riskyEdges, tone: riskyEdges > 0 ? "bad" : "good", note: "relationships carrying high/critical activity", onClick: () => nav("evidence") },
-            ]}
-          />
-        </div>
-      </div>
-
-      {nodes.some((n) => n.risky) && (
-        <div className="section">
+        ) },
+        { id: "flagged", label: "Flagged relationships", count: riskyEdges, content: !nodes.some((n) => n.risky)
+          ? <div className="card empty">No risky relationships right now — every edge is low or moderate risk.</div>
+          : (
+        <div>
           <SectionHead title="Flagged relationship" sub="Edges the Safety Kernel is watching" />
           <div className="card" style={{ borderColor: "var(--bad)" }}>
             <div className="row" style={{ alignItems: "flex-start", gap: 12 }}>
@@ -215,7 +217,8 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
             </div>
           </div>
         </div>
-      )}
+        ) },
+      ]} />
     </div>
   );
 }

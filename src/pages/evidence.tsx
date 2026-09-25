@@ -2,7 +2,7 @@
 // full causal chain and a graph/timeline view.
 import { useMemo, useState } from "react";
 import { useAppState } from "../state/store";
-import { PageHead, SectionHead, MetricBar, DecisionChip, Chip, SimNote, names, EvidenceChain, RiskChip, Avatar, AgentMark, DestMark } from "../ui/kit";
+import { PageHead, SectionHead, MetricBar, DecisionChip, Chip, SimNote, names, EvidenceChain, RiskChip, Avatar, AgentMark, DestMark, usePaged, Pager } from "../ui/kit";
 import { describe } from "../ui/describe";
 import { EventDetail } from "../ui/event-detail";
 import type { SimulationEvent } from "../model/types";
@@ -49,6 +49,9 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
     }
     return l;
   }, [s.events, q]);
+
+  // Table view shows 15 events per page; a new search jumps back to page 1.
+  const paged = usePaged(list, 10, q);
 
   const tally = useMemo(() => ({
     total: s.events.length,
@@ -114,7 +117,7 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
             <table className="tbl tbl-wide">
               <thead><tr><th>Time</th><th>Actor</th><th>What happened</th><th>Data</th><th>Wrapbox decision</th><th>Human review</th><th>Risk</th><th>Seal</th></tr></thead>
               <tbody>
-                {list.map((e) => {
+                {paged.rows.map((e) => {
                   const n = names(e);
                   return (
                     <tr key={e.id} className="rowlink" onClick={() => setOpen(e)}>
@@ -151,6 +154,7 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
                 {list.length === 0 && <tr><td colSpan={8}><div className="empty">No evidence matches your search.</div></td></tr>}
               </tbody>
             </table>
+            <Pager {...paged} />
           </div>
         ) : (
           <div className="grid g2">

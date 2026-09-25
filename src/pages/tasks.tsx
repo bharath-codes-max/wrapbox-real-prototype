@@ -3,12 +3,24 @@
 // step 6 (production deploy) parks; independent steps continue; approval resumes.
 import { useAppState, startTask, advanceTask } from "../state/store";
 import { TASK_JOBS } from "../engine/scenarios";
-import { PageHead, SectionHead, MetricBar, Chip, DecisionChip, SimNote, AgentMark, Avatar } from "../ui/kit";
+import { PageHead, SectionHead, MetricBar, Chip, DecisionChip, SimNote, AgentMark, Avatar, PageTabs, usePaged, Pager } from "../ui/kit";
 import { EventDetail } from "../ui/event-detail";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { agentById, resourceById, userById } from "../model/org";
 import type { TaskEnvelope } from "../model/types";
-import { Boxes, ShieldOff, Timer, FileStack, Play, PauseOctagon, Sunrise } from "lucide-react";
+import { Boxes, ShieldOff, Timer, FileStack, Play, PauseOctagon, Sunrise, ArrowRight } from "lucide-react";
+
+/** In progress = still running or parked for approval; everything else has finished (completed, stopped, expired). */
+const isInProgress = (t: TaskEnvelope) => t.status === "active" || t.status === "parked";
+
+/** One status chip for a task — shared by the list row and the panel header so they can never disagree. */
+function TaskStatusChip({ t }: { t: TaskEnvelope }) {
+  return (
+    <Chip tone={t.status === "completed" ? "allow" : t.status === "parked" ? "review" : t.status === "stopped" ? "block" : "constrain"}>
+      {t.status === "stopped" ? "PARTLY DONE" : t.status.toUpperCase()}
+    </Chip>
+  );
+}
 
 // Each execution state maps to a decision tone; blank tones render as quiet/inactive.
 const STEP_TONE: Record<string, string> = {
@@ -130,9 +142,7 @@ function EnvelopeCard({ t, nav }: { t: TaskEnvelope; nav: (r: string) => void })
         </div>
         <div className="row" style={{ gap: 6, flexShrink: 0 }}>
           {t.team && <Chip tone="neutral">{t.team}</Chip>}
-          <Chip tone={t.status === "completed" ? "allow" : t.status === "parked" ? "review" : t.status === "stopped" ? "block" : "constrain"}>
-            {t.status === "stopped" ? "PARTLY DONE" : t.status.toUpperCase()}
-          </Chip>
+          <TaskStatusChip t={t} />
         </div>
       </div>
 
@@ -233,10 +243,11 @@ function EnvelopeCard({ t, nav }: { t: TaskEnvelope; nav: (r: string) => void })
   );
 }
 
-/** The console's action surface — four real team jobs, each with its slip + separate approver. */
+/** The console's action surface — four real team jobs, each with its slip + separate approver.
+ *  Renders without a section wrapper so it can sit directly inside a tab panel. */
 function Launcher({ run, busyMorning }: { run: (jobId?: string) => void; busyMorning: () => void }) {
   return (
-    <div className="section">
+    <>
       <SectionHead
         title="Start a task"
         sub="Four real jobs from four teams. Each agent gets its team's permission slip; its risky step goes to a different person to approve."
@@ -265,6 +276,70 @@ function Launcher({ run, busyMorning }: { run: (jobId?: string) => void; busyMor
           </div>
         ))}
       </div>
+    </>
+  );
+}
+
+/** Compact master list — one selectable row per task; the full panel renders below for the selected one. */
+function TaskList({ tasks, selectedId, onSelect, resetKey }: {
+  tasks: TaskEnvelope[];
+  selectedId: string;
+  onSelect: (taskId: string) => void;
+  resetKey: string;
+}) {
+  const pg = usePaged(tasks, 4, resetKey);
+  return (
+    <div className="card card-pad-0">
+      <table className="tbl">
+        <thead>
+          <tr>
+            <th>Task</th>
+            <th>Team</th>
+            <th>Asked by → approver</th>
+            <th>Status</th>
+            <th style={{ textAlign: "right" }}>Steps done</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pg.rows.map((t) => {
+            const sel = t.taskId === selectedId;
+            const cell: CSSProperties = { verticalAlign: "middle", paddingTop: 7, paddingBottom: 7, ...(sel ? { background: "var(--accent-soft)" } : {}) };
+            const done = t.steps.filter((x) => x.state === "done").length;
+            const requester = userById(t.user)?.name ?? t.user;
+            const approver = t.approver ? userById(t.approver)?.name ?? t.approver : undefined;
+            return (
+              <tr
+                key={t.taskId}
+                className="rowlink"
+                tabIndex={0}
+                aria-selected={sel}
+                onClick={() => onSelect(t.taskId)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(t.taskId); } }}
+              >
+                <td style={{ ...cell, boxShadow: sel ? "inset 3px 0 0 var(--accent)" : undefined }}>
+                  <div className="row" style={{ gap: 10, flexWrap: "nowrap" }} title={agentById(t.agent)?.name}>
+                    <AgentMark agentId={t.agent} size={18} />
+                    <span style={{ fontWeight: sel ? 650 : 550 }}>{t.title}</span>
+                  </div>
+                </td>
+                <td style={cell}>{t.team ? <Chip tone="neutral">{t.team}</Chip> : <span className="faint">—</span>}</td>
+                <td style={cell}>
+                  <span className="row" style={{ gap: 6, flexWrap: "nowrap" }} title={`Asked by ${requester}${approver ? ` · risky steps → ${approver}` : ""}`}>
+                    <Avatar userId={t.user} size={18} />
+                    <ArrowRight size={12} className="faint" />
+                    {t.approver ? <Avatar userId={t.approver} size={18} /> : <span className="faint">—</span>}
+                  </span>
+                </td>
+                <td style={cell}><TaskStatusChip t={t} /></td>
+                <td style={{ ...cell, textAlign: "right" }} className="tnum">
+                  {done} / {t.steps.length}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <Pager page={pg.page} pages={pg.pages} setPage={pg.setPage} total={pg.total} size={pg.size} />
     </div>
   );
 }
@@ -280,6 +355,62 @@ export function TasksPage({ nav }: { nav: (r: string) => void }) {
   const [teamFilter, setTeamFilter] = useState<string>("");
   const shown = [...s.tasks].reverse().filter((t) => !teamFilter || (t.team ?? "Engineering") === teamFilter);
 
+  // Status split for the tabs. Tab counts are all-team totals; the team filter narrows the list inside a tab.
+  const inProgressAll = s.tasks.filter(isInProgress);
+  const finishedAll = s.tasks.filter((t) => !isInProgress(t));
+  const inProgressShown = shown.filter(isInProgress);
+  const finishedShown = shown.filter((t) => !isInProgress(t));
+  const latest = s.tasks[s.tasks.length - 1];
+
+  // Master/detail selection — remembered per tab; falls back to the newest task in the list.
+  const [picked, setPicked] = useState<{ progress?: string; finished?: string }>({});
+
+  const teamButtons = (
+    <div className="row" style={{ gap: 4 }}>
+      {["", ...TASK_JOBS.map((j) => j.team)].map((tm) => (
+        <button key={tm || "all"} className={`btn btn-sm ${teamFilter === tm ? "btn-primary" : "btn-ghost"}`} onClick={() => setTeamFilter(tm)}>
+          {tm || "All teams"}
+        </button>
+      ))}
+    </div>
+  );
+
+  const browse = (key: "progress" | "finished", list: TaskEnvelope[], total: number, title: string, sub: string, emptyLine: string) => {
+    const current = list.find((t) => t.taskId === picked[key]) ?? list[0];
+    return (
+      <>
+        <SectionHead
+          title={title}
+          sub={`${sub}${teamFilter ? ` · ${list.length} of ${total} from ${teamFilter}` : ""}`}
+          right={teamButtons}
+        />
+        {!current ? (
+          <div className="card empty">
+            <Boxes size={26} className="dim" />
+            <div style={{ fontWeight: 600, fontSize: 15, marginTop: 10 }}>
+              No {teamFilter ? `${teamFilter} ` : ""}tasks {key === "progress" ? "in progress" : "finished yet"}
+            </div>
+            <div className="small dim" style={{ maxWidth: 520, margin: "8px auto 0", lineHeight: 1.55 }}>
+              {emptyLine} Start one from the <b>Start a task</b> tab — or press <b>Busy morning</b> there to see all four teams working at once.
+            </div>
+          </div>
+        ) : (
+          <>
+            <TaskList
+              tasks={list}
+              selectedId={current.taskId}
+              onSelect={(id) => setPicked((p) => ({ ...p, [key]: id }))}
+              resetKey={teamFilter}
+            />
+            <div style={{ marginTop: 16 }}>
+              <EnvelopeCard key={current.taskId} t={current} nav={nav} />
+            </div>
+          </>
+        )}
+      </>
+    );
+  };
+
   return (
     <div className="page">
       <PageHead
@@ -291,7 +422,9 @@ export function TasksPage({ nav }: { nav: (r: string) => void }) {
 
       {s.tasks.length === 0 ? (
         <>
-          <Launcher run={run} busyMorning={busyMorning} />
+          <div className="section">
+            <Launcher run={run} busyMorning={busyMorning} />
+          </div>
           <div className="card empty" style={{ marginTop: 24 }}>
             <Boxes size={26} className="dim" />
             <div style={{ fontWeight: 600, fontSize: 15, marginTop: 10 }}>No tasks yet</div>
@@ -314,25 +447,51 @@ export function TasksPage({ nav }: { nav: (r: string) => void }) {
             />
           </div>
 
-          <div className="section">
-            <SectionHead
-              title="Running and finished tasks"
-              sub="Newest first — click any step with a recorded decision to inspect its event"
-              right={
-                <div className="row" style={{ gap: 4 }}>
-                  {["", ...TASK_JOBS.map((j) => j.team)].map((tm) => (
-                    <button key={tm || "all"} className={`btn btn-sm ${teamFilter === tm ? "btn-primary" : "btn-ghost"}`} onClick={() => setTeamFilter(tm)}>
-                      {tm || "All teams"}
-                    </button>
-                  ))}
-                </div>
-              }
-            />
-            {shown.map((t) => <EnvelopeCard key={t.taskId} t={t} nav={nav} />)}
-            {shown.length === 0 && <div className="card empty">No {teamFilter} tasks yet.</div>}
-          </div>
-
-          <Launcher run={run} busyMorning={busyMorning} />
+          <PageTabs
+            storageKey="tasks"
+            tabs={[
+              {
+                id: "progress",
+                label: "In progress",
+                count: inProgressAll.length,
+                content: browse(
+                  "progress", inProgressShown, inProgressAll.length, "In progress",
+                  "Running or parked for approval, newest first — select a task to see its envelope and execution timeline",
+                  "Tasks appear here while they run or wait on an approval.",
+                ),
+              },
+              {
+                id: "finished",
+                label: "Finished",
+                count: finishedAll.length,
+                content: browse(
+                  "finished", finishedShown, finishedAll.length, "Finished",
+                  "Completed, or partly done after a denial — click any decided step to inspect its event",
+                  "Tasks land here once they complete, or stop after a denial.",
+                ),
+              },
+              {
+                id: "start",
+                label: "Start a task",
+                content: (
+                  <>
+                    {latest && (
+                      <div className="card" style={{ padding: "11px 16px", marginBottom: 18 }}>
+                        <div className="row small" style={{ gap: 8 }}>
+                          <span className="faint">Latest run</span>
+                          <AgentMark agentId={latest.agent} size={16} />
+                          <b>{latest.title}</b>
+                          <TaskStatusChip t={latest} />
+                          <span className="dim">— follow it in the <b>{isInProgress(latest) ? "In progress" : "Finished"}</b> tab</span>
+                        </div>
+                      </div>
+                    )}
+                    <Launcher run={run} busyMorning={busyMorning} />
+                  </>
+                ),
+              },
+            ]}
+          />
         </>
       )}
     </div>

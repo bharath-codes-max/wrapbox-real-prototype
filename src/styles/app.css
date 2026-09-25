@@ -121,7 +121,35 @@
   --shadow-lg: 0 24px 60px -24px rgba(0, 0, 0, 0.75);
   color-scheme: dark;
 }
-:root[data-theme="dark"] .topbar { border-bottom-color: rgba(255, 255, 255, 0.07); }
+/* Dark theme header — Terracotta Dusk #4D260F with a gradient glass finish:
+   a warm glow from the left, a soft top sheen, frosted blur, and a lit edge. */
+:root[data-theme="dark"] { --header: #4d260f; }
+:root[data-theme="dark"] .topbar {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.02) 48%, rgba(255, 255, 255, 0) 100%),
+    radial-gradient(120% 260% at 12% -60%, rgba(217, 132, 99, 0.38) 0%, rgba(217, 132, 99, 0) 58%),
+    linear-gradient(100deg, rgba(77, 38, 15, 0.94) 0%, rgba(104, 53, 24, 0.9) 52%, rgba(77, 38, 15, 0.94) 100%);
+  backdrop-filter: saturate(160%) blur(18px);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+  border-bottom: 1px solid rgba(255, 196, 160, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 28px -14px rgba(0, 0, 0, 0.7);
+}
+:root[data-theme="dark"] .topbar-search,
+:root[data-theme="dark"] .theme-toggle {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 214, 190, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+:root[data-theme="dark"] .topbar-search:hover,
+:root[data-theme="dark"] .theme-toggle:hover { background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 214, 190, 0.34); }
+
+/* Page tabs + pager — one section at a time, no long scroll */
+.page-tabs > .tabs { margin-bottom: 18px; }
+.pager {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 12px 0 4px; margin-top: 4px; border-top: 1px solid var(--line);
+}
+.card-pad-0 > .pager { padding: 12px 20px; margin-top: 0; }
 
 /* Theme toggle — sits on the dark header in both themes */
 .theme-toggle {
@@ -630,15 +658,12 @@ textarea.input { resize: vertical; line-height: 1.6; }
 /* ==========================================================================
    Trust graph
    ========================================================================== */
-.tg-canvas {
-  background: radial-gradient(120% 90% at 28% 12%, #1a396a 0%, #10264a 48%, #0a1a35 100%);
-  border-radius: var(--r); padding: 6px 10px;
-  box-shadow: inset 0 1px 40px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-}
+/* Graph sits on the card's own surface (follows light/dark theme) */
+.tg-canvas { background: transparent; padding: 0; }
 .tg-svg { width: 100%; height: auto; display: block; }
 .tg-node { cursor: pointer; }
-.tg-canvas .tg-label { font-size: 12px; fill: rgba(255, 255, 255, 0.82); font-family: var(--sans); }
-.tg-col-head { fill: rgba(255, 255, 255, 0.42); font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-family: var(--sans); }
+.tg-canvas .tg-label { font-size: 12px; fill: var(--fg-2); font-family: var(--sans); }
+.tg-col-head { fill: var(--fg-3); font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-family: var(--sans); }
 .tg-label { font-size: 12px; fill: var(--fg-2); font-family: var(--sans); }
 .tg-edge { stroke: var(--line-strong); }
 

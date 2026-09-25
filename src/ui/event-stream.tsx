@@ -1,7 +1,7 @@
 // Shared filterable event stream — used by Live Actions and embedded elsewhere.
 import { useMemo, useState } from "react";
 import type { SimulationEvent } from "../model/types";
-import { Avatar, AgentMark, DecisionChip, names, clock, RiskChip } from "./kit";
+import { Avatar, AgentMark, DecisionChip, names, clock, RiskChip, usePaged, Pager } from "./kit";
 import { EventDetail } from "./event-detail";
 import { describe } from "./describe";
 import { AGENTS, USERS } from "../model/org";
@@ -39,6 +39,8 @@ export function EventStream({
     }
     return limit ? list.slice(0, limit) : list;
   }, [events, fAgent, fUser, fPlane, fDecision, fRisk, q, limit]);
+  // Full streams page at 12 rows; embedded previews (`limit`) show their slice as-is.
+  const paged = usePaged(filtered, limit ? Math.max(filtered.length, 1) : 12, [fAgent, fUser, fPlane, fDecision, fRisk, q].join("|"));
 
   return (
     <>
@@ -70,7 +72,7 @@ export function EventStream({
       )}
       <div className={bare ? "" : "card"} style={bare ? { padding: "6px 22px" } : { padding: compact ? "6px 20px" : "8px 22px" }}>
         {filtered.length === 0 && <div className="empty">No events match the current filters.</div>}
-        {filtered.map((e) => {
+        {paged.rows.map((e) => {
           const n = names(e);
           return (
             <div className="stream-item rowlink" key={e.id} onClick={() => setOpen(e)} style={{ cursor: "pointer" }}>
@@ -91,6 +93,7 @@ export function EventStream({
             </div>
           );
         })}
+        <Pager {...paged} />
       </div>
       {open && <EventDetail e={events.find((x) => x.id === open.id) ?? open} onClose={() => setOpen(null)} onNavigate={(r) => { setOpen(null); nav(r); }} />}
     </>

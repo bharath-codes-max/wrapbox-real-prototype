@@ -1,7 +1,7 @@
 // Control Room — executive/operations dashboard. Every number derives from
 // the event store; every metric is clickable to its inspectable source.
 import { useAppState, metrics } from "../state/store";
-import { PageHead, MetricBar, StatusChip, SimNote, SectionHead } from "../ui/kit";
+import { PageHead, MetricBar, StatusChip, SimNote, SectionHead, PageTabs } from "../ui/kit";
 import { EventStream } from "../ui/event-stream";
 import { AGENTS, DEVICES } from "../model/org";
 import { CAPABILITIES } from "../model/registries";
@@ -76,7 +76,17 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
         </div>
       </div>
 
-      <div className="section">
+      <PageTabs storageKey="control" tabs={[
+        { id: "activity", label: "Recent activity", count: Math.min(8, s.events.length), content: (
+      <div>
+        <SectionHead title="Recent activity" sub="The live decision stream, newest first" right={<button className="btn btn-sm" onClick={() => nav("live")}>Live Actions <ArrowRight size={13} /></button>} />
+        <div className="card card-pad-0">
+          <EventStream events={s.events} nav={nav} compact limit={8} filters={false} bare />
+        </div>
+      </div>
+        ) },
+        { id: "planes", label: "Enforcement planes", count: 3, content: (
+      <div>
         <SectionHead title="Enforcement planes" sub="One Core Brain, three enforcement arms" right={<button className="btn btn-sm" onClick={() => nav("coverage")}>Coverage Map <ArrowRight size={13} /></button>} />
         <div className="grid g3">
           {(["ENDPOINT", "NETWORK", "GATEWAY"] as const).map((p) => {
@@ -105,13 +115,8 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
           })}
         </div>
       </div>
-
-      <div className="section">
-        <SectionHead title="Recent activity" sub="The live decision stream, newest first" right={<button className="btn btn-sm" onClick={() => nav("live")}>Live Actions <ArrowRight size={13} /></button>} />
-        <div className="card card-pad-0">
-          <EventStream events={s.events} nav={nav} compact limit={8} filters={false} bare />
-        </div>
-      </div>
+        ) },
+      ]} />
     </div>
   );
 }

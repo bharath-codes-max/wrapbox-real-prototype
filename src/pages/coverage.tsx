@@ -4,7 +4,7 @@
 // Deliberately not all-green: gaps are the product being honest.
 import { useMemo, useState } from "react";
 import { useAppState } from "../state/store";
-import { PageHead, StatusChip, SimNote, Chip, MetricBar } from "../ui/kit";
+import { PageHead, StatusChip, SimNote, Chip, MetricBar, usePaged, Pager } from "../ui/kit";
 import { logoUrl, INTEGRATION_LOGOS } from "../ui/logos";
 import { CAPABILITIES, DATA_TYPES } from "../model/registries";
 import { buildCoverageMatrix, type CoverageRow } from "../engine/coverage";
@@ -61,6 +61,7 @@ function StatusDot({ s }: { s: CoverageStatus }) {
 }
 
 function RuleTable({ rows, showReason }: { rows: CoverageRow[]; showReason?: boolean }) {
+  const paged = usePaged(rows, 8, rows.map((r) => r.id).join("|"));
   return (
     <div className="card card-pad-0">
       <table className="tbl tbl-wide">
@@ -71,7 +72,7 @@ function RuleTable({ rows, showReason }: { rows: CoverageRow[]; showReason?: boo
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
+          {paged.rows.map((r) => (
             <tr key={r.id}>
               <td>
                 <div className="row" style={{ gap: 9, flexWrap: "nowrap", alignItems: "flex-start" }}>
@@ -106,6 +107,7 @@ function RuleTable({ rows, showReason }: { rows: CoverageRow[]; showReason?: boo
           ))}
         </tbody>
       </table>
+      <Pager {...paged} />
     </div>
   );
 }
@@ -116,6 +118,8 @@ export function CoverageMap({ nav }: { nav: (r: string) => void }) {
   const [tab, setTab] = useState<Tab>("rules");
   // "Show me the promises this weak skill is holding back" (from Known gaps).
   const [skill, setSkill] = useState<{ id: string; label: string } | null>(null);
+  const pagedCaps = usePaged(CAPABILITIES, 8);
+  const pagedData = usePaged(DATA_TYPES, 8);
   const order: CoverageStatus[] = ["ENFORCED", "DEGRADED", "UNDERSTOOD_ONLY", "PENDING", "UNINSPECTABLE"];
 
   const bySkill = (rows: CoverageRow[]) => (skill ? rows.filter((r) => r.needs.some((n) => n.id === skill.id)) : rows);
@@ -269,7 +273,7 @@ export function CoverageMap({ nav }: { nav: (r: string) => void }) {
             <table className="tbl">
               <thead><tr><th>Capability</th><th>Plane</th><th>Status</th><th>Note</th></tr></thead>
               <tbody>
-                {CAPABILITIES.map((c) => {
+                {pagedCaps.rows.map((c) => {
                   const lg = CAP_LOGO[c.id];
                   return (
                     <tr key={c.id}>
@@ -292,6 +296,7 @@ export function CoverageMap({ nav }: { nav: (r: string) => void }) {
                 })}
               </tbody>
             </table>
+            <Pager {...pagedCaps} />
           </div>
         )}
 
@@ -302,7 +307,7 @@ export function CoverageMap({ nav }: { nav: (r: string) => void }) {
             <table className="tbl">
               <thead><tr><th>Class</th><th>Family</th><th>Example</th><th>Severity</th></tr></thead>
               <tbody>
-                {DATA_TYPES.map((d) => (
+                {pagedData.rows.map((d) => (
                   <tr key={d.id}>
                     <td><Chip tone="violet">{d.id}</Chip></td>
                     <td><Chip tone="neutral">{d.family}</Chip></td>
@@ -312,6 +317,7 @@ export function CoverageMap({ nav }: { nav: (r: string) => void }) {
                 ))}
               </tbody>
             </table>
+            <Pager {...pagedData} />
           </div>
         )}
       </div>

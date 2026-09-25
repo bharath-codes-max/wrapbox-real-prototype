@@ -4,7 +4,7 @@
 import { useAppState } from "../state/store";
 import {
   PageHead, Chip, StatusChip, SimNote, SectionHead, DecisionChip, names,
-  MetricBar, Avatar, AgentMark, DestMark,
+  MetricBar, Avatar, AgentMark, DestMark, PageTabs,
 } from "../ui/kit";
 import { RESOURCES, DEVICES, USERS, AGENTS, deviceById, userById, resourceById } from "../model/org";
 import { ACTION_NORMALIZATION, CAPABILITIES } from "../model/registries";
@@ -128,164 +128,180 @@ export function IntegrationsPage({ nav }: { nav: (r: string) => void }) {
         />
       </div>
 
-      {/* HERO — the connections themselves, logo-forward */}
-      <div className="section">
-        <SectionHead
-          title="Connected systems"
-          sub="What each one can do today, and how many of your recorded actions went through it"
-          right={
-            <div className="row" style={{ gap: 6 }}>
-              <Chip tone="enforced">{enforced} enforced</Chip>
-              {degraded > 0 && <Chip tone="degraded">{degraded} degraded</Chip>}
-              {understood > 0 && <Chip tone="understood_only">{understood} understood only</Chip>}
-            </div>
-          }
-        />
-        <div className="grid g2">
-          {CONNECTIONS.map((c, i) => (
-            <div className="card" key={c.name} style={{ display: "flex", flexDirection: "column", gap: 13 }}>
-              <div className="spread" style={{ alignItems: "flex-start" }}>
-                <span className="row" style={{ gap: 12, flexWrap: "nowrap", minWidth: 0 }}>
-                  <span className="plane-icon" style={{ width: 40, height: 40, borderRadius: 11 }}>
-                    <img src={logoUrl(c.logo)} alt="" style={{ width: 22, height: 22, objectFit: "contain" }} />
-                  </span>
-                  <span style={{ minWidth: 0 }}>
-                    <span style={{ display: "block", fontWeight: 600, fontSize: 14.5, letterSpacing: "-0.01em" }}>{c.name}</span>
-                    <span className="small faint">{c.kind}</span>
-                  </span>
-                </span>
-                <StatusChip s={statuses[i]} />
-              </div>
-
-              <div className="small dim" style={{ lineHeight: 1.5 }}>{c.detail}</div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 9, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
-                {c.caps.map(capOf).map((cap) => (
-                  <div key={cap.id} className="row" style={{ gap: 9, flexWrap: "nowrap", alignItems: "baseline" }}>
-                    <StatusChip s={cap.status} />
-                    <span style={{ minWidth: 0 }}>
-                      <span className="small" style={{ fontWeight: 550 }}>{cap.label}</span>
-                      <span className="small faint"> — {cap.note}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="spread" style={{ marginTop: "auto", paddingTop: 12, borderTop: "1px solid var(--line)" }}>
-                <span className="small faint">Recorded actions routed through this</span>
-                <span className="mono" style={{ fontWeight: 700, fontSize: 15, fontVariantNumeric: "tabular-nums" }}>{used(c)}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Identity model — the who/what/through/on chain from a real action */}
-      <div className="section">
-        <SectionHead title="Identity model" sub="Who, on which laptop, with which agent, through what, on what — taken from a real recorded action" />
-        <div className="card">
-          {!sample ? (
-            <div className="empty">No actions recorded yet — run one in the Simulation Lab.</div>
+      <PageTabs storageKey="integrations" tabs={[
+        {
+          id: "connections",
+          label: "Connected systems",
+          count: CONNECTIONS.length,
+          content: CONNECTIONS.length === 0 ? (
+            <div className="card empty">No connections configured yet.</div>
           ) : (
-            <>
-              <div className="spread" style={{ marginBottom: 16, gap: 10 }}>
-                <span className="row" style={{ gap: 10, minWidth: 0 }}>
-                  <DecisionChip d={sample.decision} />
-                  <span className="small" style={{ fontWeight: 550 }}>{describe(sample)}</span>
-                </span>
-                <span className="faint mono small">{sample.id}</span>
-              </div>
-
-              <div className="row" style={{ gap: 0, rowGap: 12 }}>
-                {chain.map((nd, idx) => (
-                  <span key={nd.label} className="row" style={{ gap: 0, flexWrap: "nowrap" }}>
-                    <span
-                      style={{
-                        display: "inline-flex", alignItems: "center", gap: 9,
-                        padding: "8px 13px", borderRadius: 10,
-                        border: "1px solid var(--line)", background: "var(--surface-2)",
-                      }}
-                    >
-                      {nd.mark}
-                      <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.25 }}>
-                        <span className="faint" style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>{nd.label}</span>
-                        <span className="small" style={{ fontWeight: 550 }}>{nd.value}</span>
+            // The connections themselves, logo-forward. Enforcement tallies live in the
+            // MetricBar above, so this tab opens straight onto the cards.
+            <div className="grid g2">
+              {CONNECTIONS.map((c, i) => (
+                <div className="card" key={c.name} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div className="spread" style={{ alignItems: "flex-start" }}>
+                    <span className="row" style={{ gap: 12, flexWrap: "nowrap", minWidth: 0 }}>
+                      <span className="plane-icon" style={{ width: 40, height: 40, borderRadius: 11 }}>
+                        <img src={logoUrl(c.logo)} alt="" style={{ width: 22, height: 22, objectFit: "contain" }} />
+                      </span>
+                      <span style={{ minWidth: 0 }}>
+                        <span style={{ display: "block", fontWeight: 600, fontSize: 14.5, letterSpacing: "-0.01em" }}>{c.name}</span>
+                        <span className="small faint">{c.kind}</span>
                       </span>
                     </span>
-                    {idx < chain.length - 1 && (
-                      <span style={{ color: "var(--fg-4)", padding: "0 6px", display: "inline-flex" }}><ArrowRight size={14} /></span>
-                    )}
-                  </span>
-                ))}
-              </div>
+                    <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
+                      <StatusChip s={statuses[i]} />
+                      <span className="row" style={{ gap: 6, flexWrap: "nowrap" }} title="Recorded actions routed through this connection">
+                        <span className="small faint">Recorded actions</span>
+                        <span className="mono" style={{ fontWeight: 700, fontSize: 15, fontVariantNumeric: "tabular-nums" }}>{used(c)}</span>
+                      </span>
+                    </span>
+                  </div>
 
-              <div className="small dim" style={{ marginTop: 18, lineHeight: 1.55, display: "flex", gap: 8 }}>
-                <Fingerprint size={14} style={{ flexShrink: 0, marginTop: 2 }} />
-                <span>
-                  User (from Okta SSO, simulated) + device + agent + tool + resource flow into every decision and
-                  every evidence record. “Traffic came from Chrome” is never an identity.
-                </span>
+                  <div className="small dim" style={{ lineHeight: 1.5 }}>{c.detail}</div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 9, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+                    {c.caps.map(capOf).map((cap) => (
+                      <div key={cap.id} className="row" style={{ gap: 9, flexWrap: "nowrap", alignItems: "baseline" }}>
+                        <StatusChip s={cap.status} />
+                        <span style={{ minWidth: 0 }}>
+                          <span className="small" style={{ fontWeight: 550 }}>{cap.label}</span>
+                          <span className="small faint"> — {cap.note}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ),
+        },
+        {
+          id: "identity",
+          label: "Identity model",
+          content: !sample ? (
+            <div className="card empty">No actions recorded yet — run one in the Simulation Lab.</div>
+          ) : (
+            <>
+              {/* The who/what/through/on chain from a real action */}
+              <SectionHead title="Identity model" sub="Who, on which laptop, with which agent, through what, on what — taken from a real recorded action" />
+              <div className="card">
+                <div className="spread" style={{ marginBottom: 16, gap: 10 }}>
+                  <span className="row" style={{ gap: 10, minWidth: 0 }}>
+                    <DecisionChip d={sample.decision} />
+                    <span className="small" style={{ fontWeight: 550 }}>{describe(sample)}</span>
+                  </span>
+                  <span className="faint mono small">{sample.id}</span>
+                </div>
+
+                <div className="row" style={{ gap: 0, rowGap: 12 }}>
+                  {chain.map((nd, idx) => (
+                    <span key={nd.label} className="row" style={{ gap: 0, flexWrap: "nowrap" }}>
+                      <span
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 9,
+                          padding: "8px 13px", borderRadius: 10,
+                          border: "1px solid var(--line)", background: "var(--surface-2)",
+                        }}
+                      >
+                        {nd.mark}
+                        <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.25 }}>
+                          <span className="faint" style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>{nd.label}</span>
+                          <span className="small" style={{ fontWeight: 550 }}>{nd.value}</span>
+                        </span>
+                      </span>
+                      {idx < chain.length - 1 && (
+                        <span style={{ color: "var(--fg-4)", padding: "0 6px", display: "inline-flex" }}><ArrowRight size={14} /></span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="small dim" style={{ marginTop: 18, lineHeight: 1.55, display: "flex", gap: 8 }}>
+                  <Fingerprint size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <span>
+                    User (from Okta SSO, simulated) + device + agent + tool + resource flow into every decision and
+                    every evidence record. “Traffic came from Chrome” is never an identity.
+                  </span>
+                </div>
               </div>
             </>
-          )}
-        </div>
-      </div>
-
-      {/* Governed resources */}
-      <div className="section">
-        <SectionHead title="Governed resources" sub="The systems policy is written against, with environment and sensitivity" />
-        <div className="card card-pad-0">
-          <table className="tbl">
-            <thead><tr><th>Resource</th><th>Kind</th><th>Environment</th><th>Sensitivity</th><th>Detail</th></tr></thead>
-            <tbody>
-              {RESOURCES.map((r) => (
-                <tr key={r.id}>
-                  <td>
-                    <span className="row" style={{ gap: 10, flexWrap: "nowrap" }}>
-                      <img src={logoUrl(resLogo(r))} alt="" className="logo-img" style={{ width: 18, height: 18 }} />
-                      <b className="small">{r.name}</b>
-                    </span>
-                  </td>
-                  <td><Chip tone="neutral">{r.kind}</Chip></td>
-                  <td><Chip tone={r.environment === "production" ? "review" : "neutral"}>{r.environment}</Chip></td>
-                  <td><Chip tone={r.sensitivity === "customer-impacting" ? "critical" : r.sensitivity === "sensitive" ? "high" : "neutral"}>{r.sensitivity}</Chip></td>
-                  <td className="small dim">{r.detail}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Action Ontology — one verb, many mechanisms */}
-      <div className="section">
-        <SectionHead title="Action Ontology — normalization" sub="Different mechanisms normalize to one semantic verb, so policy is written once" />
-        <div className="card card-pad-0">
-          <table className="tbl">
-            <thead><tr><th>Raw mechanism</th><th>Via</th><th>Normalized verb</th></tr></thead>
-            <tbody>
-              {ACTION_NORMALIZATION.map((a) => (
-                <tr key={a.raw}>
-                  <td className="mono small">{a.raw}</td>
-                  <td><Chip tone="neutral">{a.via}</Chip></td>
-                  <td>
-                    <span className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
-                      <span style={{ color: "var(--fg-4)", display: "inline-flex" }}><ArrowRight size={13} /></span>
-                      <Chip tone="constrain">{a.verb}</Chip>
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="small faint row" style={{ gap: 6, marginTop: 12 }}>
-          <Shuffle size={13} />
-          Policy is written once against the verb. See it applied live in the{" "}
-          <a onClick={() => nav("simlab")}>Simulation Lab</a>
-          <ArrowRight size={12} />
-        </div>
-      </div>
+          ),
+        },
+        {
+          id: "resources",
+          label: "Governed resources",
+          count: RESOURCES.length,
+          content: RESOURCES.length === 0 ? (
+            <div className="card empty">No governed resources defined yet.</div>
+          ) : (
+            <>
+              <SectionHead title="Governed resources" sub="The systems policy is written against, with environment and sensitivity" />
+              <div className="card card-pad-0">
+                <table className="tbl">
+                  <thead><tr><th>Resource</th><th>Kind</th><th>Environment</th><th>Sensitivity</th><th>Detail</th></tr></thead>
+                  <tbody>
+                    {RESOURCES.map((r) => (
+                      <tr key={r.id}>
+                        <td>
+                          <span className="row" style={{ gap: 10, flexWrap: "nowrap" }}>
+                            <img src={logoUrl(resLogo(r))} alt="" className="logo-img" style={{ width: 18, height: 18 }} />
+                            <b className="small">{r.name}</b>
+                          </span>
+                        </td>
+                        <td><Chip tone="neutral">{r.kind}</Chip></td>
+                        <td><Chip tone={r.environment === "production" ? "review" : "neutral"}>{r.environment}</Chip></td>
+                        <td><Chip tone={r.sensitivity === "customer-impacting" ? "critical" : r.sensitivity === "sensitive" ? "high" : "neutral"}>{r.sensitivity}</Chip></td>
+                        <td className="small dim">{r.detail}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ),
+        },
+        {
+          id: "ontology",
+          label: "Action ontology",
+          count: ACTION_NORMALIZATION.length,
+          content: ACTION_NORMALIZATION.length === 0 ? (
+            <div className="card empty">No action normalizations registered yet.</div>
+          ) : (
+            <>
+              {/* One verb, many mechanisms */}
+              <SectionHead title="Action Ontology — normalization" sub="Different mechanisms normalize to one semantic verb, so policy is written once" />
+              <div className="card card-pad-0">
+                <table className="tbl">
+                  <thead><tr><th>Raw mechanism</th><th>Via</th><th>Normalized verb</th></tr></thead>
+                  <tbody>
+                    {ACTION_NORMALIZATION.map((a) => (
+                      <tr key={a.raw}>
+                        <td className="mono small">{a.raw}</td>
+                        <td><Chip tone="neutral">{a.via}</Chip></td>
+                        <td>
+                          <span className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
+                            <span style={{ color: "var(--fg-4)", display: "inline-flex" }}><ArrowRight size={13} /></span>
+                            <Chip tone="constrain">{a.verb}</Chip>
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="small faint row" style={{ gap: 6, marginTop: 12 }}>
+                <Shuffle size={13} />
+                Policy is written once against the verb. See it applied live in the{" "}
+                <a onClick={() => nav("simlab")}>Simulation Lab</a>
+                <ArrowRight size={12} />
+              </div>
+            </>
+          ),
+        },
+      ]} />
     </div>
   );
 }

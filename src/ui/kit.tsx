@@ -87,6 +87,64 @@ export function MetricBar({ items, band }: { items: MetricItem[]; band?: boolean
   );
 }
 
+/**
+ * Page-level tabs — one section at a time instead of a long scroll. Only the
+ * active tab's content mounts; page state lives in the page component, so it
+ * survives tab switches. `storageKey` remembers the last tab for the session.
+ */
+export interface PageTab { id: string; label: string; count?: React.ReactNode; content: React.ReactNode }
+export function PageTabs({ tabs, storageKey }: { tabs: PageTab[]; storageKey?: string }) {
+  const [active, setActive] = React.useState<string>(() => {
+    try {
+      const saved = storageKey ? sessionStorage.getItem(`tab:${storageKey}`) : null;
+      if (saved && tabs.some((t) => t.id === saved)) return saved;
+    } catch { /* storage unavailable — default to the first tab */ }
+    return tabs[0]?.id ?? "";
+  });
+  const current = tabs.find((t) => t.id === active) ?? tabs[0];
+  const pick = (id: string) => {
+    setActive(id);
+    try { if (storageKey) sessionStorage.setItem(`tab:${storageKey}`, id); } catch { /* ignore */ }
+  };
+  return (
+    <div className="section page-tabs">
+      <div className="tabs" role="tablist">
+        {tabs.map((t) => (
+          <button key={t.id} role="tab" aria-selected={t.id === current?.id} className={`tab ${t.id === current?.id ? "active" : ""}`} onClick={() => pick(t.id)}>
+            {t.label}
+            {t.count !== undefined && <span className="tab-count">{t.count}</span>}
+          </button>
+        ))}
+      </div>
+      <div role="tabpanel">{current?.content}</div>
+    </div>
+  );
+}
+
+/** Client-side pagination for long lists; `resetKey` jumps back to page 1 when filters change. */
+export function usePaged<T>(items: T[], size = 12, resetKey = "") {
+  const [page, setPage] = React.useState(0);
+  React.useEffect(() => { setPage(0); }, [resetKey]);
+  const pages = Math.max(1, Math.ceil(items.length / size));
+  const p = Math.min(page, pages - 1);
+  return { rows: items.slice(p * size, p * size + size), page: p, pages, setPage, total: items.length, size };
+}
+export function Pager({ page, pages, setPage, total, size }: { page: number; pages: number; setPage: (p: number) => void; total: number; size: number }) {
+  if (pages <= 1) return null;
+  const start = page * size + 1;
+  const end = Math.min(total, start + size - 1);
+  return (
+    <div className="pager">
+      <span className="small faint tnum">{start}–{end} of {total}</span>
+      <div className="row" style={{ gap: 8 }}>
+        <button className="btn btn-sm" disabled={page === 0} onClick={() => setPage(page - 1)}>‹ Previous</button>
+        <span className="small dim tnum">Page {page + 1} of {pages}</span>
+        <button className="btn btn-sm" disabled={page >= pages - 1} onClick={() => setPage(page + 1)}>Next ›</button>
+      </div>
+    </div>
+  );
+}
+
 export function PageHead({ title, sub, right, eyebrow }: { title: string; sub?: string; right?: React.ReactNode; eyebrow?: string }) {
   return (
     <div className="page-head">

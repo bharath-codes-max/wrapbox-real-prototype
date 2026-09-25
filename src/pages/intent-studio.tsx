@@ -3,7 +3,7 @@
 // (recommend only — never silently activates wider authority).
 import { useState } from "react";
 import { useAppState, upsertContract, setContractStatus, setAutopilotStatus, acceptAutopilot, markAutopilotModified } from "../state/store";
-import { PageHead, SectionHead, Chip, StatusChip, SimNote, Drawer, DecisionChip, MetricBar, Avatar } from "../ui/kit";
+import { PageHead, SectionHead, Chip, StatusChip, SimNote, Drawer, DecisionChip, MetricBar, Avatar, PageTabs } from "../ui/kit";
 import { CAPABILITIES } from "../model/registries";
 import { userById } from "../model/org";
 import type { ContractClause } from "../model/types";
@@ -111,7 +111,9 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
         ]} />
       </div>
 
-      <div className="section">
+      <PageTabs storageKey="intent" tabs={[
+        { id: "contracts", label: "Intent contracts", count: s.contracts.length, content: (
+      <>
         <SectionHead
           title="Intent Contracts"
           sub="Each row is authored intent compiled to enforceable clauses — open one to inspect its machine representation"
@@ -160,10 +162,10 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
           </table>
         </div>
         )}
-      </div>
-
-      {/* Policy Autopilot */}
-      <div className="section">
+      </>
+        ) },
+        { id: "autopilot", label: "Policy Autopilot", count: openRecs.length, content: (
+      <>
         <SectionHead
           title="Policy Autopilot"
           sub="Suggestions based on what Wrapbox has seen. Accepting creates a draft rule (switched off) or narrows a permission — never switches anything on by itself."
@@ -232,7 +234,9 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
             <div className="small faint" style={{ marginTop: 10 }}>Autopilot never switches a rule on or widens anyone's authority by itself.</div>
           </div>
         )}
-      </div>
+      </>
+        ) },
+      ]} />
 
       {/* Contract detail */}
       {contract && (
