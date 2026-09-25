@@ -5,7 +5,7 @@
 // or recorded from this page — changes become real in Intent Studio.
 import { useMemo, useState, type ReactNode } from "react";
 import { useAppState, shadowEvaluate } from "../state/store";
-import { PageHead, DecisionChip, Chip, SimNote, Avatar, timeAgo, PageTabs, usePaged, Pager } from "../ui/kit";
+import { PageHead, DecisionChip, Chip, SimNote, Avatar, timeAgo, PageTabs, usePaged, Pager, EntityCard, CardGrid, FilterBar, useCardFilters } from "../ui/kit";
 import { SCENARIOS, scenarioById, type Scenario } from "../engine/scenarios";
 import { canActivate } from "../engine/coverage";
 import { describe } from "../ui/describe";
@@ -91,7 +91,17 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
 
   // Replay table pagination — back to page 1 whenever the source or the proposal changes.
   const pageKey = `${source}|${[...removed].sort().join(",")}|${[...added].sort().join(",")}`;
-  const paged = usePaged(orderedRows, 10, pageKey);
+  const decOpts = DECS.map((d) => ({ value: d, label: d }));
+  const rf = useCardFilters(orderedRows, {
+    search: (r) => `${r.title} ${r.sub}`,
+    filters: [
+      { id: "change", label: "Change", get: (r) => (r.current !== r.prop ? "changed" : "unchanged"),
+        options: [{ value: "changed", label: "Changed" }, { value: "unchanged", label: "Unchanged" }] },
+      { id: "today", label: "Decision today", get: (r) => r.current, options: decOpts },
+      { id: "prop", label: "With proposal", get: (r) => r.prop, options: decOpts },
+    ],
+  });
+  const paged = usePaged(rf.filtered, 8, `${pageKey}|${rf.resetKey}`);
 
   // One-line intro at the top of each tab (the tab label carries the act number and title).
   const tabIntro = (sub: string, right?: ReactNode) => (
@@ -168,18 +178,17 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
           </div>
         )}
 
-        <div className="grid g2">
+        <CardGrid>
           {active.map((c) => (
-            <div className="card" key={c.id}>
-              <div className="spread" style={{ marginBottom: 14 }}>
-                <b className="small">{c.name}</b>
-                <div className="row" style={{ gap: 8 }}>
-                  <span className="faint small">
-                    {c.clauses.length} rule{c.clauses.length === 1 ? "" : "s"}
-                  </span>
-                  <Chip tone="allow">ACTIVE</Chip>
-                </div>
-              </div>
+            <EntityCard
+              key={c.id}
+              eyebrow="Active contract"
+              title={c.name}
+              status={<Chip tone="allow">ACTIVE</Chip>}
+              fields={[
+                { label: "Rules", value: <span className="tnum">{c.clauses.length - c.clauses.filter((cl) => removed.has(cl.id)).length} of {c.clauses.length} on in preview</span> },
+              ]}
+            >
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {c.clauses.map((cl) => {
                   const off = removed.has(cl.id);
@@ -206,24 +215,32 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
                   );
                 })}
               </div>
-            </div>
+            </EntityCard>
           ))}
 
           {inactive.map((c) => (
-            <div className="card" key={c.id} style={added.has(c.id) ? { borderColor: "var(--accent)" } : undefined}>
-              <label className="spread" style={{ cursor: "pointer", marginBottom: 12, flexWrap: "nowrap" }}>
-                <span className="row" style={{ gap: 9, flexWrap: "nowrap" }}>
-                  <input type="checkbox" checked={added.has(c.id)} onChange={() => flip(added, c.id, setAdded)} style={{ flexShrink: 0 }} />
-                  <b className="small">{c.name}</b>
-                </span>
-                <Chip tone={added.has(c.id) ? "constrain" : "neutral"}>{added.has(c.id) ? "ON IN PREVIEW" : c.status}</Chip>
-              </label>
+            <EntityCard
+              key={c.id}
+              selected={added.has(c.id)}
+              eyebrow="Switched-off contract"
+              title={c.name}
+              status={<Chip tone={added.has(c.id) ? "constrain" : "neutral"}>{added.has(c.id) ? "ON IN PREVIEW" : c.status}</Chip>}
+              action={
+                <label className="row small" style={{ gap: 6, cursor: "pointer", flexWrap: "nowrap" }}>
+                  <input type="checkbox" checked={added.has(c.id)} onChange={() => flip(added, c.id, setAdded)} />
+                  Try on
+                </label>
+              }
+              fields={[
+                { label: "Rules", value: <span className="tnum">{c.clauses.length}</span> },
+              ]}
+            >
               <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                 {c.clauses.map((cl) => (
                   <div
                     key={cl.id}
                     className="row small faint"
-                    style={{ gap: 8, paddingLeft: 24, alignItems: "flex-start", flexWrap: "nowrap" }}
+                    style={{ gap: 8, alignItems: "flex-start", flexWrap: "nowrap" }}
                   >
                     <span style={{ flex: 1 }}>{cl.text}</span>
                     <DecisionChip d={cl.effect} small />
@@ -239,9 +256,9 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
                   <span>Preview only — this contract can't really be switched on yet (a skill it needs is missing).</span>
                 </div>
               )}
-            </div>
+            </EntityCard>
           ))}
-        </div>
+        </CardGrid>
       </div>
             ),
           },
@@ -316,44 +333,45 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
           </div>
         ) : (
         <>
-        <div className="card card-pad-0" style={{ marginTop: 16 }}>
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>{source === "history" ? "What happened" : "Scenario"}</th>
-                <th>Today</th>
-                <th></th>
-                <th>Proposal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paged.rows.map((r) => (
-                <tr key={r.key} style={r.current !== r.prop ? { background: "var(--warn-soft)" } : undefined}>
-                  <td>
-                    <div className="row" style={{ gap: 9, flexWrap: "nowrap", alignItems: "flex-start" }}>
-                      {r.user && <Avatar userId={r.user} size={20} />}
-                      <div style={{ minWidth: 0 }}>
-                        <div className="small" style={{ fontWeight: 550 }}>{r.title}</div>
-                        <div className="small faint">{r.sub}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td><DecisionChip d={r.current} small /></td>
-                  <td style={{ textAlign: "center", width: 40 }}>
-                    {r.current !== r.prop ? (
-                      <ArrowRight size={14} style={{ color: "var(--review)" }} />
-                    ) : (
-                      <span className="faint">=</span>
-                    )}
-                  </td>
-                  <td><DecisionChip d={r.prop} small /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <Pager {...paged} />
+        <div style={{ marginTop: 16 }}>
+          <FilterBar {...rf.bar} placeholder={source === "history" ? "Search what happened…" : "Search scenarios…"} />
         </div>
-        <div className="small faint" style={{ marginTop: 8 }}>Rows that would change are listed first.</div>
+        {rf.filtered.length === 0 ? (
+          <div className="card empty">No replayed actions match these filters.</div>
+        ) : (
+          <CardGrid>
+            {paged.rows.map((r) => {
+              const isChanged = r.current !== r.prop;
+              const isWeakened = isChanged && r.prop === "ALLOW" && r.current !== "ALLOW";
+              return (
+                <EntityCard
+                  key={r.key}
+                  tone={isWeakened ? "block" : isChanged ? "review" : undefined}
+                  icon={r.user ? <Avatar userId={r.user} size={26} /> : <span className="stat-icon"><Library size={15} /></span>}
+                  eyebrow={r.user ? r.sub : "Scenario library"}
+                  title={r.title}
+                  status={
+                    <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                      <DecisionChip d={r.current} small />
+                      {isChanged ? <ArrowRight size={14} style={{ color: "var(--review)" }} /> : <span className="faint">=</span>}
+                      <DecisionChip d={r.prop} small />
+                    </span>
+                  }
+                  fields={[
+                    { label: "Today", value: <DecisionChip d={r.current} small /> },
+                    { label: "With proposal", value: <DecisionChip d={r.prop} small /> },
+                    { label: "Change", value: isWeakened
+                      ? <Chip tone="block">weakened — would be allowed</Chip>
+                      : isChanged ? <Chip tone="review">changes</Chip> : <span className="faint">no change</span> },
+                    ...(r.user ? [] : [{ label: "Scenario", value: <span className="dim">{r.sub}</span> }]),
+                  ]}
+                />
+              );
+            })}
+          </CardGrid>
+        )}
+        <Pager {...paged} />
+        <div className="small faint" style={{ marginTop: 8 }}>Actions that would change are listed first.</div>
         </>
         )}
       </div>

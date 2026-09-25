@@ -1,5 +1,5 @@
 // Shared event detail drawer — the single inspection view every screen opens.
-import { Drawer, DecisionChip, Payload, EvidenceChain, names, RiskChip, StatusChip, Chip } from "./kit";
+import { Drawer, DecisionChip, Payload, EvidenceChain, names, RiskChip, StatusChip, Chip, EntityCard, CardGrid } from "./kit";
 import { describe } from "./describe";
 import type { ReactNode } from "react";
 import type { SimulationEvent } from "../model/types";
@@ -89,22 +89,21 @@ export function EventDetail({ e, onClose, onNavigate }: {
           <SectionLabel icon={<ScanSearch size={15} />} meta={<span className="mono">{e.inspection.parser}</span>}>
             Detector findings
           </SectionLabel>
-          <div className="card card-pad-0">
-            <table className="tbl">
-              <thead><tr><th>Data class</th><th>Detector</th><th>Conf.</th><th>Count</th><th>Sample</th></tr></thead>
-              <tbody>
-                {e.inspection.findings.map((f) => (
-                  <tr key={f.dataClass}>
-                    <td><Chip tone="violet">{f.dataClass}</Chip></td>
-                    <td className="mono small">{f.detector} v{f.detectorVersion}</td>
-                    <td className="mono">{f.confidence.toFixed(2)}</td>
-                    <td className="mono">{f.count.toLocaleString()}</td>
-                    <td className="mono small dim">{f.sample}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <CardGrid cols={1}>
+            {e.inspection.findings.map((f) => (
+              <EntityCard
+                key={f.dataClass}
+                icon={<ScanSearch size={15} />}
+                eyebrow={<span className="mono">{f.detector} v{f.detectorVersion}</span>}
+                title={<Chip tone="violet">{f.dataClass}</Chip>}
+                fields={[
+                  { label: "Confidence", value: <span className="mono">{f.confidence.toFixed(2)}</span> },
+                  { label: "Count", value: <span className="mono">{f.count.toLocaleString()}</span> },
+                  { label: "Sample", value: <span className="mono small dim">{f.sample}</span> },
+                ]}
+              />
+            ))}
+          </CardGrid>
         </>
       )}
       {e.inspection && !e.inspection.inspectable && (
@@ -147,20 +146,20 @@ export function EventDetail({ e, onClose, onNavigate }: {
           <SectionLabel icon={<ArrowLeftRight size={15} />} meta={e.transformation[0].kind}>
             Transformations
           </SectionLabel>
-          <div className="card card-pad-0">
-            <table className="tbl">
-              <thead><tr><th>Class</th><th>Before</th><th>After</th></tr></thead>
-              <tbody>
-                {e.transformation.map((t, i) => (
-                  <tr key={i}>
-                    <td className="small">{t.dataClass}</td>
-                    <td className="mono small">{t.before}</td>
-                    <td className="mono small"><span className="hl-tok">{t.after}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <CardGrid cols={1}>
+            {e.transformation.map((t, i) => (
+              <EntityCard
+                key={i}
+                icon={<ArrowLeftRight size={15} />}
+                eyebrow={t.kind}
+                title={t.dataClass}
+                fields={[
+                  { label: "Before", value: <span className="mono small">{t.before}</span> },
+                  { label: "After", value: <span className="mono small"><span className="hl-tok">{t.after}</span></span> },
+                ]}
+              />
+            ))}
+          </CardGrid>
           {e.transformation.some((t) => t.tokenId) && onNavigate && (
             <div className="small dim" style={{ marginTop: 10 }}>
               Reversible tokens stored in <a onClick={() => onNavigate("vault")}>Token Vault</a> — authorized restoration only.

@@ -3,7 +3,7 @@
 // (recommend only — never silently activates wider authority).
 import { useState } from "react";
 import { useAppState, upsertContract, setContractStatus, setAutopilotStatus, acceptAutopilot, markAutopilotModified } from "../state/store";
-import { PageHead, SectionHead, Chip, StatusChip, SimNote, Drawer, DecisionChip, MetricBar, Avatar, PageTabs } from "../ui/kit";
+import { PageHead, SectionHead, Chip, StatusChip, SimNote, Drawer, DecisionChip, MetricBar, Avatar, PageTabs, EntityCard, CardGrid, FilterBar, Pager, useCardFilters, usePaged } from "../ui/kit";
 import { CAPABILITIES } from "../model/registries";
 import { userById } from "../model/org";
 import type { ContractClause } from "../model/types";
@@ -56,6 +56,15 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
   const openRecs = s.autopilot.filter((a) => a.status === "open");
   const acceptedRecs = s.autopilot.filter((a) => a.status === "accepted").length;
   const dismissedRecs = s.autopilot.filter((a) => a.status === "dismissed").length;
+  const cf = useCardFilters(s.contracts, {
+    search: (c) => `${c.name} ${c.sourceText} ${userById(c.author)?.name ?? ""}`,
+    filters: [
+      { id: "status", label: "Status", get: (c) => c.status },
+      { id: "coverage", label: "Coverage", get: (c) => contractCoverage(c), format: (v) => v.replaceAll("_", " ") },
+      { id: "author", label: "Author", get: (c) => c.author, format: (v) => userById(v)?.name ?? v },
+    ],
+  });
+  const cpg = usePaged(cf.filtered, 8, cf.resetKey);
 
   return (
     <div className="page page-wide">
@@ -116,51 +125,41 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
       <>
         <SectionHead
           title="Intent Contracts"
-          sub="Each row is authored intent compiled to enforceable clauses — open one to inspect its machine representation"
+          sub="Each card is authored intent compiled to enforceable clauses — open one to inspect its machine representation"
           right={<span className="small faint tnum">{s.contracts.length} total · {activeCount} active</span>}
         />
         {s.contracts.length === 0 ? (
           <div className="card empty"><FileText size={18} className="dim" /><div>No contracts yet. Describe a rule in plain English above, then <b>Use this draft</b> to compile your first one.</div></div>
         ) : (
-        <div className="card card-pad-0">
-          <table className="tbl tbl-wide">
-            <thead><tr><th style={{ minWidth: 300 }}>Contract</th><th>Author</th><th>Clauses</th><th>Coverage</th><th>Status</th><th>Version</th></tr></thead>
-            <tbody>
-              {s.contracts.map((c) => {
-                const effects = [...new Set(c.clauses.map((cl) => cl.effect))];
-                return (
-                <tr key={c.id} className="rowlink" onClick={() => setOpen(c.id)}>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{c.name}</div>
-                    <div className="small faint" style={{ maxWidth: 460, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>{c.sourceText}</div>
-                  </td>
-                  <td>
-                    <div className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
-                      <Avatar userId={c.author} size={24} />
-                      <div style={{ minWidth: 0 }}>
-                        <div className="small" style={{ fontWeight: 550 }}>{userById(c.author)?.name}</div>
-                        <div className="small faint">{userById(c.author)?.role}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="row" style={{ gap: 6, alignItems: "baseline" }}>
-                      <span className="mono tnum" style={{ fontSize: 13, fontWeight: 600 }}>{c.clauses.length}</span>
-                      <span className="small faint">clause{c.clauses.length === 1 ? "" : "s"}</span>
-                    </div>
-                    <div className="row" style={{ gap: 4, marginTop: 5 }}>
-                      {effects.map((eff) => <DecisionChip key={eff} d={eff} small />)}
-                    </div>
-                  </td>
-                  <td><StatusChip s={contractCoverage(c)} /></td>
-                  <td><Chip tone={c.status === "ACTIVE" ? "allow" : c.status === "DRAFT" ? "neutral" : "block"}>{c.status}</Chip></td>
-                  <td className="mono small tnum">v{c.version}</td>
-                </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+        <FilterBar {...cf.bar} placeholder="Search contracts…" />
+        {cf.filtered.length === 0 ? (
+          <div className="card empty"><FileText size={18} className="dim" /><div>No contracts match these filters.</div></div>
+        ) : (
+        <CardGrid>
+          {cpg.rows.map((c) => {
+            const effects = [...new Set(c.clauses.map((cl) => cl.effect))];
+            return (
+              <EntityCard
+                key={c.id}
+                icon={<Avatar userId={c.author} size={26} />}
+                eyebrow={userById(c.author)?.name ?? c.author}
+                title={c.name}
+                status={<Chip tone={c.status === "ACTIVE" ? "allow" : c.status === "DRAFT" ? "neutral" : "block"}>{c.status}</Chip>}
+                onClick={() => setOpen(c.id)}
+                fields={[
+                  { label: "Clauses", value: <span className="row" style={{ gap: 6 }}><span className="mono tnum" style={{ fontWeight: 600 }}>{c.clauses.length}</span>{effects.map((eff) => <DecisionChip key={eff} d={eff} small />)}</span> },
+                  { label: "Coverage", value: <StatusChip s={contractCoverage(c)} /> },
+                  { label: "Version", value: <span className="mono tnum">v{c.version}</span> },
+                  { label: "Source text", value: <span className="dim" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{c.sourceText}</span> },
+                ]}
+              />
+            );
+          })}
+        </CardGrid>
+        )}
+        <Pager page={cpg.page} pages={cpg.pages} setPage={cpg.setPage} total={cpg.total} size={cpg.size} />
+        </>
         )}
       </>
         ) },
@@ -175,32 +174,29 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
           <div className="card empty"><Wand2 size={18} className="dim" /><div>No open recommendations.</div></div>
         )}
         {openRecs.length > 0 && (
-          <div className="grid g2">
+          <CardGrid>
             {openRecs.map((a) => (
-              <div className="card" key={a.id} style={{ display: "flex", flexDirection: "column" }}>
-                <div className="spread" style={{ alignItems: "flex-start", gap: 10 }}>
-                  <span className="row" style={{ gap: 9 }}>
-                    <span className="plane-icon" style={{ color: "var(--accent)", background: "var(--accent-soft)" }}><Sparkles size={15} strokeWidth={1.9} /></span>
-                    <span className="eyebrow">Observed pattern</span>
-                  </span>
+              <EntityCard
+                key={a.id}
+                icon={<span className="plane-icon" style={{ color: "var(--accent)", background: "var(--accent-soft)" }}><Sparkles size={15} strokeWidth={1.9} /></span>}
+                eyebrow="Observed pattern"
+                title={a.observation}
+                status={
                   <Chip tone={a.proposes?.kind === "draft" ? "review" : a.proposes?.kind === "narrow-standing" ? "constrain" : "neutral"}>
                     {a.proposes?.kind === "draft" ? "new draft rule" : a.proposes?.kind === "narrow-standing" ? "narrow permission" : "no change"}
                   </Chip>
-                </div>
-                <div style={{ margin: "13px 0 6px", fontSize: 14, lineHeight: 1.55 }}>{a.observation}</div>
-                <div className="small faint tnum" style={{ marginBottom: 14 }}>Observed across {a.basedOnEvents.toLocaleString()} events</div>
-                <div className="card" style={{ padding: "11px 13px", marginTop: "auto" }}>
-                  <div className="small" style={{ fontWeight: 600 }}>Recommendation</div>
-                  <div className="small dim" style={{ marginTop: 3 }}>{a.recommendation}</div>
-                  <div className="small faint" style={{ marginTop: 8, lineHeight: 1.5 }}>
-                    If you accept: {a.proposes?.kind === "draft"
-                      ? <>a new <b>draft</b> rule is created — switched off until you activate it.</>
-                      : a.proposes?.kind === "narrow-standing"
-                        ? <>a standing permission is <b>narrowed</b> ("{a.proposes.from}" → "{a.proposes.to}").</>
-                        : "nothing is created."}
-                  </div>
-                </div>
-                <div className="row" style={{ marginTop: 14 }}>
+                }
+                fields={[
+                  { label: "Observed", value: <span className="tnum">{a.basedOnEvents.toLocaleString()} events</span> },
+                  { label: "Recommendation", value: a.recommendation },
+                  { label: "If you accept", value: a.proposes?.kind === "draft"
+                    ? <>a new <b>draft</b> rule is created — switched off until you activate it.</>
+                    : a.proposes?.kind === "narrow-standing"
+                      ? <>a standing permission is <b>narrowed</b> ("{a.proposes.from}" → "{a.proposes.to}").</>
+                      : "nothing is created." },
+                ]}
+              >
+                <div className="row">
                   <button className="btn btn-sm btn-good" onClick={() => acceptAutopilot(a.id)}>Accept</button>
                   {a.proposes?.kind === "draft" && (
                     <button className="btn btn-sm" onClick={() => {
@@ -211,9 +207,9 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
                   )}
                   <button className="btn btn-sm btn-ghost" onClick={() => setAutopilotStatus(a.id, "dismissed")}>Dismiss</button>
                 </div>
-              </div>
+              </EntityCard>
             ))}
-          </div>
+          </CardGrid>
         )}
         {s.autopilot.some((a) => a.status !== "open") && (
           <div className="card" style={{ marginTop: 16 }}>

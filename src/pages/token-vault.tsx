@@ -4,7 +4,7 @@
 // never displayed — originals are masked on screen.
 import React, { useMemo, useState } from "react";
 import { useAppState, restoreToken } from "../state/store";
-import { PageHead, Chip, SimNote, SectionHead, MetricBar, Avatar, DestMark, PageTabs, usePaged, Pager } from "../ui/kit";
+import { PageHead, Chip, SimNote, SectionHead, MetricBar, Avatar, DestMark, PageTabs, usePaged, Pager, EntityCard, CardGrid, Select, FilterBar, useCardFilters } from "../ui/kit";
 import { DEST_LOGOS } from "../ui/logos";
 import { EventDetail } from "../ui/event-detail";
 import { destById } from "../model/registries";
@@ -58,16 +58,44 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
     setLast((m) => ({ ...m, [who]: rec }));
   };
 
-  // Presentation only: newest-first log and page slices for the two tables.
+  // Presentation only: newest-first log, filters and page slices for the two card lists.
   const logRows = useMemo(() => [...s.restorations].reverse(), [s.restorations]);
-  const logPaged = usePaged(logRows, 12);
-  const vaultPaged = usePaged(tokens, 12);
+  const classOf = (tokenId: string) => s.tokens.find((t) => t.id === tokenId)?.dataClass;
+  const resultLabel = (allowed: boolean) => (allowed ? "Allowed" : "Denied");
+  const restoresOf = (tokenId: string) => s.restorations.filter((r) => r.tokenId === tokenId);
+  const lf = useCardFilters(logRows, {
+    search: (r) => `${r.tokenId} ${r.requester} ${r.reason}`,
+    filters: [
+      { id: "class", label: "Data class", get: (r) => classOf(r.tokenId) },
+      { id: "scope", label: "Scope", get: (r) => (r.inside ? "Inside Veridian" : "Outside Veridian") },
+      { id: "result", label: "Result", get: (r) => resultLabel(r.allowed) },
+    ],
+  });
+  const logPaged = usePaged(lf.filtered, 8, lf.resetKey);
+  const vf = useCardFilters(tokens, {
+    search: (t) => `${t.id} ${t.dataClass} ${t.eventId}`,
+    filters: [
+      { id: "class", label: "Data class", get: (t) => t.dataClass },
+      { id: "scope", label: "Scope", get: (t) => scopeLabel(t.scope) },
+      {
+        id: "result", label: "Result",
+        get: (t) => {
+          const rs = restoresOf(t.id);
+          return rs.length === 0 ? "Never restored" : [...new Set(rs.map((r) => resultLabel(r.allowed)))];
+        },
+      },
+    ],
+  });
+  const vaultPaged = usePaged(vf.filtered, 8, vf.resetKey);
 
   // One token picker, shown on both round-trip tabs — `picked` lives at page level.
   const picker = tokens.length > 0 ? (
-    <select className="select" style={{ width: "auto" }} value={picked} onChange={(e) => { setPicked(e.target.value); setLast({}); }}>
-      {tokens.map((t) => <option key={t.id} value={t.id}>{t.id} · {t.dataClass}</option>)}
-    </select>
+    <Select
+      value={picked}
+      onChange={(v) => { setPicked(v); setLast({}); }}
+      options={tokens.map((t) => ({ value: t.id, label: `${t.id} · ${t.dataClass}` }))}
+      allLabel={null}
+    />
   ) : undefined;
 
   const vaultEmpty = (
@@ -163,39 +191,36 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
                 />
                 {!token || !origin ? vaultEmpty : (
                   <div className="card">
-                    <div className="grid g2">
+                    <CardGrid>
                       {([
                         { who: "inside" as const, title: "Priya Menon asks", sub: "inside Veridian, reading the AI's reply" },
                         { who: "outside" as const, title: `${outsider} asks`, sub: "the AI that received the token tries to learn the real value" },
                       ]).map((c) => {
                         const r = last[c.who];
                         return (
-                          <div className="card" key={c.who} style={r ? { borderColor: r.allowed ? "var(--good)" : "var(--bad)" } : undefined}>
-                            <div className="spread">
-                              <div className="row" style={{ gap: 11, flexWrap: "nowrap", minWidth: 0 }}>
-                                <span style={{ width: 38, height: 38, borderRadius: 10, display: "grid", placeItems: "center", background: "var(--surface)", border: "1px solid var(--line)", flexShrink: 0 }}>
-                                  {c.who === "inside"
-                                    ? <Avatar userId="u-priya" size={26} />
-                                    : origin.event.destination && DEST_LOGOS[origin.event.destination]
-                                      ? <DestMark destId={origin.event.destination} size={20} />
-                                      : <Globe size={18} className="faint" />}
-                                </span>
-                                <div style={{ minWidth: 0 }}>
-                                  <b className="small" style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis" }}>{c.title}</b>
-                                  <div className="small faint">{c.sub}</div>
-                                </div>
-                              </div>
-                              <button className="btn btn-sm" onClick={() => ask(c.who)}>Restore</button>
-                            </div>
+                          <EntityCard
+                            key={c.who}
+                            tone={r ? (r.allowed ? "allow" : "block") : undefined}
+                            icon={c.who === "inside"
+                              ? <Avatar userId="u-priya" size={26} />
+                              : origin.event.destination && DEST_LOGOS[origin.event.destination]
+                                ? <DestMark destId={origin.event.destination} size={20} />
+                                : <Globe size={18} className="faint" />}
+                            eyebrow={c.who === "inside" ? "Inside Veridian" : "Outside Veridian"}
+                            title={c.title}
+                            status={r ? (r.allowed
+                              ? <Chip tone="allow"><ShieldCheck size={11} /> ALLOWED</Chip>
+                              : <Chip tone="block"><ShieldX size={11} /> DENIED</Chip>) : undefined}
+                            action={<button className="btn btn-sm" onClick={() => ask(c.who)}>Restore</button>}
+                            fields={[
+                              { label: "Requester", value: <span className="dim">{c.sub}</span> },
+                              { label: "Token", value: <span className="mono hl-tok">{token.id}</span> },
+                              ...(r ? [{ label: "Why", value: <span className="dim">{r.reason}</span> }] : []),
+                            ]}
+                          >
                             {r && (
-                              <div style={{ marginTop: 14 }}>
-                                <div className="row" style={{ gap: 8 }}>
-                                  {r.allowed
-                                    ? <Chip tone="allow"><ShieldCheck size={11} /> ALLOWED</Chip>
-                                    : <Chip tone="block"><ShieldX size={11} /> DENIED</Chip>}
-                                  <span className="small dim">{r.reason}</span>
-                                </div>
-                                <div className="payload" style={{ marginTop: 10 }}>
+                              <>
+                                <div className="payload">
                                   {r.allowed
                                     ? reply(<span className="hl-red">{mask(origin.original)}</span>)
                                     : reply(<span className="hl-tok">{token.id}</span>)}
@@ -205,12 +230,12 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
                                     ? "Priya sees the real value in her app. It's masked here so this page never displays it."
                                     : `${outsider} keeps seeing only the token. The attempt is written to the restore log.`}
                                 </div>
-                              </div>
+                              </>
                             )}
-                          </div>
+                          </EntityCard>
                         );
                       })}
-                    </div>
+                    </CardGrid>
                     <div className="small faint row" style={{ gap: 6, marginTop: 14 }}>
                       <History size={13} /> Every attempt — allowed or denied — is recorded in the Restore log tab.
                     </div>
@@ -229,34 +254,37 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
                 {s.restorations.length === 0 ? (
                   <div className="card empty">No restore attempts yet — try one in “Who gets it back”.</div>
                 ) : (
-                  <div className="card card-pad-0">
-                    <table className="tbl">
-                      <thead><tr><th>When</th><th>Token</th><th>Who asked</th><th>Result</th><th>Why</th></tr></thead>
-                      <tbody>
+                  <>
+                    <FilterBar {...lf.bar} placeholder="Search token, requester or reason…" />
+                    {lf.filtered.length === 0 ? (
+                      <div className="card empty">No restore attempts match these filters.</div>
+                    ) : (
+                      <CardGrid>
                         {logPaged.rows.map((r) => (
-                          <tr key={r.id}>
-                            <td className="small dim tnum">{new Date(r.at).toLocaleTimeString()}</td>
-                            <td className="mono small">
-                              <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
-                                <KeyRound size={12} className="faint" /><span className="hl-tok">{r.tokenId}</span>
-                              </span>
-                            </td>
-                            <td className="small">
-                              <span className="row" style={{ gap: 7, flexWrap: "nowrap", minWidth: 0 }}>
-                                {r.inside ? <Avatar userId="u-priya" size={18} /> : <Globe size={13} className="faint" />}
-                                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{r.requester}</span>
-                              </span>
-                            </td>
-                            <td>{r.allowed
+                          <EntityCard
+                            key={r.id}
+                            tone={r.allowed ? undefined : "block"}
+                            icon={<KeyRound size={18} className="faint" />}
+                            eyebrow={classOf(r.tokenId) ?? "Token"}
+                            title={<span className="mono hl-tok">{r.tokenId}</span>}
+                            status={r.allowed
                               ? <Chip tone="allow"><ShieldCheck size={11} /> ALLOWED</Chip>
-                              : <Chip tone="block"><ShieldX size={11} /> DENIED</Chip>}</td>
-                            <td className="small dim">{r.reason}</td>
-                          </tr>
+                              : <Chip tone="block"><ShieldX size={11} /> DENIED</Chip>}
+                            fields={[
+                              { label: "When", value: <span className="tnum">{new Date(r.at).toLocaleTimeString()}</span> },
+                              {
+                                label: "Who asked",
+                                value: <>{r.inside ? <Avatar userId="u-priya" size={16} /> : <Globe size={13} className="faint" />} {r.requester}</>,
+                              },
+                              { label: "Scope", value: r.inside ? "Inside Veridian" : "Outside Veridian" },
+                              { label: "Why", value: <span className="dim">{r.reason}</span> },
+                            ]}
+                          />
                         ))}
-                      </tbody>
-                    </table>
+                      </CardGrid>
+                    )}
                     <Pager {...logPaged} />
-                  </div>
+                  </>
                 )}
               </>
             ),
@@ -271,38 +299,51 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
                 {tokens.length === 0 ? (
                   <div className="card empty">No tokens yet — run "Customer PII → approved AI" in the Simulation Lab.</div>
                 ) : (
-                  <div className="card card-pad-0">
-                    <table className="tbl">
-                      <thead><tr><th>Token</th><th>Data type</th><th>Created</th><th>Who can restore</th><th>Expires</th><th>From</th></tr></thead>
-                      <tbody>
+                  <>
+                    <FilterBar {...vf.bar} placeholder="Search token or event…" />
+                    {vf.filtered.length === 0 ? (
+                      <div className="card empty">No tokens match these filters.</div>
+                    ) : (
+                      <CardGrid>
                         {vaultPaged.rows.map((t) => {
                           const o = originOf(t.id);
+                          const rs = restoresOf(t.id);
+                          const ok = rs.filter((r) => r.allowed).length;
+                          const no = rs.length - ok;
                           return (
-                            <tr key={t.id + t.eventId}>
-                              <td className="mono small">
-                                <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
-                                  <KeyRound size={12} className="faint" /><span className="hl-tok">{t.id}</span>
-                                </span>
-                              </td>
-                              <td><Chip tone="violet">{t.dataClass}</Chip></td>
-                              <td className="small dim tnum">{new Date(t.createdAt).toLocaleString()}</td>
-                              <td className="small">
-                                <span className="chip c-constrain"><ShieldCheck size={11} /> {scopeLabel(t.scope)}</span>
-                              </td>
-                              <td className="small dim tnum">{new Date(t.expiresAt).toLocaleDateString()}</td>
-                              <td className="mono small">
-                                <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
-                                  {o?.event.destination && DEST_LOGOS[o.event.destination] && <DestMark destId={o.event.destination} size={14} />}
-                                  {o ? <a onClick={() => setOpenEvt(o.event)}>{t.eventId}</a> : t.eventId}
-                                </span>
-                              </td>
-                            </tr>
+                            <EntityCard
+                              key={t.id + t.eventId}
+                              icon={<KeyRound size={18} className="faint" />}
+                              eyebrow={t.dataClass}
+                              title={<span className="mono hl-tok">{t.id}</span>}
+                              status={<Chip tone={t.restorable ? "violet" : "neutral"}>{t.restorable ? "RESTORABLE" : "NOT RESTORABLE"}</Chip>}
+                              fields={[
+                                { label: "Original", value: o ? <span className="mono">{mask(o.original)}</span> : <span className="faint">—</span> },
+                                { label: "Scope", value: <span className="chip c-constrain"><ShieldCheck size={11} /> {scopeLabel(t.scope)}</span> },
+                                {
+                                  label: "Created by",
+                                  value: <>
+                                    {o?.event.destination && DEST_LOGOS[o.event.destination] && <DestMark destId={o.event.destination} size={14} />}{" "}
+                                    <span className="mono">{o ? <a onClick={() => setOpenEvt(o.event)}>{t.eventId}</a> : t.eventId}</span>
+                                    <span className="faint tnum"> · {new Date(t.createdAt).toLocaleString()}</span>
+                                  </>,
+                                },
+                                { label: "Expires", value: <span className="tnum">{new Date(t.expiresAt).toLocaleDateString()}</span> },
+                                {
+                                  label: "Restores",
+                                  value: rs.length === 0 ? <span className="faint">Never restored</span> : <>
+                                    {ok > 0 && <Chip tone="allow"><ShieldCheck size={11} /> Allowed · {ok}</Chip>}{" "}
+                                    {no > 0 && <Chip tone="block"><ShieldX size={11} /> Denied · {no}</Chip>}
+                                  </>,
+                                },
+                              ]}
+                            />
                           );
                         })}
-                      </tbody>
-                    </table>
+                      </CardGrid>
+                    )}
                     <Pager {...vaultPaged} />
-                  </div>
+                  </>
                 )}
               </>
             ),

@@ -2,7 +2,7 @@
 // resources/destinations, with new/risky edges highlighted. Pure SVG.
 import { useMemo, useState } from "react";
 import { useAppState } from "../state/store";
-import { PageHead, SectionHead, Chip, SimNote, MetricBar, AgentMark, DestMark, PageTabs } from "../ui/kit";
+import { PageHead, SectionHead, Chip, SimNote, MetricBar, AgentMark, DestMark, PageTabs, Avatar, EntityCard, CardGrid, FilterBar, Pager, useCardFilters, usePaged } from "../ui/kit";
 import { AGENTS, USERS, resourceById, userById } from "../model/org";
 import { destById } from "../model/registries";
 import { ShieldAlert } from "lucide-react";
@@ -64,6 +64,30 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
   const riskyEdges = edges.filter((e) => e.risky).length;
   const riskyAgents = nodes.filter((n) => n.kind === "agent" && n.risky).length;
   const agentNodes = nodes.filter((n) => n.kind === "agent");
+
+  // Flagged relationships — every edge that carries high-risk activity or touches a stranger node.
+  const kindLabel: Record<Node["kind"], string> = { user: "Person", agent: "AI agent", resource: "Resource", dest: "Destination" };
+  const flagReasons = (e: Edge) => {
+    const r: string[] = [];
+    if (e.risky) r.push("high/critical activity");
+    if (byId.get(e.from)?.risky) r.push(byId.get(e.from)!.kind === "agent" ? "unregistered agent" : "stranger source");
+    if (byId.get(e.to)?.risky) r.push(byId.get(e.to)!.kind === "agent" ? "unregistered agent" : "unknown address");
+    return r;
+  };
+  const flagged = edges.filter((e) => byId.has(e.from) && byId.has(e.to) && flagReasons(e).length > 0);
+  const flagFilter = useCardFilters(flagged, {
+    search: (e) => `${byId.get(e.from)?.label} ${byId.get(e.to)?.label} ${e.from} ${e.to}`,
+    filters: [
+      { id: "reason", label: "Why", get: (e) => flagReasons(e) },
+      { id: "target", label: "Target", get: (e) => kindLabel[byId.get(e.to)!.kind] },
+    ],
+  });
+  const flagPg = usePaged(flagFilter.filtered, 8, flagFilter.resetKey);
+  const nodeMark = (n: Node) =>
+    n.kind === "agent" ? <AgentMark agentId={n.id} size={16} />
+    : n.kind === "user" ? <Avatar userId={n.id} size={18} />
+    : n.kind === "dest" ? <DestMark destId={n.id} size={16} />
+    : null;
 
   return (
     <div className="page page-wide">
@@ -192,8 +216,8 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
           ? <div className="card empty">No risky relationships right now — every edge is low or moderate risk.</div>
           : (
         <div>
-          <SectionHead title="Flagged relationship" sub="Edges the Safety Kernel is watching" />
-          <div className="card" style={{ borderColor: "var(--bad)" }}>
+          <SectionHead title="Flagged relationships" sub="Edges the Safety Kernel is watching — high-risk activity, unregistered agents or unknown addresses" />
+          <div className="card" style={{ borderColor: "var(--bad)", marginBottom: 14 }}>
             <div className="row" style={{ alignItems: "flex-start", gap: 12 }}>
               <div className="stat-icon" style={{ color: "var(--bad)", background: "var(--bad-soft)", flexShrink: 0 }}><ShieldAlert size={17} /></div>
               <div style={{ minWidth: 0, flex: 1 }}>
@@ -205,17 +229,39 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
                   </div>
                 </div>
                 <div className="small dim" style={{ marginTop: 6, lineHeight: 1.5 }}>
-                  An unregistered MCP agent on Finance-Laptop-07 holds edges to an unknown external endpoint. Its transfers were
-                  blocked by the Safety Kernel — inspect it in <a onClick={() => nav("agents")}>Agent Inventory</a>.
-                </div>
-                <div className="row" style={{ gap: 10, marginTop: 12 }}>
-                  <span className="row" style={{ gap: 6 }}><AgentMark agentId="a-unknown-mcp" size={16} /><span className="mono small faint">a-unknown-mcp</span></span>
-                  <span className="faint">→</span>
-                  <span className="row" style={{ gap: 6 }}><DestMark destId="dest-unknown" size={16} /><span className="mono small faint">unknown endpoint</span></span>
+                  Each card below is an observed relationship. Inspect the agents in <a onClick={() => nav("agents")}>Agent Inventory</a> and the underlying decisions in <a onClick={() => nav("evidence")}>Evidence</a>.
                 </div>
               </div>
             </div>
           </div>
+          <FilterBar {...flagFilter.bar} placeholder="Search agents, people, destinations…" />
+          {flagPg.rows.length === 0
+            ? <div className="card empty">No flagged relationships match these filters.</div>
+            : (
+              <CardGrid cols={2}>
+                {flagPg.rows.map((e) => {
+                  const a = byId.get(e.from)!; const b = byId.get(e.to)!;
+                  return (
+                    <EntityCard
+                      key={`${e.from}→${e.to}`}
+                      tone="block"
+                      icon={nodeMark(a)}
+                      eyebrow={kindLabel[a.kind]}
+                      title={<span className="row" style={{ gap: 6, flexWrap: "nowrap", minWidth: 0 }}>{a.label}<span className="faint">→</span>{nodeMark(b)}{b.label}</span>}
+                      status={e.risky ? <Chip tone="block">high-risk</Chip> : <Chip tone="critical">stranger</Chip>}
+                      onClick={() => setSelected(a.id)}
+                      selected={selected === a.id}
+                      fields={[
+                        { label: "Target", value: <span>{kindLabel[b.kind]} · <span className="mono small faint">{b.id.replace(/^res:/, "")}</span></span> },
+                        { label: "Observed", value: <span className="mono">{e.count.toLocaleString()} event{e.count === 1 ? "" : "s"}</span> },
+                        { label: "Why flagged", value: flagReasons(e).join(" · ") },
+                      ]}
+                    />
+                  );
+                })}
+              </CardGrid>
+            )}
+          <Pager {...flagPg} />
         </div>
         ) },
       ]} />

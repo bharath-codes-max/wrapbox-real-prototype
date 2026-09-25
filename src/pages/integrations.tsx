@@ -5,6 +5,7 @@ import { useAppState } from "../state/store";
 import {
   PageHead, Chip, StatusChip, SimNote, SectionHead, DecisionChip, names,
   MetricBar, Avatar, AgentMark, DestMark, PageTabs,
+  EntityCard, CardGrid, FilterBar, Pager, useCardFilters, usePaged,
 } from "../ui/kit";
 import { RESOURCES, DEVICES, USERS, AGENTS, deviceById, userById, resourceById } from "../model/org";
 import { ACTION_NORMALIZATION, CAPABILITIES } from "../model/registries";
@@ -78,6 +79,22 @@ export function IntegrationsPage({ nav }: { nav: (r: string) => void }) {
   const understood = statuses.filter((x) => x === "UNDERSTOOD_ONLY").length;
   const used = (c: Connection) => s.events.filter(c.uses).length;
 
+  // Presentation only: search + filters for the resource and ontology card lists.
+  const rf = useCardFilters(RESOURCES, {
+    search: (r) => `${r.name} ${r.detail}`,
+    filters: [
+      { id: "kind", label: "Kind", get: (r) => r.kind },
+      { id: "env", label: "Environment", get: (r) => r.environment },
+      { id: "sens", label: "Sensitivity", get: (r) => r.sensitivity },
+    ],
+  });
+  const rPaged = usePaged(rf.filtered, 8, rf.resetKey);
+  const of = useCardFilters(ACTION_NORMALIZATION, {
+    search: (a) => `${a.raw} ${a.via} ${a.verb}`,
+    filters: [{ id: "verb", label: "Verb", get: (a) => a.verb }],
+  });
+  const oPaged = usePaged(of.filtered, 8, of.resetKey);
+
   // A real identity chain: the latest recorded action on the checkout code (the root), else the latest action.
   const byTime = [...s.events].sort((a, b) => b.timestamp - a.timestamp);
   const sample = byTime.find((e) => /checkout/i.test(names(e).resource)) ?? byTime[0];
@@ -138,44 +155,25 @@ export function IntegrationsPage({ nav }: { nav: (r: string) => void }) {
           ) : (
             // The connections themselves, logo-forward. Enforcement tallies live in the
             // MetricBar above, so this tab opens straight onto the cards.
-            <div className="grid g2">
+            <CardGrid>
               {CONNECTIONS.map((c, i) => (
-                <div className="card" key={c.name} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <div className="spread" style={{ alignItems: "flex-start" }}>
-                    <span className="row" style={{ gap: 12, flexWrap: "nowrap", minWidth: 0 }}>
-                      <span className="plane-icon" style={{ width: 40, height: 40, borderRadius: 11 }}>
-                        <img src={logoUrl(c.logo)} alt="" style={{ width: 22, height: 22, objectFit: "contain" }} />
-                      </span>
-                      <span style={{ minWidth: 0 }}>
-                        <span style={{ display: "block", fontWeight: 600, fontSize: 14.5, letterSpacing: "-0.01em" }}>{c.name}</span>
-                        <span className="small faint">{c.kind}</span>
-                      </span>
-                    </span>
-                    <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
-                      <StatusChip s={statuses[i]} />
-                      <span className="row" style={{ gap: 6, flexWrap: "nowrap" }} title="Recorded actions routed through this connection">
-                        <span className="small faint">Recorded actions</span>
-                        <span className="mono" style={{ fontWeight: 700, fontSize: 15, fontVariantNumeric: "tabular-nums" }}>{used(c)}</span>
-                      </span>
-                    </span>
-                  </div>
-
-                  <div className="small dim" style={{ lineHeight: 1.5 }}>{c.detail}</div>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: 9, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
-                    {c.caps.map(capOf).map((cap) => (
-                      <div key={cap.id} className="row" style={{ gap: 9, flexWrap: "nowrap", alignItems: "baseline" }}>
-                        <StatusChip s={cap.status} />
-                        <span style={{ minWidth: 0 }}>
-                          <span className="small" style={{ fontWeight: 550 }}>{cap.label}</span>
-                          <span className="small faint"> — {cap.note}</span>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <EntityCard
+                  key={c.name}
+                  icon={<img src={logoUrl(c.logo)} alt="" className="logo-img" style={{ width: 22, height: 22, objectFit: "contain" }} />}
+                  eyebrow={c.kind}
+                  title={c.name}
+                  status={<StatusChip s={statuses[i]} />}
+                  fields={[
+                    { label: "Scope", value: <span className="dim">{c.detail}</span> },
+                    ...c.caps.map(capOf).map((cap) => ({
+                      label: cap.label,
+                      value: <><StatusChip s={cap.status} /> <span className="faint">{cap.note}</span></>,
+                    })),
+                    { label: "Recorded actions", value: <span className="mono tnum" style={{ fontWeight: 700 }}>{used(c)}</span> },
+                  ]}
+                />
               ))}
-            </div>
+            </CardGrid>
           ),
         },
         {
@@ -239,27 +237,29 @@ export function IntegrationsPage({ nav }: { nav: (r: string) => void }) {
           ) : (
             <>
               <SectionHead title="Governed resources" sub="The systems policy is written against, with environment and sensitivity" />
-              <div className="card card-pad-0">
-                <table className="tbl">
-                  <thead><tr><th>Resource</th><th>Kind</th><th>Environment</th><th>Sensitivity</th><th>Detail</th></tr></thead>
-                  <tbody>
-                    {RESOURCES.map((r) => (
-                      <tr key={r.id}>
-                        <td>
-                          <span className="row" style={{ gap: 10, flexWrap: "nowrap" }}>
-                            <img src={logoUrl(resLogo(r))} alt="" className="logo-img" style={{ width: 18, height: 18 }} />
-                            <b className="small">{r.name}</b>
-                          </span>
-                        </td>
-                        <td><Chip tone="neutral">{r.kind}</Chip></td>
-                        <td><Chip tone={r.environment === "production" ? "review" : "neutral"}>{r.environment}</Chip></td>
-                        <td><Chip tone={r.sensitivity === "customer-impacting" ? "critical" : r.sensitivity === "sensitive" ? "high" : "neutral"}>{r.sensitivity}</Chip></td>
-                        <td className="small dim">{r.detail}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <FilterBar {...rf.bar} placeholder="Search resources…" />
+              {rf.filtered.length === 0 ? (
+                <div className="card empty">No resources match these filters.</div>
+              ) : (
+                <CardGrid>
+                  {rPaged.rows.map((r) => (
+                    <EntityCard
+                      key={r.id}
+                      icon={<img src={logoUrl(resLogo(r))} alt="" className="logo-img" style={{ width: 22, height: 22 }} />}
+                      eyebrow={r.kind}
+                      title={r.name}
+                      status={<Chip tone={r.sensitivity === "customer-impacting" ? "critical" : r.sensitivity === "sensitive" ? "high" : "neutral"}>{r.sensitivity}</Chip>}
+                      fields={[
+                        { label: "Kind", value: <Chip tone="neutral">{r.kind}</Chip> },
+                        { label: "Environment", value: <Chip tone={r.environment === "production" ? "review" : "neutral"}>{r.environment}</Chip> },
+                        { label: "Sensitivity", value: r.sensitivity },
+                        { label: "Detail", value: <span className="dim">{r.detail}</span> },
+                      ]}
+                    />
+                  ))}
+                </CardGrid>
+              )}
+              <Pager {...rPaged} />
             </>
           ),
         },
@@ -273,25 +273,28 @@ export function IntegrationsPage({ nav }: { nav: (r: string) => void }) {
             <>
               {/* One verb, many mechanisms */}
               <SectionHead title="Action Ontology — normalization" sub="Different mechanisms normalize to one semantic verb, so policy is written once" />
-              <div className="card card-pad-0">
-                <table className="tbl">
-                  <thead><tr><th>Raw mechanism</th><th>Via</th><th>Normalized verb</th></tr></thead>
-                  <tbody>
-                    {ACTION_NORMALIZATION.map((a) => (
-                      <tr key={a.raw}>
-                        <td className="mono small">{a.raw}</td>
-                        <td><Chip tone="neutral">{a.via}</Chip></td>
-                        <td>
-                          <span className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
-                            <span style={{ color: "var(--fg-4)", display: "inline-flex" }}><ArrowRight size={13} /></span>
-                            <Chip tone="constrain">{a.verb}</Chip>
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <FilterBar {...of.bar} placeholder="Search mechanisms…" />
+              {of.filtered.length === 0 ? (
+                <div className="card empty">No mechanisms match these filters.</div>
+              ) : (
+                <CardGrid>
+                  {oPaged.rows.map((a) => (
+                    <EntityCard
+                      key={a.raw}
+                      icon={<Shuffle size={18} style={{ color: "var(--fg-3)" }} />}
+                      eyebrow={a.via}
+                      title={<span className="mono">{a.raw}</span>}
+                      status={<Chip tone="constrain">{a.verb}</Chip>}
+                      fields={[
+                        { label: "Raw mechanism", value: <span className="mono">{a.raw}</span> },
+                        { label: "Via", value: <Chip tone="neutral">{a.via}</Chip> },
+                        { label: "Normalized verb", value: <><ArrowRight size={13} style={{ color: "var(--fg-4)" }} /> <Chip tone="constrain">{a.verb}</Chip></> },
+                      ]}
+                    />
+                  ))}
+                </CardGrid>
+              )}
+              <Pager {...oPaged} />
               <div className="small faint row" style={{ gap: 6, marginTop: 12 }}>
                 <Shuffle size={13} />
                 Policy is written once against the verb. See it applied live in the{" "}

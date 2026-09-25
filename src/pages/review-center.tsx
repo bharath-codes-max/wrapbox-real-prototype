@@ -2,7 +2,7 @@
 // alternative, expiry, requester separation, transaction bundling.
 import { useState } from "react";
 import { useAppState, resolveReview, approverFor } from "../state/store";
-import { PageHead, SectionHead, MetricBar, DecisionChip, Chip, RiskChip, SimNote, names, timeAgo, StatusChip, Avatar, AgentMark, DestMark, PageTabs, usePaged, Pager } from "../ui/kit";
+import { PageHead, SectionHead, MetricBar, DecisionChip, Chip, RiskChip, SimNote, names, timeAgo, StatusChip, Avatar, AgentMark, DestMark, PageTabs, usePaged, Pager, EntityCard, CardGrid, FilterBar, useCardFilters } from "../ui/kit";
 import { describe } from "../ui/describe";
 import { userById } from "../model/org";
 import { EventDetail } from "../ui/event-detail";
@@ -29,7 +29,16 @@ export function ReviewCenter({ nav }: { nav: (r: string) => void }) {
   // Presentation only: page through bundles and the resolved log so neither tab
   // becomes a long scroll. Counts above are always over the full lists.
   const pagedBundles = usePaged([...bundles.entries()], 2);
-  const pagedResolved = usePaged(resolved, 12);
+  const RESOLUTION: Record<string, string> = {
+    approved: "Approved", approved_scoped: "Approved (scoped)", constrained: "Constrained", denied: "Denied", expired: "Expired",
+  };
+  const rf = useCardFilters(resolved, {
+    filters: [
+      { id: "resolution", label: "Resolution", get: (e) => e.reviewState!.status, format: (v) => RESOLUTION[v] ?? v },
+      { id: "approver", label: "Approver", get: (e) => e.reviewState!.reviewer, format: (v) => userById(v)?.name ?? v },
+    ],
+  });
+  const pagedResolved = usePaged(rf.filtered, 8, rf.resetKey);
 
   return (
     <div className="page">
@@ -72,54 +81,23 @@ export function ReviewCenter({ nav }: { nav: (r: string) => void }) {
                 const n = names(first);
                 const task = first.taskId ? s.tasks.find((t) => t.taskId === first.taskId) : undefined;
                 return (
-                  <div
-                    className="card"
-                    key={key}
-                    style={{ borderColor: "color-mix(in oklab, var(--review) 32%, var(--line))", padding: "18px 20px 16px" }}
-                  >
-                    {/* Panel header — what, who asked, risk & expiry */}
-                    <div className="spread" style={{ alignItems: "flex-start", gap: 12 }}>
-                      <div className="row" style={{ gap: 12, alignItems: "flex-start", minWidth: 0 }}>
-                        <span className="plane-icon" style={{ background: "var(--review-soft)" }}>
-                          <AgentMark agentId={first.agent} size={18} />
-                        </span>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 650, fontSize: 15, letterSpacing: "-0.01em", lineHeight: 1.3 }}>
-                            {task ? `${task.team ?? "Task"} · “${task.title}”` : describe(first)}
-                          </div>
-                          <div className="small dim" style={{ marginTop: 3 }}>
-                            {isBundle && task
-                              ? `Asked by ${n.user} via ${n.agent} · ${task.steps.length} steps · ${task.steps.filter((x) => x.state === "done").length} already done · ${evs.length} need${evs.length === 1 ? "s" : ""} a yes`
-                              : `Requested by ${n.user} via ${n.agent}${first.application ? ` (${first.application})` : ""} · ${timeAgo(first.timestamp)}`}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="row" style={{ gap: 8, flexShrink: 0 }}>
-                        {isBundle && <Chip tone="neutral"><Layers size={12} /> {evs.length} step{evs.length === 1 ? "" : "s"}</Chip>}
+                  <div key={key}>
+                    {/* Bundle header — what, who asked, who decides, risk & expiry */}
+                    <EntityCard
+                      icon={<AgentMark agentId={first.agent} size={26} />}
+                      eyebrow={isBundle ? `Bundle · ${evs.length} step${evs.length === 1 ? "" : "s"}` : "Single request"}
+                      title={task ? `${task.team ?? "Task"} · “${task.title}”` : describe(first)}
+                      tone="review"
+                      status={<>
                         <RiskChip r={first.risk} />
                         <Chip tone="review">expires {new Date(first.reviewState!.expiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Chip>
-                      </div>
-                    </div>
-
-                    {/* Requester → approver — the separation, made visible */}
-                    <div
-                      className="row"
-                      style={{ gap: 10, marginTop: 14, paddingTop: 13, borderTop: "1px solid var(--line)", flexWrap: "wrap" }}
-                    >
-                      <span className="row" style={{ gap: 7, flexWrap: "nowrap" }}>
-                        <Avatar userId={first.user} size={20} />
-                        <span className="small"><span className="faint">Requested by </span><b>{n.user}</b></span>
-                      </span>
-                      <ArrowRight size={13} style={{ color: "var(--fg-4)" }} />
-                      <span className="row" style={{ gap: 7, flexWrap: "nowrap" }}>
-                        <Avatar userId={approverFor(first)} size={20} />
-                        <span className="small">
-                          <span className="faint">Decides </span>
-                          <b>{userById(approverFor(first))?.name}</b>{" "}
-                          <span className="faint">· {task?.approverRole ?? userById(approverFor(first))?.role}</span>
-                        </span>
-                      </span>
-                    </div>
+                      </>}
+                      fields={[
+                        { label: "Requested by", value: <><Avatar userId={first.user} size={16} />{n.user}<span className="faint">via {n.agent}{first.application ? ` (${first.application})` : ""} · {timeAgo(first.timestamp)}</span></> },
+                        { label: "Decides", value: <><Avatar userId={approverFor(first)} size={16} />{userById(approverFor(first))?.name}<span className="faint">· {task?.approverRole ?? userById(approverFor(first))?.role}</span></> },
+                        ...(isBundle && task ? [{ label: "Progress", value: `${task.steps.length} steps · ${task.steps.filter((x) => x.state === "done").length} already done · ${evs.length} need${evs.length === 1 ? "s" : ""} a yes` }] : []),
+                      ]}
+                    />
 
                     {/* One card per action in the bundle */}
                     {evs.map((e) => {
@@ -221,41 +199,37 @@ export function ReviewCenter({ nav }: { nav: (r: string) => void }) {
               ]} />
             </div>
 
-            <div className="card card-pad-0">
-              <table className="tbl">
-                <thead><tr><th>Request</th><th>Requester</th><th>Outcome</th><th>Reviewer</th><th>Note / scope</th></tr></thead>
-                <tbody>
-                  {pagedResolved.rows.map((e) => {
-                    const n = names(e);
-                    const reviewer = e.reviewState!.reviewer;
-                    return (
-                      <tr key={e.id} className="rowlink" onClick={() => setOpen(e)}>
-                        <td>
-                          <div className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
-                            <AgentMark agentId={e.agent} size={15} />
-                            <div style={{ minWidth: 0 }}>
-                              <div className="small" style={{ fontWeight: 550 }}>{describe(e)}</div>
-                              <div className="mono faint" style={{ fontSize: 11, marginTop: 2 }}>{e.action}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className="row small" style={{ gap: 6, flexWrap: "nowrap" }}><Avatar userId={e.user} size={17} />{n.user}</span>
-                        </td>
-                        <td><StatusChip s={e.reviewState!.status} /></td>
-                        <td>
-                          {reviewer
-                            ? <span className="row small" style={{ gap: 6, flexWrap: "nowrap" }}><Avatar userId={reviewer} size={17} />{userById(reviewer)?.name ?? reviewer}</span>
-                            : <span className="small faint">—</span>}
-                        </td>
-                        <td className="small dim">{e.reviewState!.scope ?? e.reviewState!.note ?? "—"}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              <Pager {...pagedResolved} />
-            </div>
+            <FilterBar {...rf.bar} />
+            {rf.filtered.length === 0 ? (
+              <div className="card empty">No resolved reviews match the current filters.</div>
+            ) : (
+              <CardGrid>
+                {pagedResolved.rows.map((e) => {
+                  const n = names(e);
+                  const r = e.reviewState!;
+                  const reviewer = r.reviewer;
+                  return (
+                    <EntityCard
+                      key={e.id}
+                      icon={<AgentMark agentId={e.agent} size={26} />}
+                      eyebrow={RESOLUTION[r.status] ?? r.status}
+                      title={describe(e)}
+                      status={<StatusChip s={r.status} />}
+                      tone={r.status === "denied" ? "block" : r.status === "constrained" ? "constrain" : r.status.startsWith("approved") ? "allow" : undefined}
+                      onClick={() => setOpen(e)}
+                      fields={[
+                        { label: "Requester", value: <><Avatar userId={e.user} size={16} />{n.user}</> },
+                        { label: "Approver", value: reviewer ? <><Avatar userId={reviewer} size={16} />{userById(reviewer)?.name ?? reviewer}</> : <span className="faint">—</span> },
+                        { label: "Decided", value: r.decidedAt ? timeAgo(r.decidedAt) : <span className="faint">—</span> },
+                        { label: "Note / scope", value: <span className="dim">{r.scope ?? r.note ?? "—"}</span> },
+                        { label: "Action", value: <span className="mono">{e.action}</span> },
+                      ]}
+                    />
+                  );
+                })}
+              </CardGrid>
+            )}
+            <Pager {...pagedResolved} />
           </>)}
         </>) },
       ]} />

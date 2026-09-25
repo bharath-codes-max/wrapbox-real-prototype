@@ -1,12 +1,13 @@
 // Core Brain — the one decision engine. The check order below is the real order
 // in engine/brain.ts decide(), and each count is how many recorded actions that
 // step decided (event.decidedBy), so the page can't drift from the engine.
+import type { ReactNode } from "react";
 import { useAppState } from "../state/store";
-import { PageHead, SectionHead, Chip, StatusChip, SimNote, DecisionChip, MetricBar, Avatar, AgentMark, DestMark, PageTabs, timeAgo } from "../ui/kit";
+import { PageHead, SectionHead, Chip, StatusChip, SimNote, DecisionChip, MetricBar, Avatar, AgentMark, DestMark, PageTabs, timeAgo, EntityCard, CardGrid, useCardFilters, FilterBar, usePaged, Pager } from "../ui/kit";
 import { describe } from "../ui/describe";
 import type { DecidedBy } from "../model/types";
 import { DETECTORS, CAPABILITIES, TRANSFORMS } from "../model/registries";
-import { ScanSearch, Shuffle, ShieldCheck, Cpu, Laptop, Network, Server, ArrowRight, ArrowDown } from "lucide-react";
+import { ScanSearch, Shuffle, ShieldCheck, Cpu, Laptop, Network, Server, ArrowRight, ArrowDown, Undo2, Lock } from "lucide-react";
 
 function Block({ title, items, tone }: { title: string; items: string[]; tone?: string }) {
   return (
@@ -42,6 +43,11 @@ const PLANES = [
   { icon: <Server size={17} />, name: "Gateway", desc: "resources & systems" },
 ];
 
+const PLANE_ICON: Record<string, ReactNode> = {
+  ENDPOINT: <Laptop size={16} />, NETWORK: <Network size={16} />, GATEWAY: <Server size={16} />, BRAIN: <Cpu size={16} />,
+};
+const titleCase = (v: string) => v.charAt(0) + v.slice(1).toLowerCase().replace(/_/g, " ");
+
 const INPUTS = ["WHO", "DEVICE", "AGENT", "ACTION", "RESOURCE", "DATA", "DESTINATION", "CONTEXT", "INTENT CONTRACT", "SAFETY KERNEL", "TASK / STANDING AUTHORITY"];
 
 export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
@@ -54,6 +60,30 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
   const capsEnforced = CAPABILITIES.filter((c) => c.status === "ENFORCED").length;
   const planeCount = new Set(CAPABILITIES.filter((c) => c.plane !== "BRAIN").map((c) => c.plane)).size;
   const capabilityGaps = CAPABILITIES.filter((c) => c.status !== "ENFORCED");
+
+  const detF = useCardFilters(DETECTORS, {
+    search: (d) => `${d.id} ${d.method} ${d.detects.join(" ")}`,
+    filters: [
+      { id: "status", label: "Status", get: (d) => d.status, format: titleCase },
+      { id: "detects", label: "Detects", get: (d) => d.detects },
+    ],
+  });
+  const detPaged = usePaged(detF.filtered, 8, detF.resetKey);
+
+  const trF = useCardFilters(TRANSFORMS, {
+    search: (t) => `${t.kind} ${t.label} ${t.example}`,
+    filters: [{ id: "rev", label: "Reversible", get: (t) => (t.reversible ? "yes" : "no"), format: (v) => (v === "yes" ? "Reversible" : "Irreversible") }],
+  });
+  const trPaged = usePaged(trF.filtered, 8, trF.resetKey);
+
+  const capF = useCardFilters(capabilityGaps, {
+    search: (c) => `${c.label} ${c.note} ${c.plane}`,
+    filters: [
+      { id: "plane", label: "Plane", get: (c) => c.plane, format: titleCase },
+      { id: "status", label: "Status", get: (c) => c.status, format: titleCase },
+    ],
+  });
+  const capPaged = usePaged(capF.filtered, 8, capF.resetKey);
 
   return (
     <div className="page">
@@ -109,47 +139,25 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
               </div>
             )}
 
-            <div className="card card-pad-0" style={{ marginTop: root ? 16 : 0 }}>
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    <th style={{ width: 1 }}></th>
-                    <th>Gate</th>
-                    <th>What it checks</th>
-                    <th style={{ textAlign: "right" }}>Decided</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ORDER.map((o, i) => {
-                    const n = decided(o.layer);
-                    return (
-                      <tr key={o.layer}>
-                        <td>
-                          <span
-                            className="tnum"
-                            style={{ display: "inline-grid", placeItems: "center", width: 22, height: 22, borderRadius: "50%", background: "var(--surface-2)", color: "var(--fg-3)", fontSize: 11, fontWeight: 600 }}
-                          >
-                            {i + 1}
-                          </span>
-                        </td>
-                        <td><b className="small">{o.name}</b></td>
-                        <td className="small dim" style={{ maxWidth: 460 }}>{o.asks}</td>
-                        <td className="tnum" style={{ textAlign: "right" }}>
-                          {n > 0 ? <b>{n}</b> : <span className="faint">{n}</span>}
-                        </td>
-                        <td>
-                          {o.page && (
-                            <a className="small row" style={{ gap: 4, justifyContent: "flex-end", flexWrap: "nowrap" }} onClick={() => nav(o.page![0])}>
-                              {o.page[1]} <ArrowRight size={12} />
-                            </a>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div style={{ marginTop: root ? 16 : 0 }}>
+              <CardGrid cols={3}>
+                {ORDER.map((o, i) => {
+                  const n = decided(o.layer);
+                  return (
+                    <EntityCard
+                      key={o.layer}
+                      icon={<span className="tnum" style={{ fontSize: 12, fontWeight: 600 }}>{i + 1}</span>}
+                      eyebrow={`Step ${i + 1}`}
+                      title={o.name}
+                      status={<Chip tone={n > 0 ? "violet" : "neutral"}>Decided {n}</Chip>}
+                      action={o.page ? (
+                        <button className="btn btn-sm" onClick={() => nav(o.page![0])}>{o.page[1]} <ArrowRight size={12} /></button>
+                      ) : undefined}
+                      fields={[{ label: "What it asks", value: <span className="dim">{o.asks}</span> }]}
+                    />
+                  );
+                })}
+              </CardGrid>
             </div>
           </div>
         ) },
@@ -236,21 +244,26 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
             {DETECTORS.length === 0 ? (
               <div className="card empty">No detectors registered.</div>
             ) : (
-              <div className="card card-pad-0">
-                <table className="tbl">
-                  <thead><tr><th>Detector</th><th>Method</th><th>Detects</th><th>Status</th></tr></thead>
-                  <tbody>
-                    {DETECTORS.map((d) => (
-                      <tr key={d.id}>
-                        <td className="mono small">{d.id} <span className="faint">v{d.version}</span></td>
-                        <td className="small dim">{d.method}</td>
-                        <td><div className="row" style={{ gap: 4 }}>{d.detects.map((x) => <Chip key={x} tone="violet">{x}</Chip>)}</div></td>
-                        <td><StatusChip s={d.status} /></td>
-                      </tr>
+              <>
+                <FilterBar {...detF.bar} placeholder="Search detectors, methods, data types…" />
+                {detF.filtered.length === 0 ? (
+                  <div className="card empty">No detectors match these filters.</div>
+                ) : (
+                  <CardGrid>
+                    {detPaged.rows.map((d) => (
+                      <EntityCard
+                        key={d.id}
+                        icon={<ScanSearch size={16} />}
+                        eyebrow={d.method}
+                        title={<span className="mono">{d.id} <span className="faint">v{d.version}</span></span>}
+                        status={<StatusChip s={d.status} />}
+                        fields={[{ label: "Detects", value: <div className="row" style={{ gap: 4, flexWrap: "wrap" }}>{d.detects.map((x) => <Chip key={x} tone="violet">{x}</Chip>)}</div> }]}
+                      />
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </CardGrid>
+                )}
+                <Pager {...detPaged} />
+              </>
             )}
           </div>
         ) },
@@ -260,20 +273,28 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
             {TRANSFORMS.length === 0 ? (
               <div className="card empty">No transforms registered.</div>
             ) : (
-              <div className="card card-pad-0">
-                <table className="tbl">
-                  <thead><tr><th>Transform</th><th>Reversible</th><th>Example</th></tr></thead>
-                  <tbody>
-                    {TRANSFORMS.map((t) => (
-                      <tr key={t.kind}>
-                        <td><Chip tone="constrain">{t.kind}</Chip></td>
-                        <td>{t.reversible ? <Chip tone="allow">yes · Token Vault</Chip> : <Chip tone="neutral">no</Chip>}</td>
-                        <td className="mono small dim">{t.example}</td>
-                      </tr>
+              <>
+                <FilterBar {...trF.bar} placeholder="Search transforms…" />
+                {trF.filtered.length === 0 ? (
+                  <div className="card empty">No transforms match these filters.</div>
+                ) : (
+                  <CardGrid>
+                    {trPaged.rows.map((t) => (
+                      <EntityCard
+                        key={t.kind}
+                        icon={t.reversible ? <Undo2 size={16} /> : <Lock size={16} />}
+                        eyebrow={t.reversible ? "Reversible" : "Irreversible"}
+                        title={t.kind}
+                        status={t.reversible ? <Chip tone="allow">Token Vault</Chip> : <Chip tone="neutral">one-way</Chip>}
+                        fields={[
+                          { label: "Example", value: <span className="mono small dim">{t.example}</span> },
+                        ]}
+                      />
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </CardGrid>
+                )}
+                <Pager {...trPaged} />
+              </>
             )}
           </div>
         ) },
@@ -287,20 +308,26 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
             {capabilityGaps.length === 0 ? (
               <div className="card empty">Every capability is enforced — no gaps gate contract activation.</div>
             ) : (
-              <div className="card card-pad-0">
-                <table className="tbl">
-                  <thead><tr><th>Capability</th><th>Plane</th><th>Status</th></tr></thead>
-                  <tbody>
-                    {capabilityGaps.map((c) => (
-                      <tr key={c.id}>
-                        <td className="small">{c.label}</td>
-                        <td><Chip tone="neutral">{c.plane}</Chip></td>
-                        <td><StatusChip s={c.status} /></td>
-                      </tr>
+              <>
+                <FilterBar {...capF.bar} placeholder="Search capabilities…" />
+                {capF.filtered.length === 0 ? (
+                  <div className="card empty">No capabilities match these filters.</div>
+                ) : (
+                  <CardGrid>
+                    {capPaged.rows.map((c) => (
+                      <EntityCard
+                        key={c.id}
+                        icon={PLANE_ICON[c.plane]}
+                        eyebrow={titleCase(c.plane)}
+                        title={c.label}
+                        status={<StatusChip s={c.status} />}
+                        fields={[{ label: "Why", value: <span className="dim">{c.note}</span> }]}
+                      />
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </CardGrid>
+                )}
+                <Pager {...capPaged} />
+              </>
             )}
           </div>
         ) },

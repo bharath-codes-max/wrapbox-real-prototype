@@ -1,5 +1,6 @@
 // Shared UI kit — decision chips, cards, tables, drawer, payload views.
 import React from "react";
+import { ChevronDown, Search, X } from "lucide-react";
 import type { Decision, SimulationEvent } from "../model/types";
 import { agentById, resourceById, userById } from "../model/org";
 import { destById } from "../model/registries";
@@ -194,6 +195,158 @@ export function Progress({
       <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={max} aria-valuenow={value}>
         <div className="progress-fill" style={{ width: `${pct}%` }} />
       </div>
+    </div>
+  );
+}
+
+/* ==========================================================================
+   EntityCard — the ONE card used for every list/record on every page (replaces
+   tables). Icon + eyebrow + title + action on top, then label/value fields.
+   ========================================================================== */
+export interface CardField { label: string; value: React.ReactNode }
+export function EntityCard({
+  icon, eyebrow, title, action, status, fields, children, onClick, selected, tone,
+}: {
+  icon?: React.ReactNode;
+  eyebrow?: React.ReactNode;
+  title: React.ReactNode;
+  action?: React.ReactNode;           // e.g. a button — clicks don't trigger onClick
+  status?: React.ReactNode;           // e.g. a chip, shown next to the action
+  fields?: CardField[];
+  children?: React.ReactNode;         // optional extra body under the fields
+  onClick?: () => void;               // whole card opens something (drawer / page)
+  selected?: boolean;
+  tone?: "allow" | "review" | "block" | "constrain";
+}) {
+  return (
+    <div
+      className={`card ecard ${onClick ? "clickable-card" : ""} ${selected ? "selected" : ""}`}
+      data-tone={tone}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
+    >
+      <div className="ecard-head">
+        {icon && <span className="ecard-icon">{icon}</span>}
+        <div className="ecard-titles">
+          {eyebrow && <div className="ecard-eyebrow">{eyebrow}</div>}
+          <div className="ecard-title">{title}</div>
+        </div>
+        {(status || action) && (
+          <div className="ecard-actions" onClick={(e) => e.stopPropagation()}>{status}{action}</div>
+        )}
+      </div>
+      {fields && fields.length > 0 && (
+        <dl className="ecard-fields">
+          {fields.map((f) => (
+            <React.Fragment key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></React.Fragment>
+          ))}
+        </dl>
+      )}
+      {children && <div className="ecard-body">{children}</div>}
+    </div>
+  );
+}
+
+/** Equal-height grid for EntityCards (2 columns, 1 on narrow screens). */
+export function CardGrid({ children, cols = 2 }: { children: React.ReactNode; cols?: 1 | 2 | 3 }) {
+  return <div className={`ecard-grid cols-${cols}`}>{children}</div>;
+}
+
+/* ==========================================================================
+   Standard inputs + filter bar
+   ========================================================================== */
+export interface FilterOption { value: string; label: string }
+export function Select({ label, value, onChange, options, allLabel = "All" }: {
+  label?: string; value: string; onChange: (v: string) => void; options: FilterOption[]; allLabel?: string | null;
+}) {
+  return (
+    <label className="fselect">
+      {label && <span className="fselect-label">{label}</span>}
+      <span className="fselect-box">
+        <select value={value} onChange={(e) => onChange(e.target.value)}>
+          {allLabel !== null && <option value="">{allLabel}</option>}
+          {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <ChevronDown size={14} className="fselect-chev" aria-hidden="true" />
+      </span>
+    </label>
+  );
+}
+export function SearchInput({ value, onChange, placeholder = "Search…" }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <label className="fsearch">
+      <Search size={14} aria-hidden="true" />
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder} />
+      {value && <button type="button" className="fsearch-clear" onClick={() => onChange("")} aria-label="Clear search"><X size={13} /></button>}
+    </label>
+  );
+}
+
+export interface FilterSpec<T> {
+  id: string;
+  label: string;
+  get: (item: T) => string | string[] | undefined;
+  options?: FilterOption[];             // default: derived from the items
+  format?: (value: string) => string;   // label for derived options
+}
+/** Search + dropdown filters over any list; options come from the data itself. */
+export function useCardFilters<T>(items: T[], opts: { search?: (item: T) => string; filters?: FilterSpec<T>[] }) {
+  const [query, setQuery] = React.useState("");
+  const [values, setValues] = React.useState<Record<string, string>>({});
+  const specs = opts.filters ?? [];
+  const withOptions = specs.map((f) => {
+    if (f.options) return { ...f, options: f.options };
+    const seen = new Set<string>();
+    for (const it of items) { const v = f.get(it); (Array.isArray(v) ? v : v ? [v] : []).forEach((x) => seen.add(x)); }
+    return { ...f, options: [...seen].sort().map((v) => ({ value: v, label: f.format ? f.format(v) : v })) };
+  });
+  const q = query.trim().toLowerCase();
+  const filtered = items.filter((it) => {
+    if (q && opts.search && !opts.search(it).toLowerCase().includes(q)) return false;
+    return specs.every((f) => {
+      const want = values[f.id];
+      if (!want) return true;
+      const v = f.get(it);
+      return Array.isArray(v) ? v.includes(want) : v === want;
+    });
+  });
+  const active = !!q || Object.values(values).some(Boolean);
+  return {
+    filtered,
+    resetKey: q + "|" + JSON.stringify(values),
+    bar: {
+      query: opts.search ? query : undefined,
+      onQuery: opts.search ? setQuery : undefined,
+      filters: withOptions.map((f) => ({ id: f.id, label: f.label, options: f.options })),
+      values,
+      onChange: (id: string, v: string) => setValues((cur) => ({ ...cur, [id]: v })),
+      count: filtered.length,
+      total: items.length,
+      onClear: active ? () => { setQuery(""); setValues({}); } : undefined,
+    },
+  };
+}
+export function FilterBar({
+  query, onQuery, placeholder, filters = [], values = {}, onChange, count, total, onClear, right,
+}: {
+  query?: string; onQuery?: (v: string) => void; placeholder?: string;
+  filters?: { id: string; label: string; options: FilterOption[] }[];
+  values?: Record<string, string>; onChange?: (id: string, v: string) => void;
+  count?: number; total?: number; onClear?: () => void; right?: React.ReactNode;
+}) {
+  return (
+    <div className="fbar">
+      {onQuery && <SearchInput value={query ?? ""} onChange={onQuery} placeholder={placeholder} />}
+      {filters.map((f) => (
+        <Select key={f.id} label={f.label} value={values[f.id] ?? ""} onChange={(v) => onChange?.(f.id, v)} options={f.options} />
+      ))}
+      <span className="fbar-meta">
+        {count !== undefined && total !== undefined && <span className="fcount">Showing <b>{count}</b> of {total}</span>}
+        {onClear && <button type="button" className="btn btn-ghost btn-sm" onClick={onClear}>Clear filters</button>}
+        {right}
+      </span>
     </div>
   );
 }

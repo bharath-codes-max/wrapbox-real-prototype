@@ -1,7 +1,7 @@
 // Shared filterable event stream — used by Live Actions and embedded elsewhere.
 import { useMemo, useState } from "react";
 import type { SimulationEvent } from "../model/types";
-import { Avatar, AgentMark, DecisionChip, names, clock, RiskChip, usePaged, Pager } from "./kit";
+import { Avatar, AgentMark, DecisionChip, names, clock, RiskChip, usePaged, Pager, EntityCard, CardGrid, FilterBar } from "./kit";
 import { EventDetail } from "./event-detail";
 import { describe } from "./describe";
 import { AGENTS, USERS } from "../model/org";
@@ -42,59 +42,57 @@ export function EventStream({
   // Full streams page at 12 rows; embedded previews (`limit`) show their slice as-is.
   const paged = usePaged(filtered, limit ? Math.max(filtered.length, 1) : 12, [fAgent, fUser, fPlane, fDecision, fRisk, q].join("|"));
 
+  const anyFilter = !!(fAgent || fUser || fPlane || fDecision || fRisk || q);
+  const opts = (xs: string[]) => xs.map((v) => ({ value: v, label: v }));
+  const toneOf = (d: string) => (d === "BLOCK" ? "block" : d === "REVIEW" ? "review" : undefined) as "block" | "review" | undefined;
+
   return (
     <>
       {filters && (
-        <div className="row" style={{ marginBottom: 12 }}>
-          <input className="input" placeholder="Search resource, action, data class…" value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: 260 }} />
-          <select className="select" style={{ width: "auto" }} value={fAgent} onChange={(e) => setFAgent(e.target.value)}>
-            <option value="">All agents</option>
-            {AGENTS.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
-          <select className="select" style={{ width: "auto" }} value={fUser} onChange={(e) => setFUser(e.target.value)}>
-            <option value="">All users</option>
-            {USERS.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-          <select className="select" style={{ width: "auto" }} value={fPlane} onChange={(e) => setFPlane(e.target.value)}>
-            <option value="">All planes</option>
-            <option>ENDPOINT</option><option>NETWORK</option><option>GATEWAY</option>
-          </select>
-          <select className="select" style={{ width: "auto" }} value={fDecision} onChange={(e) => setFDecision(e.target.value)}>
-            <option value="">All decisions</option>
-            <option>ALLOW</option><option>CONSTRAIN</option><option>REVIEW</option><option>BLOCK</option>
-          </select>
-          <select className="select" style={{ width: "auto" }} value={fRisk} onChange={(e) => setFRisk(e.target.value)}>
-            <option value="">All risk</option>
-            <option value="low">low</option><option value="moderate">moderate</option>
-            <option value="high">high</option><option value="critical">critical</option>
-          </select>
-        </div>
+        <FilterBar
+          query={q}
+          onQuery={setQ}
+          placeholder="Search resource, action, data class…"
+          filters={[
+            { id: "agent", label: "Agent", options: AGENTS.map((a) => ({ value: a.id, label: a.name })) },
+            { id: "user", label: "Person", options: USERS.map((u) => ({ value: u.id, label: u.name })) },
+            { id: "plane", label: "Plane", options: opts(["ENDPOINT", "NETWORK", "GATEWAY"]) },
+            { id: "decision", label: "Decision", options: opts(["ALLOW", "CONSTRAIN", "REVIEW", "BLOCK"]) },
+            { id: "risk", label: "Risk", options: opts(["low", "moderate", "high", "critical"]) },
+          ]}
+          values={{ agent: fAgent, user: fUser, plane: fPlane, decision: fDecision, risk: fRisk }}
+          onChange={(id, v) => ({ agent: setFAgent, user: setFUser, plane: setFPlane, decision: setFDecision, risk: setFRisk } as Record<string, (x: string) => void>)[id](v)}
+          count={filtered.length}
+          total={events.length}
+          onClear={anyFilter ? () => { setFAgent(""); setFUser(""); setFPlane(""); setFDecision(""); setFRisk(""); setQ(""); } : undefined}
+        />
       )}
-      <div className={bare ? "" : "card"} style={bare ? { padding: "6px 22px" } : { padding: compact ? "6px 20px" : "8px 22px" }}>
-        {filtered.length === 0 && <div className="empty">No events match the current filters.</div>}
+      {filtered.length === 0 && <div className="card empty">No events match the current filters.</div>}
+      <CardGrid>
         {paged.rows.map((e) => {
           const n = names(e);
           return (
-            <div className="stream-item rowlink" key={e.id} onClick={() => setOpen(e)} style={{ cursor: "pointer" }}>
-              <span className="stream-time">{clock(e.timestamp)}</span>
-              <span className="stream-text">
-                <span className="stream-sentence">{describe(e)}</span>
-                <span className="stream-meta">
-                  <span className="stream-who"><Avatar userId={e.user} size={16} />{n.user}</span>
-                  <span className="sep">·</span>
-                  <span className="stream-who"><AgentMark agentId={e.agent} size={13} />{n.agent}</span>
-                  {e.application && <><span className="sep">·</span>{e.application}</>}
-                  <span className="sep">·</span>
-                  <span className="mono">{e.action}</span>
-                </span>
-              </span>
-              {!compact && <RiskChip r={e.risk} />}
-              <DecisionChip d={e.decision} small />
-            </div>
+            <EntityCard
+              key={e.id}
+              icon={<AgentMark agentId={e.agent} size={26} />}
+              eyebrow={`${clock(e.timestamp)} · ${e.plane}`}
+              title={describe(e)}
+              status={<DecisionChip d={e.decision} small />}
+              tone={toneOf(e.decision)}
+              onClick={() => setOpen(e)}
+              fields={[
+                { label: "Person", value: <><Avatar userId={e.user} size={16} />{n.user}</> },
+                { label: "Agent", value: <>{n.agent}{e.application && <span className="faint">· {e.application}</span>}</> },
+                ...(compact ? [] : [
+                  { label: "Action", value: <span className="mono">{e.action}</span> },
+                  { label: "Risk", value: <RiskChip r={e.risk} /> },
+                ]),
+              ]}
+            />
           );
         })}
-        <Pager {...paged} />
-      </div>
+      </CardGrid>
+      <Pager {...paged} />
       {open && <EventDetail e={events.find((x) => x.id === open.id) ?? open} onClose={() => setOpen(null)} onNavigate={(r) => { setOpen(null); nav(r); }} />}
     </>
   );

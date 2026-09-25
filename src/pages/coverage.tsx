@@ -4,13 +4,13 @@
 // Deliberately not all-green: gaps are the product being honest.
 import { useMemo, useState } from "react";
 import { useAppState } from "../state/store";
-import { PageHead, StatusChip, SimNote, Chip, MetricBar, usePaged, Pager } from "../ui/kit";
+import { PageHead, StatusChip, SimNote, Chip, MetricBar, usePaged, Pager, EntityCard, CardGrid, FilterBar, useCardFilters } from "../ui/kit";
 import { logoUrl, INTEGRATION_LOGOS } from "../ui/logos";
 import { CAPABILITIES, DATA_TYPES } from "../model/registries";
 import { buildCoverageMatrix, type CoverageRow } from "../engine/coverage";
 import type { CoverageStatus } from "../model/types";
 import type { ReactNode } from "react";
-import { ShieldCheck, ShieldAlert, Eye, Clock, Lock, ArrowRight, X, Laptop, Network, DoorOpen, Cpu } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Eye, Clock, Lock, ArrowRight, X, Laptop, Network, DoorOpen, Cpu, Fingerprint } from "lucide-react";
 
 const STATUS_META: Record<CoverageStatus, { icon: ReactNode; tone?: string; note: string }> = {
   ENFORCED: { icon: <ShieldCheck size={17} />, tone: "good", note: "can see it and stop it" },
@@ -56,59 +56,207 @@ const TAB_HINT: Record<Tab, string> = {
   data: "Every kind of sensitive data Wrapbox recognizes, and how dangerous it is if it leaks.",
 };
 
-function StatusDot({ s }: { s: CoverageStatus }) {
-  return <span style={{ width: 7, height: 7, borderRadius: 999, flexShrink: 0, background: `var(--${STATUS_TONE[s]})` }} />;
+const CARD_TONE: Record<CoverageStatus, "allow" | "review" | "block" | "constrain"> = {
+  ENFORCED: "allow",
+  DEGRADED: "review",
+  UNDERSTOOD_ONLY: "constrain",
+  PENDING: "block",
+  UNINSPECTABLE: "block",
+};
+const fmtStatus = (v: string) => v.replaceAll("_", " ").toLowerCase().replace(/^./, (c) => c.toUpperCase());
+
+function StatusIcon({ s }: { s: CoverageStatus }) {
+  return <span style={{ color: `var(--${STATUS_TONE[s]})`, display: "inline-flex" }}>{STATUS_META[s].icon}</span>;
 }
 
-function RuleTable({ rows, showReason }: { rows: CoverageRow[]; showReason?: boolean }) {
-  const paged = usePaged(rows, 8, rows.map((r) => r.id).join("|"));
+function RuleCards({ rows, showReason, what }: { rows: CoverageRow[]; showReason?: boolean; what: string }) {
+  const f = useCardFilters(rows, {
+    search: (r) => [r.title, r.source, r.destination, ...r.dataClasses, ...r.needs.map((n) => n.label)].join(" "),
+    filters: [
+      { id: "status", label: showReason ? "Would be" : "Status", get: (r) => r.status, format: fmtStatus },
+      { id: "plane", label: "Plane", get: (r) => r.planes },
+      { id: "data", label: "Data", get: (r) => r.dataClasses },
+      { id: "source", label: "Source", get: (r) => r.source },
+    ],
+  });
+  const paged = usePaged(f.filtered, 8, f.resetKey + "#" + rows.map((r) => r.id).join("|"));
   return (
-    <div className="card card-pad-0">
-      <table className="tbl tbl-wide">
-        <thead>
-          <tr>
-            <th style={{ minWidth: 260 }}>Promise</th><th>Data</th><th>Where to</th><th>Plane</th><th>Needs these skills</th>
-            <th>{showReason ? "Would be" : "Status"}</th>
-          </tr>
-        </thead>
-        <tbody>
+    <>
+      <FilterBar {...f.bar} placeholder={`Search ${what}…`} />
+      {f.filtered.length === 0 ? (
+        <div className="card empty">No {what} match these filters.</div>
+      ) : (
+        <CardGrid>
           {paged.rows.map((r) => (
-            <tr key={r.id}>
-              <td>
-                <div className="row" style={{ gap: 9, flexWrap: "nowrap", alignItems: "flex-start" }}>
-                  <span style={{ marginTop: 6 }}><StatusDot s={r.status} /></span>
-                  <div style={{ minWidth: 0 }}>
-                    <div className="small" style={{ fontWeight: 600, lineHeight: 1.45 }}>{r.title}</div>
-                    <div className="small faint" style={{ marginTop: 2 }}>
-                      {r.source}{showReason && r.inactiveReason ? ` · ${r.inactiveReason}` : ""}
+            <EntityCard
+              key={r.id}
+              tone={CARD_TONE[r.status]}
+              icon={<StatusIcon s={r.status} />}
+              eyebrow={r.source}
+              title={r.title}
+              status={showReason
+                ? <span className="row" style={{ gap: 6 }}><span className="small faint">would be</span><StatusChip s={r.status} /></span>
+                : <StatusChip s={r.status} />}
+              fields={[
+                ...(showReason && r.inactiveReason ? [{ label: "Why off", value: <span className="small dim">{r.inactiveReason}</span> }] : []),
+                {
+                  label: "Data",
+                  value: r.dataClasses.length === 0
+                    ? <span className="small faint">any data</span>
+                    : <div className="row" style={{ gap: 4 }}>{r.dataClasses.map((d) => <Chip key={d} tone="violet">{d}</Chip>)}</div>,
+                },
+                { label: "Where to", value: <span className="small dim">{r.destination}</span> },
+                { label: "Plane", value: <div className="row" style={{ gap: 4 }}>{r.planes.map((p) => <Chip key={p} tone="neutral">{p}</Chip>)}</div> },
+                {
+                  label: "Needs these skills",
+                  value: (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                      {r.needs.map((n) => (
+                        <div key={n.id} className="spread small" style={{ gap: 12, flexWrap: "nowrap" }}>
+                          <span className="dim" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{n.label}</span>
+                          <StatusChip s={n.status} />
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                </div>
-              </td>
-              <td>
-                {r.dataClasses.length === 0
-                  ? <span className="small faint">any data</span>
-                  : <div className="row" style={{ gap: 4 }}>{r.dataClasses.map((d) => <Chip key={d} tone="violet">{d}</Chip>)}</div>}
-              </td>
-              <td className="small dim">{r.destination}</td>
-              <td><div className="row" style={{ gap: 4 }}>{r.planes.map((p) => <Chip key={p} tone="neutral">{p}</Chip>)}</div></td>
-              <td>
-                <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 170 }}>
-                  {r.needs.map((n) => (
-                    <div key={n.id} className="spread small" style={{ gap: 12, flexWrap: "nowrap" }}>
-                      <span className="dim" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{n.label}</span>
-                      <StatusChip s={n.status} />
-                    </div>
-                  ))}
-                </div>
-              </td>
-              <td><StatusChip s={r.status} /></td>
-            </tr>
+                  ),
+                },
+              ]}
+            />
           ))}
-        </tbody>
-      </table>
+        </CardGrid>
+      )}
       <Pager {...paged} />
-    </div>
+    </>
+  );
+}
+
+function GapCards({ gaps, jump }: { gaps: CoverageRow[]; jump: (t: Tab, g: CoverageRow) => void }) {
+  const f = useCardFilters(gaps, {
+    search: (g) => [g.title, g.source, ...g.planes].join(" "),
+    filters: [
+      { id: "plane", label: "Plane", get: (g) => g.planes },
+      { id: "status", label: "Status", get: (g) => g.status, format: fmtStatus },
+    ],
+  });
+  const paged = usePaged(f.filtered, 8, f.resetKey + "#" + gaps.map((g) => g.id).join("|"));
+  return (
+    <>
+      <FilterBar {...f.bar} placeholder="Search gaps…" />
+      {f.filtered.length === 0 ? (
+        <div className="card empty">No gaps match these filters.</div>
+      ) : (
+        <CardGrid>
+          {paged.rows.map((g) => {
+            const nr = g.affects?.rules.length ?? 0;
+            const ns = g.affects?.safety.length ?? 0;
+            return (
+              <EntityCard
+                key={g.id}
+                tone={CARD_TONE[g.status]}
+                icon={PLANE_ICON[g.planes[0]] ?? <StatusIcon s={g.status} />}
+                eyebrow={g.planes[0]}
+                title={g.title}
+                status={<StatusChip s={g.status} />}
+                fields={[
+                  {
+                    label: "Affects",
+                    value: nr + ns === 0 ? (
+                      <span className="small faint">no promise yet</span>
+                    ) : (
+                      <div className="row small" style={{ gap: 10 }}>
+                        {nr > 0 && <a onClick={() => jump("rules", g)}>{nr} {nr === 1 ? "rule" : "rules"}</a>}
+                        {ns > 0 && <a onClick={() => jump("safety", g)}>{ns} safety</a>}
+                      </div>
+                    ),
+                  },
+                  { label: "Why", value: <span className="small dim">{g.source}</span> },
+                ]}
+              />
+            );
+          })}
+        </CardGrid>
+      )}
+      <Pager {...paged} />
+    </>
+  );
+}
+
+function SkillCards() {
+  const f = useCardFilters(CAPABILITIES, {
+    search: (c) => [c.label, c.id, c.plane, c.note ?? ""].join(" "),
+    filters: [
+      { id: "plane", label: "Plane", get: (c) => c.plane },
+      { id: "status", label: "Status", get: (c) => c.status, format: fmtStatus },
+    ],
+  });
+  const paged = usePaged(f.filtered, 8, f.resetKey);
+  return (
+    <>
+      <FilterBar {...f.bar} placeholder="Search skills…" />
+      {f.filtered.length === 0 ? (
+        <div className="card empty">No skills match these filters.</div>
+      ) : (
+        <CardGrid>
+          {paged.rows.map((c) => {
+            const lg = CAP_LOGO[c.id];
+            return (
+              <EntityCard
+                key={c.id}
+                tone={CARD_TONE[c.status]}
+                icon={lg ? <img src={logoUrl(lg)} alt="" className="logo-img" width={26} height={26} /> : PLANE_ICON[c.plane]}
+                eyebrow={c.plane}
+                title={c.label}
+                status={<StatusChip s={c.status} />}
+                fields={[
+                  { label: "Id", value: <span className="mono small faint">{c.id}</span> },
+                  { label: "Note", value: <span className="small dim">{c.note}</span> },
+                ]}
+              />
+            );
+          })}
+        </CardGrid>
+      )}
+      <Pager {...paged} />
+    </>
+  );
+}
+
+const SEVERITY_ORDER = ["critical", "high", "moderate", "low"];
+
+function DataTypeCards() {
+  const f = useCardFilters(DATA_TYPES, {
+    search: (d) => [d.id, d.family, d.example].join(" "),
+    filters: [
+      { id: "family", label: "Family", get: (d) => d.family },
+      {
+        id: "severity", label: "Severity", get: (d) => d.severity,
+        options: SEVERITY_ORDER.filter((v) => DATA_TYPES.some((d) => d.severity === v)).map((v) => ({ value: v, label: fmtStatus(v) })),
+      },
+    ],
+  });
+  const paged = usePaged(f.filtered, 8, f.resetKey);
+  return (
+    <>
+      <FilterBar {...f.bar} placeholder="Search data types…" />
+      {f.filtered.length === 0 ? (
+        <div className="card empty">No data types match these filters.</div>
+      ) : (
+        <CardGrid>
+          {paged.rows.map((d) => (
+            <EntityCard
+              key={d.id}
+              tone={d.severity === "critical" ? "block" : d.severity === "high" ? "review" : undefined}
+              icon={<Fingerprint size={18} />}
+              eyebrow={d.family}
+              title={<span className="mono">{d.id}</span>}
+              status={<Chip tone={d.severity}>{d.severity}</Chip>}
+              fields={[{ label: "Example", value: <span className="mono small dim">{d.example}</span> }]}
+            />
+          ))}
+        </CardGrid>
+      )}
+      <Pager {...paged} />
+    </>
   );
 }
 
@@ -118,8 +266,6 @@ export function CoverageMap({ nav }: { nav: (r: string) => void }) {
   const [tab, setTab] = useState<Tab>("rules");
   // "Show me the promises this weak skill is holding back" (from Known gaps).
   const [skill, setSkill] = useState<{ id: string; label: string } | null>(null);
-  const pagedCaps = usePaged(CAPABILITIES, 8);
-  const pagedData = usePaged(DATA_TYPES, 8);
   const order: CoverageStatus[] = ["ENFORCED", "DEGRADED", "UNDERSTOOD_ONLY", "PENDING", "UNINSPECTABLE"];
 
   const bySkill = (rows: CoverageRow[]) => (skill ? rows.filter((r) => r.needs.some((n) => n.id === skill.id)) : rows);
@@ -212,113 +358,37 @@ export function CoverageMap({ nav }: { nav: (r: string) => void }) {
             ? <div className="card empty">No rules are switched on. Write and activate one in Intent Studio.</div>
             : bySkill(m.rules).length === 0
               ? <div className="card empty">No switched-on rule needs this skill.</div>
-              : <RuleTable rows={bySkill(m.rules)} />
+              : <RuleCards key="rules" rows={bySkill(m.rules)} what="rules" />
         )}
 
         {tab === "safety" && (
           bySkill(m.safety).length === 0
             ? <div className="card empty">No always-on safety rule needs this skill.</div>
-            : <RuleTable rows={bySkill(m.safety)} />
+            : <RuleCards key="safety" rows={bySkill(m.safety)} what="safety rules" />
         )}
 
         {tab === "gaps" && (
           m.gaps.length === 0
             ? <div className="card empty">No gaps — every skill your switched-on rules rely on is fully enforced.</div>
-            : <div className="card card-pad-0">
-            <table className="tbl">
-              <thead><tr><th>Skill</th><th>Plane</th><th>Status</th><th>Affects</th><th>Why</th></tr></thead>
-              <tbody>
-                {m.gaps.map((g) => {
-                  const nr = g.affects?.rules.length ?? 0;
-                  const ns = g.affects?.safety.length ?? 0;
-                  return (
-                    <tr key={g.id}>
-                      <td>
-                        <div className="row" style={{ gap: 9, flexWrap: "nowrap" }}>
-                          <StatusDot s={g.status} />
-                          <b className="small">{g.title}</b>
-                        </div>
-                      </td>
-                      <td><Chip tone="neutral">{g.planes[0]}</Chip></td>
-                      <td><StatusChip s={g.status} /></td>
-                      <td>
-                        {nr + ns === 0 ? (
-                          <span className="small faint">no promise yet</span>
-                        ) : (
-                          <div className="row small" style={{ gap: 10 }}>
-                            {nr > 0 && <a onClick={() => jump("rules", g)}>{nr} {nr === 1 ? "rule" : "rules"}</a>}
-                            {ns > 0 && <a onClick={() => jump("safety", g)}>{ns} safety</a>}
-                          </div>
-                        )}
-                      </td>
-                      <td className="small dim">{g.source}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+            : <GapCards gaps={m.gaps} jump={jump} />
         )}
 
         {tab === "inactive" && (
           m.inactive.length === 0
             ? <div className="card empty">Every written rule is switched on.</div>
-            : <RuleTable rows={m.inactive} showReason />
+            : <RuleCards key="inactive" rows={m.inactive} showReason what="switched-off rules" />
         )}
 
         {tab === "skills" && (
           CAPABILITIES.length === 0
             ? <div className="card empty">No skills registered yet.</div>
-            : <div className="card card-pad-0">
-            <table className="tbl">
-              <thead><tr><th>Capability</th><th>Plane</th><th>Status</th><th>Note</th></tr></thead>
-              <tbody>
-                {pagedCaps.rows.map((c) => {
-                  const lg = CAP_LOGO[c.id];
-                  return (
-                    <tr key={c.id}>
-                      <td>
-                        <div className="row" style={{ gap: 11, flexWrap: "nowrap" }}>
-                          <span className="plane-icon" style={{ width: 28, height: 28 }}>
-                            {lg ? <img src={logoUrl(lg)} alt="" className="logo-img" /> : PLANE_ICON[c.plane]}
-                          </span>
-                          <div style={{ minWidth: 0 }}>
-                            <div className="small" style={{ fontWeight: 600 }}>{c.label}</div>
-                            <div className="mono faint small">{c.id}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td><Chip tone="neutral">{c.plane}</Chip></td>
-                      <td><StatusChip s={c.status} /></td>
-                      <td className="small dim">{c.note}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            <Pager {...pagedCaps} />
-          </div>
+            : <SkillCards />
         )}
 
         {tab === "data" && (
           DATA_TYPES.length === 0
             ? <div className="card empty">No data classes registered yet.</div>
-            : <div className="card card-pad-0">
-            <table className="tbl">
-              <thead><tr><th>Class</th><th>Family</th><th>Example</th><th>Severity</th></tr></thead>
-              <tbody>
-                {pagedData.rows.map((d) => (
-                  <tr key={d.id}>
-                    <td><Chip tone="violet">{d.id}</Chip></td>
-                    <td><Chip tone="neutral">{d.family}</Chip></td>
-                    <td className="mono small dim">{d.example}</td>
-                    <td><Chip tone={d.severity}>{d.severity}</Chip></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <Pager {...pagedData} />
-          </div>
+            : <DataTypeCards />
         )}
       </div>
     </div>

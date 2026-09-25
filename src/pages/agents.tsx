@@ -2,7 +2,7 @@
 // risk and per-agent activity derived from the shared event store.
 import { useState } from "react";
 import { useAppState } from "../state/store";
-import { PageHead, SectionHead, MetricBar, Chip, RiskChip, SimNote, Drawer, DecisionChip, timeAgo, AgentMark, DestMark, Avatar, PageTabs, usePaged, Pager } from "../ui/kit";
+import { PageHead, SectionHead, MetricBar, Chip, RiskChip, SimNote, Drawer, DecisionChip, timeAgo, AgentMark, DestMark, Avatar, PageTabs, usePaged, Pager, EntityCard, CardGrid, FilterBar, useCardFilters } from "../ui/kit";
 import { EventStream } from "../ui/event-stream";
 import { describe } from "../ui/describe";
 import { AGENTS, deviceById, userById, type OrgAgent } from "../model/org";
@@ -17,7 +17,15 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
     const evs = s.events.filter((e) => e.agent === id);
     return evs.length ? evs[evs.length - 1].timestamp : undefined;
   };
-  const pagedAgents = usePaged(AGENTS, 6);
+  const agentFilters = useCardFilters(AGENTS, {
+    search: (a) => `${a.name} ${a.provider} ${a.kind} ${a.tools.join(" ")}`,
+    filters: [
+      { id: "kind", label: "Kind", get: (a) => a.kind },
+      { id: "trust", label: "Trust", get: (a) => a.trust },
+      { id: "risk", label: "Risk", get: (a) => a.risk },
+    ],
+  });
+  const pagedAgents = usePaged(agentFilters.filtered, 8, agentFilters.resetKey);
   const decisionsFor = (id: string) => {
     const evs = s.events.filter((e) => e.agent === id);
     return {
@@ -121,7 +129,11 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
           ) : (
             <>
               <SectionHead title="Inventory" sub="Every agent Wrapbox has identified, with owner, reach and current risk posture" />
-              <div className="grid g3">
+              <FilterBar {...agentFilters.bar} placeholder="Search agent, provider, tool…" />
+              {agentFilters.filtered.length === 0 ? (
+                <div className="card empty">No agents match the current filters.</div>
+              ) : (
+              <CardGrid>
                 {pagedAgents.rows.map((a) => {
                   const d = decisionsFor(a.id);
                   const last = lastActivity(a.id);
@@ -129,90 +141,61 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
                   const TrustIcon = a.trust === "trusted" ? ShieldCheck : ShieldAlert;
                   const trustColor = a.trust === "trusted" ? "var(--allow)" : a.trust === "conditional" ? "var(--constrain)" : "var(--bad)";
                   return (
-                    <div
+                    <EntityCard
                       key={a.id}
-                      className="card clickable-card"
                       onClick={() => setOpen(a)}
-                      style={a.discovered ? { borderColor: "var(--bad)" } : undefined}
-                    >
-                      <div className="spread" style={{ alignItems: "flex-start", gap: 12 }}>
-                        <div className="row" style={{ gap: 11, alignItems: "center", minWidth: 0 }}>
-                          <span className="plane-icon" style={a.discovered ? { background: "var(--bad-soft)" } : undefined}>
-                            <AgentMark agentId={a.id} size={18} />
-                          </span>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontWeight: 600, fontSize: 14.5, letterSpacing: "-0.01em" }}>{a.name}</div>
-                            <div className="small faint">{a.provider} · {a.kind}</div>
-                          </div>
-                        </div>
-                        <RiskChip r={a.risk} />
-                      </div>
-
-                      {a.discovered && (
-                        <div style={{ marginTop: 10 }}><Chip tone="critical">DISCOVERED · UNREGISTERED</Chip></div>
-                      )}
-
-                      <div className="row" style={{ gap: 8, marginTop: 12 }}>
-                        <TrustIcon size={14} strokeWidth={1.9} style={{ color: trustColor }} />
-                        <Chip tone={trustTone(a.trust)}>{a.trust}</Chip>
-                      </div>
-
-                      <dl className="clause-facts" style={{ gridTemplateColumns: "82px 1fr", marginTop: 14, rowGap: 10 }}>
-                        <dt>Owner</dt>
-                        <dd>
-                          {a.owner ? (
-                            <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
-                              <Avatar userId={a.owner} size={18} />{userById(a.owner)?.name}
+                      tone={a.discovered ? "block" : undefined}
+                      icon={<AgentMark agentId={a.id} size={26} />}
+                      eyebrow={`${a.provider} · ${a.kind}`}
+                      title={a.name}
+                      status={
+                        <>
+                          {a.discovered && <Chip tone="critical">UNREGISTERED</Chip>}
+                          <Chip tone={trustTone(a.trust)}><TrustIcon size={12} strokeWidth={1.9} style={{ color: trustColor }} /> {a.trust}</Chip>
+                          <RiskChip r={a.risk} />
+                        </>
+                      }
+                      fields={[
+                        {
+                          label: "Owner",
+                          value: a.owner ? (
+                            <><Avatar userId={a.owner} size={16} />{userById(a.owner)?.name}<span className="faint">· {a.device ? deviceById(a.device)?.name : "—"}</span></>
+                          ) : <span className="faint">unknown</span>,
+                        },
+                        {
+                          label: "Used by",
+                          value: seen.length === 0 ? <span className="faint">nobody yet</span> : seen.map((u) => (
+                            <span key={u.user} className="row" style={{ gap: 5, flexWrap: "nowrap" }}>
+                              <Avatar userId={u.user} size={16} />{userById(u.user)?.name ?? u.user}
                             </span>
-                          ) : <span className="faint">unknown</span>}
-                          <div className="faint small" style={{ marginTop: 2 }}>{a.device ? deviceById(a.device)?.name : "—"}</div>
-                        </dd>
-
-                        <dt>Used by</dt>
-                        <dd>
-                          {seen.length === 0 ? <span className="faint">nobody yet</span> : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                              {seen.map((u) => (
-                                <span key={u.user} className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
-                                  <Avatar userId={u.user} size={18} />{userById(u.user)?.name ?? u.user}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </dd>
-
-                        <dt>Tools</dt>
-                        <dd>
-                          <div className="row" style={{ gap: 5 }}>
-                            {a.tools.map((t) => <Chip key={t} tone="neutral">{t}</Chip>)}
-                          </div>
-                        </dd>
-
-                        <dt>Reach</dt>
-                        <dd>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                            {a.destinations.map((x) => (
-                              <span key={x} className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
-                                <DestMark destId={x} size={14} /><span>{destById(x)?.label ?? x}</span>
-                              </span>
-                            ))}
-                          </div>
-                        </dd>
-                      </dl>
-
-                      <hr className="divider" style={{ margin: "14px 0 12px" }} />
-                      <div className="spread small faint">
-                        <span className="row" style={{ gap: 5 }}>
-                          <Activity size={12} strokeWidth={1.9} />
-                          <span className="tnum">{d.total} events</span>
-                          {d.blocked > 0 && <span style={{ color: "var(--bad)" }} className="tnum">· {d.blocked} blocked</span>}
-                        </span>
-                        <span>{last ? timeAgo(last) : "no activity"}</span>
-                      </div>
-                    </div>
+                          )),
+                        },
+                        { label: "Tools", value: a.tools.map((t) => <Chip key={t} tone="neutral">{t}</Chip>) },
+                        {
+                          label: "Reach",
+                          value: a.destinations.map((x) => (
+                            <span key={x} className="row" style={{ gap: 5, flexWrap: "nowrap" }}>
+                              <DestMark destId={x} size={14} /><span>{destById(x)?.label ?? x}</span>
+                            </span>
+                          )),
+                        },
+                        {
+                          label: "Activity",
+                          value: (
+                            <span className="row" style={{ gap: 5 }}>
+                              <Activity size={12} strokeWidth={1.9} />
+                              <span className="tnum">{d.total} events</span>
+                              {d.blocked > 0 && <span style={{ color: "var(--bad)" }} className="tnum">· {d.blocked} blocked</span>}
+                              <span className="faint">· {last ? timeAgo(last) : "no activity"}</span>
+                            </span>
+                          ),
+                        },
+                      ]}
+                    />
                   );
                 })}
-              </div>
+              </CardGrid>
+              )}
               <Pager {...pagedAgents} />
             </>
           ),
@@ -227,9 +210,7 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
               {streamShown === 0 ? (
                 <div className="card empty">No agent activity recorded yet.</div>
               ) : (
-                <div className="card card-pad-0">
-                  <EventStream events={s.events} nav={nav} compact limit={streamLimit} filters={false} bare />
-                </div>
+                <EventStream events={s.events} nav={nav} compact limit={streamLimit} filters={false} bare />
               )}
             </>
           ),

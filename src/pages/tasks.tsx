@@ -3,9 +3,9 @@
 // step 6 (production deploy) parks; independent steps continue; approval resumes.
 import { useAppState, startTask, advanceTask } from "../state/store";
 import { TASK_JOBS } from "../engine/scenarios";
-import { PageHead, SectionHead, MetricBar, Chip, DecisionChip, SimNote, AgentMark, Avatar, PageTabs, usePaged, Pager, Progress } from "../ui/kit";
+import { PageHead, SectionHead, MetricBar, Chip, DecisionChip, SimNote, AgentMark, Avatar, PageTabs, usePaged, Pager, Progress, EntityCard, CardGrid, FilterBar, useCardFilters } from "../ui/kit";
 import { EventDetail } from "../ui/event-detail";
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 import { agentById, resourceById, userById } from "../model/org";
 import type { TaskEnvelope } from "../model/types";
 import { Boxes, ShieldOff, Timer, FileStack, Play, PauseOctagon, Sunrise, ArrowRight } from "lucide-react";
@@ -253,94 +253,115 @@ function Launcher({ run, busyMorning }: { run: (jobId?: string) => void; busyMor
         sub="Four real jobs from four teams. Each agent gets its team's permission slip; its risky step goes to a different person to approve."
         right={<button className="btn btn-primary btn-sm" onClick={busyMorning}><Sunrise size={13} /> Busy morning — start all 4</button>}
       />
-      <div className="grid g2">
+      <CardGrid>
         {TASK_JOBS.map((j) => (
-          <div className="card" key={j.id}>
-            <div className="spread" style={{ alignItems: "flex-start" }}>
-              <div className="row" style={{ gap: 11, flexWrap: "nowrap", alignItems: "flex-start", minWidth: 0 }}>
-                <AgentMark agentId={j.agent} size={26} />
-                <div style={{ minWidth: 0 }}>
-                  <div className="eyebrow">{j.team}</div>
-                  <b style={{ fontSize: 14.5 }}>{j.title}</b>
-                </div>
-              </div>
-              <button className="btn btn-sm" onClick={() => run(j.id)}><Play size={13} /> Start</button>
-            </div>
-            <dl className="clause-facts" style={{ gridTemplateColumns: "92px 1fr", marginTop: 14 }}>
-              <dt>Agent</dt><dd className="row" style={{ gap: 6 }}><AgentMark agentId={j.agent} size={15} /> {agentById(j.agent)?.name}</dd>
-              <dt>Asked by</dt><dd className="row" style={{ gap: 6 }}><Avatar userId={j.user} size={16} />{userById(j.user)?.name} <span className="faint">({userById(j.user)?.role})</span></dd>
-              <dt>Approver</dt><dd className="row" style={{ gap: 6 }}><Avatar userId={j.approver} size={16} />{userById(j.approver)?.name} <span className="faint">({j.approverRole})</span></dd>
-              <dt>Envelope</dt><dd>{j.envelope.name} · {j.envelope.durationMin} min</dd>
-              <dt>Never</dt><dd className="row" style={{ gap: 5 }}>{j.envelope.forbidden.map((f, i) => <Chip key={i} tone="block">{resourceById(f)?.name ?? f}</Chip>)}</dd>
-            </dl>
-          </div>
+          <EntityCard
+            key={j.id}
+            icon={<AgentMark agentId={j.agent} size={26} />}
+            eyebrow={j.team}
+            title={j.title}
+            action={<button className="btn btn-sm" onClick={() => run(j.id)}><Play size={13} /> Start</button>}
+            fields={[
+              { label: "Agent", value: <><AgentMark agentId={j.agent} size={15} /> {agentById(j.agent)?.name}</> },
+              { label: "Asked by", value: <><Avatar userId={j.user} size={16} />{userById(j.user)?.name} <span className="faint">({userById(j.user)?.role})</span></> },
+              { label: "Approver", value: <><Avatar userId={j.approver} size={16} />{userById(j.approver)?.name} <span className="faint">({j.approverRole})</span></> },
+              { label: "Envelope", value: `${j.envelope.name} · ${j.envelope.durationMin} min` },
+              { label: "Never", value: j.envelope.forbidden.map((f, i) => <Chip key={i} tone="block">{resourceById(f)?.name ?? f}</Chip>) },
+            ]}
+          />
         ))}
-      </div>
+      </CardGrid>
     </>
   );
 }
 
-/** Compact master list — one selectable row per task; the full panel renders below for the selected one. */
-function TaskList({ tasks, selectedId, onSelect, resetKey }: {
-  tasks: TaskEnvelope[];
-  selectedId: string;
-  onSelect: (taskId: string) => void;
-  resetKey: string;
+/** Status label for filtering — the same wording TaskStatusChip shows. */
+const statusLabel = (t: TaskEnvelope) => (t.status === "stopped" ? "PARTLY DONE" : t.status.toUpperCase());
+
+/** Master list + detail: filterable EntityCard grid; the full panel renders below for the selected task. */
+function TaskBrowser({ list, total, title, sub, emptyLine, inProgress, pickedId, onPick, nav }: {
+  list: TaskEnvelope[];
+  total: number;
+  title: string;
+  sub: string;
+  emptyLine: string;
+  inProgress: boolean;
+  pickedId?: string;
+  onPick: (taskId: string) => void;
+  nav: (r: string) => void;
 }) {
-  const pg = usePaged(tasks, 4, resetKey);
+  const f = useCardFilters(list, {
+    search: (t) => `${t.title} ${t.team ?? ""} ${agentById(t.agent)?.name ?? ""} ${userById(t.user)?.name ?? ""}`,
+    filters: [
+      { id: "team", label: "Team", get: (t) => t.team ?? "Engineering" },
+      { id: "status", label: "Status", get: statusLabel },
+      { id: "agent", label: "Agent", get: (t) => t.agent, format: (v) => agentById(v)?.name ?? v },
+    ],
+  });
+  const pg = usePaged(f.filtered, 8, f.resetKey);
+  const current = f.filtered.find((t) => t.taskId === pickedId) ?? f.filtered[0];
+
   return (
-    <div className="card card-pad-0">
-      <table className="tbl">
-        <thead>
-          <tr>
-            <th>Task</th>
-            <th>Team</th>
-            <th>Asked by → approver</th>
-            <th>Status</th>
-            <th style={{ textAlign: "right" }}>Steps done</th>
-          </tr>
-        </thead>
-        <tbody>
-          {pg.rows.map((t) => {
-            const sel = t.taskId === selectedId;
-            const cell: CSSProperties = { verticalAlign: "middle", paddingTop: 7, paddingBottom: 7, ...(sel ? { background: "var(--accent-soft)" } : {}) };
-            const done = t.steps.filter((x) => x.state === "done").length;
-            const requester = userById(t.user)?.name ?? t.user;
-            const approver = t.approver ? userById(t.approver)?.name ?? t.approver : undefined;
-            return (
-              <tr
-                key={t.taskId}
-                className="rowlink"
-                tabIndex={0}
-                aria-selected={sel}
-                onClick={() => onSelect(t.taskId)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(t.taskId); } }}
-              >
-                <td style={{ ...cell, boxShadow: sel ? "inset 3px 0 0 var(--accent)" : undefined }}>
-                  <div className="row" style={{ gap: 10, flexWrap: "nowrap" }} title={agentById(t.agent)?.name}>
-                    <AgentMark agentId={t.agent} size={18} />
-                    <span style={{ fontWeight: sel ? 650 : 550 }}>{t.title}</span>
-                  </div>
-                </td>
-                <td style={cell}>{t.team ? <Chip tone="neutral">{t.team}</Chip> : <span className="faint">—</span>}</td>
-                <td style={cell}>
-                  <span className="row" style={{ gap: 6, flexWrap: "nowrap" }} title={`Asked by ${requester}${approver ? ` · risky steps → ${approver}` : ""}`}>
-                    <Avatar userId={t.user} size={18} />
-                    <ArrowRight size={12} className="faint" />
-                    {t.approver ? <Avatar userId={t.approver} size={18} /> : <span className="faint">—</span>}
-                  </span>
-                </td>
-                <td style={cell}><TaskStatusChip t={t} /></td>
-                <td style={{ ...cell, textAlign: "right" }} className="tnum">
-                  {done} / {t.steps.length}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <Pager page={pg.page} pages={pg.pages} setPage={pg.setPage} total={pg.total} size={pg.size} />
-    </div>
+    <>
+      <SectionHead title={title} sub={sub} />
+      {list.length === 0 ? (
+        <div className="card empty">
+          <Boxes size={26} className="dim" />
+          <div style={{ fontWeight: 600, fontSize: 15, marginTop: 10 }}>
+            No tasks {inProgress ? "in progress" : "finished yet"}
+          </div>
+          <div className="small dim" style={{ maxWidth: 520, margin: "8px auto 0", lineHeight: 1.55 }}>
+            {emptyLine} Start one from the <b>Start a task</b> tab — or press <b>Busy morning</b> there to see all four teams working at once.
+          </div>
+        </div>
+      ) : (
+        <>
+          <FilterBar {...f.bar} placeholder="Search task, team, agent, person…" />
+          {f.filtered.length === 0 ? (
+            <div className="card empty">No tasks match the current filters ({total} in this tab).</div>
+          ) : (
+            <>
+              <CardGrid>
+                {pg.rows.map((t) => {
+                  const done = t.steps.filter((x) => x.state === "done").length;
+                  return (
+                    <EntityCard
+                      key={t.taskId}
+                      icon={<AgentMark agentId={t.agent} size={26} />}
+                      eyebrow={t.team ?? "Engineering"}
+                      title={t.title}
+                      status={<TaskStatusChip t={t} />}
+                      selected={t.taskId === current?.taskId}
+                      onClick={() => onPick(t.taskId)}
+                      fields={[
+                        {
+                          label: "Asked by → Approver",
+                          value: (
+                            <>
+                              <Avatar userId={t.user} size={16} />{userById(t.user)?.name ?? t.user}
+                              <ArrowRight size={12} className="faint" />
+                              {t.approver ? <><Avatar userId={t.approver} size={16} />{userById(t.approver)?.name ?? t.approver}</> : <span className="faint">—</span>}
+                            </>
+                          ),
+                        },
+                        { label: "Steps", value: <span className="tnum">{done} / {t.steps.length} done</span> },
+                        { label: "Envelope", value: `${t.templateName ?? "Task envelope"} · ${t.durationMin} min` },
+                      ]}
+                    />
+                  );
+                })}
+              </CardGrid>
+              <Pager page={pg.page} pages={pg.pages} setPage={pg.setPage} total={pg.total} size={pg.size} />
+              {current && (
+                <div style={{ marginTop: 16 }}>
+                  <EnvelopeCard key={current.taskId} t={current} nav={nav} />
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </>
   );
 }
 
@@ -352,64 +373,29 @@ export function TasksPage({ nav }: { nav: (r: string) => void }) {
   const stopped = s.tasks.filter((t) => t.status === "stopped").length;
   const run = (jobId?: string) => { const t = startTask(jobId); advanceTask(t.taskId); };
   const busyMorning = () => TASK_JOBS.forEach((j) => run(j.id));
-  const [teamFilter, setTeamFilter] = useState<string>("");
-  const shown = [...s.tasks].reverse().filter((t) => !teamFilter || (t.team ?? "Engineering") === teamFilter);
 
-  // Status split for the tabs. Tab counts are all-team totals; the team filter narrows the list inside a tab.
-  const inProgressAll = s.tasks.filter(isInProgress);
-  const finishedAll = s.tasks.filter((t) => !isInProgress(t));
-  const inProgressShown = shown.filter(isInProgress);
-  const finishedShown = shown.filter((t) => !isInProgress(t));
+  // Status split for the tabs; filters (team, status, agent) narrow the list inside a tab.
+  const newestFirst = [...s.tasks].reverse();
+  const inProgressAll = newestFirst.filter(isInProgress);
+  const finishedAll = newestFirst.filter((t) => !isInProgress(t));
   const latest = s.tasks[s.tasks.length - 1];
 
   // Master/detail selection — remembered per tab; falls back to the newest task in the list.
   const [picked, setPicked] = useState<{ progress?: string; finished?: string }>({});
 
-  const teamButtons = (
-    <div className="row" style={{ gap: 4 }}>
-      {["", ...TASK_JOBS.map((j) => j.team)].map((tm) => (
-        <button key={tm || "all"} className={`btn btn-sm ${teamFilter === tm ? "btn-primary" : "btn-ghost"}`} onClick={() => setTeamFilter(tm)}>
-          {tm || "All teams"}
-        </button>
-      ))}
-    </div>
+  const browse = (key: "progress" | "finished", list: TaskEnvelope[], title: string, sub: string, emptyLine: string) => (
+    <TaskBrowser
+      list={list}
+      total={list.length}
+      title={title}
+      sub={sub}
+      emptyLine={emptyLine}
+      inProgress={key === "progress"}
+      pickedId={picked[key]}
+      onPick={(id) => setPicked((p) => ({ ...p, [key]: id }))}
+      nav={nav}
+    />
   );
-
-  const browse = (key: "progress" | "finished", list: TaskEnvelope[], total: number, title: string, sub: string, emptyLine: string) => {
-    const current = list.find((t) => t.taskId === picked[key]) ?? list[0];
-    return (
-      <>
-        <SectionHead
-          title={title}
-          sub={`${sub}${teamFilter ? ` · ${list.length} of ${total} from ${teamFilter}` : ""}`}
-          right={teamButtons}
-        />
-        {!current ? (
-          <div className="card empty">
-            <Boxes size={26} className="dim" />
-            <div style={{ fontWeight: 600, fontSize: 15, marginTop: 10 }}>
-              No {teamFilter ? `${teamFilter} ` : ""}tasks {key === "progress" ? "in progress" : "finished yet"}
-            </div>
-            <div className="small dim" style={{ maxWidth: 520, margin: "8px auto 0", lineHeight: 1.55 }}>
-              {emptyLine} Start one from the <b>Start a task</b> tab — or press <b>Busy morning</b> there to see all four teams working at once.
-            </div>
-          </div>
-        ) : (
-          <>
-            <TaskList
-              tasks={list}
-              selectedId={current.taskId}
-              onSelect={(id) => setPicked((p) => ({ ...p, [key]: id }))}
-              resetKey={teamFilter}
-            />
-            <div style={{ marginTop: 16 }}>
-              <EnvelopeCard key={current.taskId} t={current} nav={nav} />
-            </div>
-          </>
-        )}
-      </>
-    );
-  };
 
   return (
     <div className="page">
@@ -455,7 +441,7 @@ export function TasksPage({ nav }: { nav: (r: string) => void }) {
                 label: "In progress",
                 count: inProgressAll.length,
                 content: browse(
-                  "progress", inProgressShown, inProgressAll.length, "In progress",
+                  "progress", inProgressAll, "In progress",
                   "Running or parked for approval, newest first — select a task to see its envelope and execution timeline",
                   "Tasks appear here while they run or wait on an approval.",
                 ),
@@ -465,7 +451,7 @@ export function TasksPage({ nav }: { nav: (r: string) => void }) {
                 label: "Finished",
                 count: finishedAll.length,
                 content: browse(
-                  "finished", finishedShown, finishedAll.length, "Finished",
+                  "finished", finishedAll, "Finished",
                   "Completed, or partly done after a denial — click any decided step to inspect its event",
                   "Tasks land here once they complete, or stop after a denial.",
                 ),

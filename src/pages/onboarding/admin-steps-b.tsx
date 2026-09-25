@@ -24,7 +24,7 @@ import { ORG, USERS, agentById, resourceById, userById } from "../../model/org";
 import { destById } from "../../model/registries";
 import { ROLLOUT, rolloutById, type AgentKind } from "../../model/rollout";
 import type { SimulationEvent } from "../../model/types";
-import { AgentMark, Avatar, Chip, DecisionChip, SimNote, timeAgo } from "../../ui/kit";
+import { AgentMark, Avatar, CardGrid, Chip, DecisionChip, EntityCard, FilterBar, Pager, SimNote, timeAgo, useCardFilters, usePaged } from "../../ui/kit";
 import { describe } from "../../ui/describe";
 import { logoUrl } from "../../ui/logos";
 import { WrapboxLogo } from "../../ui/logo";
@@ -142,12 +142,6 @@ export function Step5Approvers(p: AdminStepProps) {
     id, n: pending.filter((e) => approverFor(e) === id).length,
   }));
 
-  const groupRow = (label: string) => (
-    <tr>
-      <td colSpan={3} className="eyebrow" style={{ background: "var(--surface-2)", paddingTop: 6, paddingBottom: 6 }}>{label}</td>
-    </tr>
-  );
-
   return (
     <Split
       main={
@@ -155,39 +149,38 @@ export function Step5Approvers(p: AdminStepProps) {
           <StepHead n={p.n} total={p.total} title="Approvers and alerts" sub="REVIEW decisions go to people, not to a queue nobody watches." />
 
           <div className="card-title" style={{ marginBottom: 10 }}>Who approves what</div>
-          <div className="card card-pad-0">
-            <table className="tbl" style={{ minWidth: 0 }}>
-              <thead>
-                <tr><th>Request</th><th>Asked by</th><th>Approver</th></tr>
-              </thead>
-              <tbody>
-                {groupRow("Team jobs — a job's risky step goes to its team's approver")}
-                {TASK_JOBS.map((j) => (
-                  <tr key={j.id}>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{j.team}</div>
-                      <div className="small faint">{j.title}</div>
-                    </td>
-                    <td><Person id={j.user} sub={userById(j.user)?.role} /></td>
-                    <td><Person id={j.approver} sub={j.approverRole} /></td>
-                  </tr>
-                ))}
-                {groupRow("Outside a team job")}
-                {defaults.map(([ap, from], i) => (
-                  <tr key={ap}>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{i === 0 ? "Everyday exceptions" : `${from.map(firstName).join(", ")}'s own requests`}</div>
-                      <div className="small faint">
-                        {i === 0 ? "Anything that needs a yes outside a team job" : from.includes(usualApprover) ? "The usual approver can't sign their own" : "Routed to someone else"}
-                      </div>
-                    </td>
-                    <td><AvatarStack ids={from} /></td>
-                    <td><Person id={ap} sub={userById(ap)?.role} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <div className="eyebrow" style={{ marginBottom: 8 }}>Team jobs — a job's risky step goes to its team's approver</div>
+          <CardGrid cols={2}>
+            {TASK_JOBS.map((j) => (
+              <EntityCard
+                key={j.id}
+                icon={<Avatar userId={j.approver} size={22} />}
+                eyebrow={j.team}
+                title={nameOf(j.approver)}
+                fields={[
+                  { label: "Request", value: j.title },
+                  { label: "Asked by", value: <Person id={j.user} sub={userById(j.user)?.role} size={18} /> },
+                  { label: "Role", value: j.approverRole },
+                ]}
+              />
+            ))}
+          </CardGrid>
+          <div className="eyebrow" style={{ margin: "16px 0 8px" }}>Outside a team job</div>
+          <CardGrid cols={2}>
+            {defaults.map(([ap, from], i) => (
+              <EntityCard
+                key={ap}
+                icon={<Avatar userId={ap} size={22} />}
+                eyebrow={i === 0 ? "Everyday exceptions" : `${from.map(firstName).join(", ")}'s own requests`}
+                title={nameOf(ap)}
+                fields={[
+                  { label: "Request", value: i === 0 ? "Anything that needs a yes outside a team job" : from.includes(usualApprover) ? "The usual approver can't sign their own" : "Routed to someone else" },
+                  { label: "Asked by", value: <AvatarStack ids={from} /> },
+                  { label: "Role", value: userById(ap)?.role },
+                ]}
+              />
+            ))}
+          </CardGrid>
           <div className="row" style={{ gap: 10, flexWrap: "nowrap", marginTop: 12 }}>
             <ShieldCheck size={16} style={{ color: selfRoutes ? "var(--block)" : "var(--allow)", flexShrink: 0 }} />
             <span className="small" style={{ flex: 1 }}>
@@ -388,6 +381,11 @@ export function Step6Team(p: AdminStepProps) {
 
   const directory = USERS.filter((u) => s.onboarding.invited.includes(u.id));
   const invitees = directory.filter((u) => u.id !== me);
+  const dirFilter = useCardFilters(directory, {
+    search: (u) => `${u.name} ${u.role} ${emailOf(u.id)}`,
+    filters: [{ id: "role", label: "Role", get: (u) => u.role }],
+  });
+  const dirPg = usePaged(dirFilter.filtered, 8, dirFilter.resetKey);
   const connected = s.onboarding.connected.length;
 
   const sync = async () => {
@@ -439,30 +437,28 @@ export function Step6Team(p: AdminStepProps) {
             </div>
           </div>
 
-          <div className="card card-pad-0" style={{ marginTop: 12 }}>
-            <table className="tbl" style={{ minWidth: 0 }}>
-              <thead>
-                <tr><th>Person</th><th>Role</th><th style={{ textAlign: "right" }}>Status</th></tr>
-              </thead>
-              <tbody>
-                {directory.map((u) => (
-                  <tr key={u.id}>
-                    <td><Person id={u.id} sub={<span className="mono" style={{ fontSize: 11.5 }}>{emailOf(u.id)}</span>} /></td>
-                    <td>
-                      <div>{u.role}</div>
-                      {APPROVERS.has(u.id) && <div style={{ marginTop: 3 }}><Chip tone="review">approver</Chip></div>}
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      {u.id === me ? <Chip tone="neutral">you · admin</Chip>
-                        : p.draft.invitesSent ? <Chip tone="allow">invited</Chip>
-                        : <Chip tone="allow">synced</Chip>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ marginTop: 12 }}>
+            {directory.length > 4 && <FilterBar {...dirFilter.bar} placeholder="Search people, roles, emails…" />}
+            <CardGrid cols={2}>
+              {dirPg.rows.map((u) => (
+                <EntityCard
+                  key={u.id}
+                  icon={<Avatar userId={u.id} size={22} />}
+                  eyebrow={u.role}
+                  title={nameOf(u.id)}
+                  status={u.id === me ? <Chip tone="neutral">you · admin</Chip>
+                    : p.draft.invitesSent ? <Chip tone="allow">invited</Chip>
+                    : <Chip tone="allow">synced</Chip>}
+                  fields={[
+                    { label: "Email", value: <span className="mono" style={{ fontSize: 11.5 }}>{emailOf(u.id)}</span> },
+                    ...(APPROVERS.has(u.id) ? [{ label: "Access", value: <Chip tone="review">approver</Chip> }] : []),
+                  ]}
+                />
+              ))}
+            </CardGrid>
+            <Pager {...dirPg} />
             {!synced && (
-              <div className="small faint" style={{ padding: "10px 20px 14px", borderTop: "1px solid var(--line)" }}>
+              <div className="small faint" style={{ marginTop: 10 }}>
                 Only you are in this workspace so far. Sync {idp} to bring in your team.
               </div>
             )}

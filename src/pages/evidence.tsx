@@ -2,12 +2,12 @@
 // full causal chain and a graph/timeline view.
 import { useMemo, useState } from "react";
 import { useAppState } from "../state/store";
-import { PageHead, SectionHead, MetricBar, DecisionChip, Chip, SimNote, names, EvidenceChain, RiskChip, Avatar, AgentMark, DestMark, usePaged, Pager } from "../ui/kit";
+import { PageHead, SectionHead, MetricBar, DecisionChip, Chip, SimNote, names, EvidenceChain, RiskChip, Avatar, AgentMark, DestMark, usePaged, Pager, EntityCard, CardGrid, FilterBar, useCardFilters, clock } from "../ui/kit";
 import { describe } from "../ui/describe";
 import { EventDetail } from "../ui/event-detail";
 import type { SimulationEvent } from "../model/types";
-import { userById } from "../model/org";
-import { FileClock, Table2, GitBranch, Search } from "lucide-react";
+import { userById, AGENTS, USERS } from "../model/org";
+import { FileClock, LayoutGrid, GitBranch } from "lucide-react";
 
 // The human's answer to a REVIEW, kept separate from Wrapbox's own decision.
 const REVIEW_OUTCOME: Record<string, [string, string]> = {
@@ -24,34 +24,33 @@ function HumanReview({ e }: { e: SimulationEvent }) {
   if (!r) return <span className="faint">—</span>;
   const [tone, label] = REVIEW_OUTCOME[r.status] ?? ["neutral", r.status];
   return (
-    <div>
+    <>
       <Chip tone={tone}>{label}</Chip>
-      {r.reviewer && <div className="small faint" style={{ marginTop: 4 }}>by {userById(r.reviewer)?.name ?? r.reviewer}</div>}
-    </div>
+      {r.reviewer && <span className="small faint">by {userById(r.reviewer)?.name ?? r.reviewer}</span>}
+    </>
   );
 }
 
 export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: string }) {
   const s = useAppState();
-  const [q, setQ] = useState("");
-  const [view, setView] = useState<"table" | "graph">("table");
+  const [view, setView] = useState<"cards" | "graph">("cards");
   const [open, setOpen] = useState<SimulationEvent | null>(null);
 
-  const list = useMemo(() => {
-    let l = [...s.events].sort((a, b) => b.timestamp - a.timestamp);
-    if (q) {
-      const t = q.toLowerCase();
-      l = l.filter((e) =>
-        [e.id, describe(e), e.action, e.actionRaw, e.resource, e.decision, ...(e.dataClasses),
-         ...e.matchedContracts.map((m) => m.clauseText), ...e.safetyRules.map((r) => r.name)]
-          .join(" ").toLowerCase().includes(t)
-      );
-    }
-    return l;
-  }, [s.events, q]);
-
-  // Table view shows 15 events per page; a new search jumps back to page 1.
-  const paged = usePaged(list, 10, q);
+  const sorted = useMemo(() => [...s.events].sort((a, b) => b.timestamp - a.timestamp), [s.events]);
+  const f = useCardFilters(sorted, {
+    search: (e) => [e.id, describe(e), e.action, e.actionRaw, e.resource, e.decision, ...e.dataClasses,
+      ...e.matchedContracts.map((m) => m.clauseText), ...e.safetyRules.map((r) => r.name)].join(" "),
+    filters: [
+      { id: "decision", label: "Decision", get: (e) => e.decision, options: ["ALLOW", "CONSTRAIN", "REVIEW", "BLOCK"].map((v) => ({ value: v, label: v })) },
+      { id: "agent", label: "Agent", get: (e) => e.agent, format: (v) => AGENTS.find((a) => a.id === v)?.name ?? v },
+      { id: "user", label: "Person", get: (e) => e.user, format: (v) => USERS.find((u) => u.id === v)?.name ?? v },
+      { id: "risk", label: "Risk", get: (e) => e.risk, options: ["low", "moderate", "high", "critical"].map((v) => ({ value: v, label: v })) },
+      { id: "review", label: "Human review", get: (e) => e.reviewState?.status ?? "none",
+        options: [...Object.entries(REVIEW_OUTCOME).map(([v, [, label]]) => ({ value: v, label })), { value: "none", label: "No review" }] },
+    ],
+  });
+  const list = f.filtered;
+  const paged = usePaged(list, 8, f.resetKey);
 
   const tally = useMemo(() => ({
     total: s.events.length,
@@ -96,67 +95,47 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
       <div className="section">
         <SectionHead
           title="Evidence ledger"
-          sub={`${list.length} of ${s.events.length} events${q ? " matching your search" : ""}, newest first`}
+          sub={`${list.length} of ${s.events.length} events, newest first`}
           right={
             <div className="row" style={{ gap: 0 }}>
-              <button className={`btn btn-sm ${view === "table" ? "btn-primary" : ""}`} style={{ borderRadius: "8px 0 0 8px" }} onClick={() => setView("table")}><Table2 size={13} /> Table</button>
+              <button className={`btn btn-sm ${view === "cards" ? "btn-primary" : ""}`} style={{ borderRadius: "8px 0 0 8px" }} onClick={() => setView("cards")}><LayoutGrid size={13} /> Cards</button>
               <button className={`btn btn-sm ${view === "graph" ? "btn-primary" : ""}`} style={{ borderRadius: "0 8px 8px 0" }} onClick={() => setView("graph")}><GitBranch size={13} /> Causal graph</button>
             </div>
           }
         />
 
-        <div className="row" style={{ marginBottom: 16 }}>
-          <div className="row" style={{ gap: 8, flex: 1, maxWidth: 420 }}>
-            <Search size={15} className="faint" />
-            <input className="input" style={{ flex: 1 }} placeholder="Search id, action, data class, policy, safety rule…" value={q} onChange={(e) => setQ(e.target.value)} />
-          </div>
-        </div>
+        <FilterBar {...f.bar} placeholder="Search id, action, resource, data class, policy…" />
 
-        {view === "table" ? (
-          <div className="card card-pad-0">
-            <table className="tbl tbl-wide">
-              <thead><tr><th>Time</th><th>Actor</th><th>What happened</th><th>Data</th><th>Wrapbox decision</th><th>Human review</th><th>Risk</th><th>Seal</th></tr></thead>
-              <tbody>
-                {paged.rows.map((e) => {
-                  const n = names(e);
-                  return (
-                    <tr key={e.id} className="rowlink" onClick={() => setOpen(e)}>
-                      <td className="mono small">{new Date(e.timestamp).toLocaleTimeString()}<div className="faint" style={{ fontSize: 11, marginTop: 2 }}>{e.id}</div></td>
-                      <td className="small">
-                        <div className="row" style={{ gap: 7 }}>
-                          <Avatar userId={e.user} size={20} />
-                          <span style={{ fontWeight: 550 }}>{n.user}</span>
-                        </div>
-                        <div className="row faint" style={{ gap: 6, marginTop: 5 }}>
-                          <AgentMark agentId={e.agent} size={13} />
-                          <span>{n.agent}{e.application ? ` · ${e.application}` : ""}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="small" style={{ fontWeight: 550, display: "flex", gap: 6, alignItems: "flex-start" }}>
-                          {e.destination && <span style={{ marginTop: 1, flexShrink: 0 }}><DestMark destId={e.destination} size={14} /></span>}
-                          <span>{describe(e)}</span>
-                        </div>
-                        <div className="mono faint" style={{ fontSize: 11, marginTop: 3 }}>{e.actionRaw ?? e.action}</div>
-                      </td>
-                      <td>
-                        {e.dataClasses.slice(0, 2).map((c) => <div key={c} style={{ marginBottom: 3 }}><Chip tone="violet">{c}</Chip></div>)}
-                        {e.dataClasses.length > 2 && <span className="faint small">+{e.dataClasses.length - 2}</span>}
-                        {e.dataClasses.length === 0 && <span className="faint">—</span>}
-                      </td>
-                      <td><DecisionChip d={e.decision} small />{e.breakGlass && <div style={{ marginTop: 5 }}><Chip tone="critical">BREAK-GLASS</Chip></div>}</td>
-                      <td><HumanReview e={e} /></td>
-                      <td><RiskChip r={e.risk} /></td>
-                      <td className="mono small faint">{e.evidence.hash}<div style={{ marginTop: 2 }}>← {e.evidence.prevHash}</div></td>
-                    </tr>
-                  );
-                })}
-                {list.length === 0 && <tr><td colSpan={8}><div className="empty">No evidence matches your search.</div></td></tr>}
-              </tbody>
-            </table>
-            <Pager {...paged} />
-          </div>
-        ) : (
+        {list.length === 0 ? (
+          <div className="card empty">No evidence matches the current filters.</div>
+        ) : view === "cards" ? (<>
+          <CardGrid>
+            {paged.rows.map((e) => {
+              const n = names(e);
+              return (
+                <EntityCard
+                  key={e.id}
+                  icon={<AgentMark agentId={e.agent} size={26} />}
+                  eyebrow={`${clock(e.timestamp)} · ${e.id}`}
+                  title={<>{e.destination && <span style={{ marginRight: 6, verticalAlign: "-2px" }}><DestMark destId={e.destination} size={14} /></span>}{describe(e)}</>}
+                  status={<>{e.breakGlass && <Chip tone="critical">BREAK-GLASS</Chip>}<DecisionChip d={e.decision} small /></>}
+                  tone={e.decision === "BLOCK" ? "block" : e.decision === "REVIEW" ? "review" : undefined}
+                  onClick={() => setOpen(e)}
+                  fields={[
+                    { label: "Actor", value: <><Avatar userId={e.user} size={16} />{n.user}<span className="faint">· {n.agent}{e.application ? ` · ${e.application}` : ""}</span></> },
+                    { label: "Data", value: e.dataClasses.length === 0
+                      ? <span className="faint">—</span>
+                      : <>{e.dataClasses.slice(0, 2).map((c) => <Chip key={c} tone="violet">{c}</Chip>)}{e.dataClasses.length > 2 && <span className="faint small">+{e.dataClasses.length - 2}</span>}</> },
+                    { label: "Human review", value: <HumanReview e={e} /> },
+                    { label: "Risk", value: <RiskChip r={e.risk} /> },
+                    { label: "Seal", value: <span className="mono small faint">{e.evidence.hash} ← {e.evidence.prevHash}</span> },
+                  ]}
+                />
+              );
+            })}
+          </CardGrid>
+          <Pager {...paged} />
+        </>) : (
           <div className="grid g2">
             {list.slice(0, 8).map((e) => {
               const n = names(e);
@@ -178,7 +157,6 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
                 </div>
               );
             })}
-            {list.length === 0 && <div className="card empty">No evidence matches your search.</div>}
           </div>
         )}
       </div>

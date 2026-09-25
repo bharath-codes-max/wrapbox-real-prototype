@@ -1,7 +1,7 @@
 // Break Glass — explicit, time-limited, heavily evidenced emergency override.
 import { useEffect, useState } from "react";
 import { useAppState, startBreakGlass, endBreakGlass } from "../state/store";
-import { PageHead, SectionHead, MetricBar, Chip, DecisionChip, Avatar, AgentMark, DestMark, SimNote, timeAgo } from "../ui/kit";
+import { PageHead, SectionHead, MetricBar, Chip, DecisionChip, Avatar, AgentMark, DestMark, SimNote, timeAgo, EntityCard, CardGrid, Select, FilterBar, Pager, useCardFilters, usePaged } from "../ui/kit";
 import { USERS, userById } from "../model/org";
 import { describe } from "../ui/describe";
 import type { BreakGlassSession, Environment } from "../model/types";
@@ -38,6 +38,16 @@ export function BreakGlassPage({ nav }: { nav: (r: string) => void }) {
   const overriddenBy = (b: BreakGlassSession) =>
     s.events.filter((e) => e.breakGlass && e.timestamp >= b.startedAt && e.timestamp <= b.startedAt + b.durationMin * 60000
       && e.resource === b.scopeResource && e.environment === b.scopeEnvironment);
+
+  // Presentation only: the same status label the history cards show, reused for filtering.
+  const isLive = (b: BreakGlassSession) => b.active && b.startedAt + b.durationMin * 60000 > Date.now();
+  const statusLabel = (b: BreakGlassSession) => (isLive(b) ? "ACTIVE" : b.active ? "expired" : "ended");
+  const history = [...s.breakGlass].reverse();
+  const hf = useCardFilters(history, {
+    search: (b) => `${b.reason} ${b.scope} ${USERS.find((u) => u.id === b.requester)?.name ?? ""}`,
+    filters: [{ id: "status", label: "Status", get: statusLabel }],
+  });
+  const hPaged = usePaged(hf.filtered, 8, hf.resetKey);
 
   return (
     <div className="page">
@@ -186,9 +196,12 @@ export function BreakGlassPage({ nav }: { nav: (r: string) => void }) {
           <div className="grid g2" style={{ marginTop: 16 }}>
             <div className="field">
               <label className="field-label">Covers only (one system)</label>
-              <select className="select" value={scopeIdx} onChange={(e) => setScopeIdx(Number(e.target.value))}>
-                {SCOPES.map((sc, i) => <option key={sc.label} value={i}>{sc.label}</option>)}
-              </select>
+              <Select
+                value={String(scopeIdx)}
+                onChange={(v) => setScopeIdx(Number(v))}
+                options={SCOPES.map((sc, i) => ({ value: String(i), label: sc.label }))}
+                allLabel={null}
+              />
               <span className="row" style={{ gap: 6, marginTop: 2 }}>
                 <Chip tone="block">{SCOPES[scopeIdx].environment}</Chip>
                 <span className="small faint">emergency authority is limited to this one system</span>
@@ -242,37 +255,34 @@ export function BreakGlassPage({ nav }: { nav: (r: string) => void }) {
             sub="Every activation is retained and reflected in Evidence"
             right={<button className="btn btn-sm" onClick={() => nav("evidence")}>View in Evidence</button>}
           />
-          <div className="card card-pad-0">
-            <table className="tbl tbl-wide">
-              <thead><tr><th>When</th><th>Requester</th><th>Reason</th><th>Covered</th><th>Duration</th><th>Overrode</th><th>Status</th></tr></thead>
-              <tbody>
-                {[...s.breakGlass].reverse().map((b) => {
-                  const isActive = b.active && b.startedAt + b.durationMin * 60000 > Date.now();
-                  return (
-                    <tr key={b.id}>
-                      <td className="small dim mono" style={{ whiteSpace: "nowrap" }}>{new Date(b.startedAt).toLocaleString()}</td>
-                      <td>
-                        <div className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
-                          <Avatar userId={b.requester} size={20} />
-                          <span className="small" style={{ fontWeight: 500 }}>{USERS.find((u) => u.id === b.requester)?.name}</span>
-                        </div>
-                      </td>
-                      <td className="small dim">{b.reason}</td>
-                      <td className="small">
-                        <div className="row" style={{ gap: 7 }}>
-                          {b.scopeEnvironment && <Chip tone="neutral">{b.scopeEnvironment}</Chip>}
-                          <span className="dim">{b.scope}</span>
-                        </div>
-                      </td>
-                      <td className="small tnum">{b.durationMin}m</td>
-                      <td className="small tnum">{overriddenBy(b).length} action{overriddenBy(b).length === 1 ? "" : "s"}</td>
-                      <td><Chip tone={isActive ? "block" : "neutral"}>{isActive ? "ACTIVE" : b.active ? "expired" : "ended"}</Chip></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <FilterBar {...hf.bar} placeholder="Search reason, system or requester…" />
+          {hf.filtered.length === 0 ? (
+            <div className="card empty">No activations match these filters.</div>
+          ) : (
+            <CardGrid>
+              {hPaged.rows.map((b) => {
+                const isActive = isLive(b);
+                const n = overriddenBy(b).length;
+                return (
+                  <EntityCard
+                    key={b.id}
+                    tone={isActive ? "block" : undefined}
+                    icon={<Avatar userId={b.requester} size={26} />}
+                    eyebrow={USERS.find((u) => u.id === b.requester)?.name ?? b.requester}
+                    title={b.reason}
+                    status={<Chip tone={isActive ? "block" : "neutral"}>{statusLabel(b)}</Chip>}
+                    fields={[
+                      { label: "Started", value: <span className="mono tnum">{new Date(b.startedAt).toLocaleString()}</span> },
+                      { label: "Covered", value: <>{b.scopeEnvironment && <Chip tone="neutral">{b.scopeEnvironment}</Chip>} {b.scope}</> },
+                      { label: "Duration", value: <span className="tnum">{b.durationMin}m</span> },
+                      { label: "Overrode", value: <span className="tnum">{n} action{n === 1 ? "" : "s"}</span> },
+                    ]}
+                  />
+                );
+              })}
+            </CardGrid>
+          )}
+          <Pager {...hPaged} />
         </div>
       ) : (
         <div className="section">

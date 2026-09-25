@@ -67,9 +67,9 @@ export function LiveActions({ nav }: { nav: (r: string) => void }) {
             </div>
           ))}
         </div>
+      </div>
 
-        <div className="overview-sep" />
-
+      <div style={{ marginTop: 20 }}>
         <EventStream events={s.events} nav={nav} />
       </div>
     </div>

@@ -1,7 +1,7 @@
 // Control Room — executive/operations dashboard. Every number derives from
 // the event store; every metric is clickable to its inspectable source.
 import { useAppState, metrics } from "../state/store";
-import { PageHead, MetricBar, StatusChip, SimNote, SectionHead, PageTabs } from "../ui/kit";
+import { PageHead, MetricBar, StatusChip, SimNote, SectionHead, PageTabs, EntityCard, CardGrid } from "../ui/kit";
 import { EventStream } from "../ui/event-stream";
 import { AGENTS, DEVICES } from "../model/org";
 import { CAPABILITIES } from "../model/registries";
@@ -36,7 +36,7 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
       <PageHead
         eyebrow="Overview"
         title="Control Room"
-        sub={`Veridian Systems · ${activeAgents} registered agents · ${DEVICES.length} protected devices. Every figure below is computed from live event state — select any metric to inspect its source.`}
+        sub={`${s.org.company} · ${activeAgents} registered agents · ${DEVICES.length} protected devices. Every figure below is computed from live event state — select any metric to inspect its source.`}
         right={<SimNote />}
       />
 
@@ -80,40 +80,31 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
         { id: "activity", label: "Recent activity", count: Math.min(8, s.events.length), content: (
       <div>
         <SectionHead title="Recent activity" sub="The live decision stream, newest first" right={<button className="btn btn-sm" onClick={() => nav("live")}>Live Actions <ArrowRight size={13} /></button>} />
-        <div className="card card-pad-0">
-          <EventStream events={s.events} nav={nav} compact limit={8} filters={false} bare />
-        </div>
+        <EventStream events={s.events} nav={nav} compact limit={8} filters={false} bare />
       </div>
         ) },
         { id: "planes", label: "Enforcement planes", count: 3, content: (
       <div>
         <SectionHead title="Enforcement planes" sub="One Core Brain, three enforcement arms" right={<button className="btn btn-sm" onClick={() => nav("coverage")}>Coverage Map <ArrowRight size={13} /></button>} />
-        <div className="grid g3">
+        <CardGrid cols={3}>
           {(["ENDPOINT", "NETWORK", "GATEWAY"] as const).map((p) => {
             const st = planeStatus(p);
             return (
-              <div className="card clickable-card" key={p} onClick={() => nav("coverage")}>
-                <div className="spread" style={{ alignItems: "center" }}>
-                  <span className="row" style={{ gap: 9 }}>
-                    <span className="plane-icon">{planeMeta[p].icon}</span>
-                    <b style={{ fontSize: 14.5, letterSpacing: "-0.01em" }}>{p.charAt(0) + p.slice(1).toLowerCase()} plane</b>
-                  </span>
-                  <StatusChip s={st.enforced === st.total ? "ENFORCED" : "DEGRADED"} />
-                </div>
-                <div className="small dim" style={{ marginTop: 10, lineHeight: 1.5 }}>{planeMeta[p].blurb}</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 7, marginTop: 16 }}>
-                  {CAPABILITIES.filter((c) => c.plane === p).slice(0, 3).map((c) => (
-                    <div key={c.id} className="spread" style={{ gap: 8 }}>
-                      <span className="small faint" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.label}</span>
-                      <StatusChip s={c.status} />
-                    </div>
-                  ))}
-                </div>
-                <div className="small faint tnum" style={{ marginTop: 14 }}>{st.enforced} of {st.total} skills enforced</div>
-              </div>
+              <EntityCard
+                key={p}
+                onClick={() => nav("coverage")}
+                icon={<span className="plane-icon">{planeMeta[p].icon}</span>}
+                eyebrow={planeMeta[p].blurb}
+                title={`${p.charAt(0) + p.slice(1).toLowerCase()} plane`}
+                status={<StatusChip s={st.enforced === st.total ? "ENFORCED" : "DEGRADED"} />}
+                fields={[
+                  ...CAPABILITIES.filter((c) => c.plane === p).slice(0, 3).map((c) => ({ label: c.label, value: <StatusChip s={c.status} /> })),
+                  { label: "Skills enforced", value: <span className="tnum">{st.enforced} of {st.total}</span> },
+                ]}
+              />
             );
           })}
-        </div>
+        </CardGrid>
       </div>
         ) },
       ]} />
