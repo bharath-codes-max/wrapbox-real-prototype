@@ -40,18 +40,19 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
         right={<SimNote />}
       />
 
-      <div className="card">
+      <div className="card overview-card">
         <MetricBar band items={[
           { label: "Active agents", value: activeAgents, note: discovered > 0 ? `+${discovered} discovered, unregistered` : "all registered", onClick: () => nav("agents") },
           { label: "Pending reviews", value: m.pendingReviews, tone: m.pendingReviews > 0 ? "warn" : "good", note: parked > 0 ? `${parked} task step(s) parked` : "no parked steps", onClick: () => nav("reviews") },
           { label: "Secrets protected", value: m.secretsProtected, tone: "good", note: "credential exfiltration blocked", onClick: () => nav("evidence") },
           { label: "High-risk events", value: m.highRisk, tone: m.highRisk > 0 ? "bad" : "good", note: "risk ≥ high, all planes", onClick: () => nav("evidence") },
         ]} />
-      </div>
-
-      <div className="section">
-        <SectionHead title="Decision mix" sub={`How ${totalDecided} consequential actions resolved across every plane`} />
-        <div className="card decisionbar">
+        <div className="overview-sep" />
+        <div className="overview-decision">
+          <div className="row spread" style={{ marginBottom: 12 }}>
+            <span className="eyebrow">Decision mix · {totalDecided} actions</span>
+            <button className="btn btn-ghost btn-sm" onClick={() => nav("live")}>Live Actions <ArrowRight size={13} /></button>
+          </div>
           <div className="decision-track">
             {DECISIONS.map((d) => {
               const c = m.counts[d.key];

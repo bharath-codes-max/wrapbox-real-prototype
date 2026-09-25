@@ -24,10 +24,8 @@
   --accent-soft: #f6ece5;
   --accent-fg: #ffffff;
   --accent-active: #a9583e;
-  /* Matte dark warm-gray header (the ONLY dark chrome; body stays light) */
-  --header: #2a2925;
-  --header-fg: #faf9f5;
-  --header-line: rgba(255, 255, 255, 0.10);
+  /* Light chrome — header matches the ivory sidebar for a seamless top-left */
+  --header: #fdfcf7;
   --ink: #201f1c;
   --ink-fg: #faf9f5;
   /* Decision tones — warm-aligned */
@@ -114,38 +112,34 @@ button { font-family: var(--sans); }
 .shell { display: flex; flex: 1; min-height: 0; }
 .content-col { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
 
-/* Topbar — full-width Stripe-indigo header (brand-color bar over a light app) */
+/* Topbar — light chrome, seamless with the ivory sidebar */
 .topbar {
   position: sticky; top: 0; z-index: 40;
   display: flex; align-items: center; gap: 14px;
-  height: 60px; padding: 0 20px; flex-shrink: 0;
+  height: 56px; padding: 0 20px; flex-shrink: 0;
   background: var(--header);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.28);
+  border-bottom: 1px solid var(--line);
 }
-.topbar-div { height: 24px; width: 1px; background: rgba(255, 255, 255, 0.18); margin: 0 2px; }
+.topbar-div { height: 22px; width: 1px; background: var(--line-strong); margin: 0 2px; }
 .sidebar-brand { display: inline-flex; align-items: center; gap: 10px; padding: 2px 4px; cursor: pointer; background: none; border: none; flex-shrink: 0; }
 .workspace-menu {
   display: inline-flex; align-items: center; gap: 8px;
   border: none; background: none; cursor: pointer;
-  font-family: var(--sans); font-size: 13px; font-weight: 550; color: #fff;
+  font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--fg);
   padding: 6px 10px; border-radius: 8px; transition: background 0.12s;
 }
-.workspace-menu:hover { background: rgba(255, 255, 255, 0.14); }
-.workspace-menu .faint { color: rgba(255, 255, 255, 0.72); font-weight: 400; }
-.workspace-dot { width: 7px; height: 7px; border-radius: 2px; background: #fff; }
+.workspace-menu:hover { background: var(--surface-3); }
+.workspace-menu .faint { color: var(--fg-3); font-weight: 400; }
+.workspace-dot { width: 8px; height: 8px; border-radius: 3px; background: var(--accent); }
 .topbar-search {
   display: flex; align-items: center; gap: 10px;
-  height: 34px; width: min(420px, 32vw);
-  border-radius: 9px; border: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.82); font-size: 13px; font-family: var(--sans);
+  height: 34px; width: min(400px, 30vw);
+  border-radius: 9px; border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg-3); font-size: 13px; font-family: var(--sans);
   padding: 0 12px; cursor: pointer; transition: background 0.14s, color 0.14s, border-color 0.14s;
 }
-.topbar-search:hover { background: rgba(255, 255, 255, 0.24); color: #fff; border-color: rgba(255, 255, 255, 0.38); }
-.topbar .kbd { background: rgba(255, 255, 255, 0.22); color: #fff; }
-.topbar .pill { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); color: #fff; }
-.topbar .pill-ok { background: rgba(255, 255, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32); color: #fff; }
-.topbar .pill-review { background: rgba(255, 255, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32); color: #fff; }
+.topbar-search:hover { background: var(--surface); color: var(--fg-2); border-color: var(--line-strong); }
 .kbd {
   display: grid; place-items: center; height: 20px; min-width: 20px;
   border-radius: 6px; background: color-mix(in oklab, var(--fg) 7%, transparent);
@@ -295,7 +289,7 @@ button { font-family: var(--sans); }
 .metric-top { display: flex; align-items: center; gap: 7px; }
 .metric-label { font-size: 11px; color: var(--fg-3); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
 .metric-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-left: auto; }
-.metric-value { font-size: 25px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.12; font-variant-numeric: tabular-nums; margin-top: 5px; color: var(--fg); }
+.metric-value { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.12; font-variant-numeric: tabular-nums; margin-top: 4px; color: var(--fg); }
 .metric-note { font-size: 12px; color: var(--fg-3); margin-top: 5px; line-height: 1.4; }
 @media (max-width: 760px) {
   .metricbar { grid-auto-flow: row; grid-template-columns: repeat(2, 1fr); }
@@ -308,13 +302,17 @@ button { font-family: var(--sans); }
 .metricband { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0; }
 .metricband .metric { border-left: 1px solid var(--line); padding: 4px 28px 4px 0; margin-left: 28px; }
 .metricband .metric:first-child { border-left: none; margin-left: 0; padding-left: 0; }
-.metricband .metric-value { font-weight: 700; font-size: 32px; letter-spacing: -0.02em; margin-top: 8px; }
+.metricband .metric-value { font-weight: 700; font-size: 23px; letter-spacing: -0.02em; margin-top: 7px; }
 .metricband .metric-label { color: var(--fg-3); }
 @media (max-width: 760px) {
   .metricband { grid-auto-flow: row; grid-template-columns: 1fr 1fr; gap: 22px 0; }
   .metricband .metric { border-left: 1px solid var(--line); margin-left: 22px; padding-right: 12px; }
   .metricband .metric:nth-child(odd) { border-left: none; margin-left: 0; }
 }
+
+/* Overview panel — KPIs + decision mix combined in one card */
+.overview-card { padding: 20px 24px; }
+.overview-sep { height: 1px; background: var(--line); margin: 20px -24px; }
 
 /* Decision bar — a single proportional bar instead of four number boxes */
 .decisionbar { margin-top: 4px; }
@@ -376,7 +374,7 @@ button { font-family: var(--sans); }
   background: var(--surface-2); color: var(--fg-2); flex-shrink: 0;
 }
 .stat-label { font-size: 11px; color: var(--fg-3); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
-.stat-value { font-size: 27px; font-weight: 600; line-height: 1.08; margin-top: 4px; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.stat-value { font-size: 22px; font-weight: 700; line-height: 1.1; margin-top: 4px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .stat-note { font-size: 12px; color: var(--fg-3); margin-top: 5px; line-height: 1.4; }
 .stat.clickable { cursor: pointer; transition: border-color 0.16s, box-shadow 0.16s, transform 0.16s; }
 .stat.clickable:hover { border-color: var(--line-strong); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
@@ -385,9 +383,9 @@ button { font-family: var(--sans); }
    Badges / chips
    ========================================================================== */
 .chip {
-  display: inline-flex; align-items: center; gap: 5px; padding: 2.5px 9px;
-  border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
-  white-space: nowrap; line-height: 1.4;
+  display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px;
+  border-radius: 6px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em;
+  white-space: nowrap; line-height: 1.5;
 }
 .chip-mono { font-family: var(--mono); letter-spacing: 0; }
 .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
