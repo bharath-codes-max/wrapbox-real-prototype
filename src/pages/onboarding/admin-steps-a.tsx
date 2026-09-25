@@ -31,14 +31,17 @@ import {
 // Shared bits
 // ---------------------------------------------------------------------------
 
-/** GitHub's mark comes in a dark and a light variant; pick the one that reads on the current theme. */
-const isDark = () => typeof document !== "undefined" && document.documentElement.dataset.theme === "dark";
-const themed = (name: string) => (name === "github_light" && isDark() ? "github_dark" : name);
-/** On an ink (primary) button the background inverts with the theme, so the mark does too. */
-const ghOnInk = () => (isDark() ? "github_light" : "github_dark");
+/** Dark is the default theme; light is the opt-in `data-theme="light"` (App.tsx removes the attribute for dark). */
+const isLight = () => typeof document !== "undefined" && document.documentElement.dataset.theme === "light";
+/** GitHub's mark comes in a dark and a light variant. A `.logo-img` sits on a white chip in the dark
+ *  theme (app.css) and on the light surface otherwise, so the dark mark reads in both themes. */
+const ghMark = () => "github_light";
+/** On the primary button the background inverts with the theme (white pill on dark, ink on light),
+ *  and the `.logo-img` chip is white on dark — so the mark must be dark on dark, white on light. */
+const ghOnInk = () => (isLight() ? "github_dark" : "github_light");
 
 function Logo({ name, size = 18 }: { name: string; size?: number }) {
-  return <img src={logoUrl(themed(name))} alt="" className="logo-img" style={{ width: size, height: size }} />;
+  return <img src={logoUrl(name === "github_light" ? ghMark() : name)} alt="" className="logo-img" style={{ width: size, height: size }} />;
 }
 
 function Bar({ value }: { value: number }) {

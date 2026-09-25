@@ -313,7 +313,7 @@ function SlackCard({ e, sample, passkey, onOpen }: { e: SimulationEvent; sample:
         <span style={{ marginLeft: "auto" }}>{sample ? <Chip tone="neutral">sample</Chip> : <Chip tone="review">waiting now</Chip>}</span>
       </div>
       <div className="row" style={{ gap: 12, padding: 14, alignItems: "flex-start", flexWrap: "nowrap" }}>
-        <span style={{ width: 36, height: 36, borderRadius: 8, background: "var(--header)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+        <span style={{ width: 36, height: 36, borderRadius: 8, background: "var(--header)", border: "1px solid var(--line)", display: "grid", placeItems: "center", flexShrink: 0 }}>
           <WrapboxLogo size={22} tone="dark" />
         </span>
         <div style={{ minWidth: 0, flex: 1 }}>
@@ -516,7 +516,7 @@ export function Step6Team(p: AdminStepProps) {
               <div style={{ marginTop: 4, fontSize: 15, fontWeight: 600, lineHeight: 1.35 }}>
                 {firstName(inviter)} invited you to the {s.org.company || "Wrapbox"} workspace
               </div>
-              <div style={{ marginTop: 16, borderRadius: 12, padding: 20, background: "var(--header)", color: "var(--accent-fg)" }}>
+              <div style={{ marginTop: 16, borderRadius: 12, padding: 20, background: "var(--header)", border: "1px solid var(--line)", color: "var(--accent-fg)" }}>
                 <div className="row" style={{ gap: 10 }}>
                   <WrapboxLogo size={26} tone="dark" />
                   <span style={{ fontFamily: "var(--brandfont)", fontSize: 16, fontWeight: 700 }}>Wrapbox</span>

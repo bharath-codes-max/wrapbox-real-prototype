@@ -1,18 +1,23 @@
 // Integrations — simulated enterprise connections. Each connection's status is
 // derived from the capability registry (the same one Coverage uses), and its
 // usage from the recorded events; nothing here is a typed-in figure.
+import { useState } from "react";
 import { useAppState } from "../state/store";
 import {
-  PageHead, Chip, StatusChip, SimNote, SectionHead, DecisionChip, names,
+  PageHead, Chip, StatusChip, SimNote, SectionHead, DecisionChip, names, timeAgo,
   MetricBar, Avatar, AgentMark, DestMark, PageTabs,
   EntityCard, CardGrid, FilterBar, Pager, useCardFilters, usePaged,
 } from "../ui/kit";
-import { RESOURCES, DEVICES, USERS, AGENTS, deviceById, userById, resourceById } from "../model/org";
+import { RESOURCES, DEVICES, USERS, AGENTS, deviceById, userById, resourceById, agentById } from "../model/org";
 import { ACTION_NORMALIZATION, CAPABILITIES } from "../model/registries";
 import { logoUrl } from "../ui/logos";
 import { describe } from "../ui/describe";
+import { AgentTerminal } from "../ui/agent-terminal";
+import { EventDetail } from "../ui/event-detail";
+import { pipelineFor } from "../engine/simulate";
+import { scenarioById } from "../engine/scenarios";
 import type { SimulationEvent } from "../model/types";
-import { Plug, Laptop, Fingerprint, Shuffle, ArrowRight } from "lucide-react";
+import { Plug, Laptop, Fingerprint, Shuffle, ArrowRight, TerminalSquare } from "lucide-react";
 
 interface Connection {
   name: string; logo: string; kind: string; caps: string[]; detail: string;
@@ -71,8 +76,13 @@ const APP_LOGO: Record<string, string> = {
   "Stripe API": "stripe", "Support SaaS API": "salesforce",
 };
 
+/** The coding agents Wrapbox governs — same org registry the Agents page uses. */
+const CODING_AGENTS = AGENTS.filter((a) => a.kind === "coding");
+const isCodingEvent = (e: SimulationEvent) => agentById(e.agent)?.kind === "coding";
+
 export function IntegrationsPage({ nav }: { nav: (r: string) => void }) {
   const s = useAppState();
+  const [openEvt, setOpenEvt] = useState<SimulationEvent | null>(null);
   const statuses = CONNECTIONS.map(statusOf);
   const enforced = statuses.filter((x) => x === "ENFORCED").length;
   const degraded = statuses.filter((x) => x === "DEGRADED").length;
@@ -98,6 +108,15 @@ export function IntegrationsPage({ nav }: { nav: (r: string) => void }) {
   // A real identity chain: the latest recorded action on the checkout code (the root), else the latest action.
   const byTime = [...s.events].sort((a, b) => b.timestamp - a.timestamp);
   const sample = byTime.find((e) => /checkout/i.test(names(e).resource)) ?? byTime[0];
+
+  // The agent terminal replays the most recent recorded action a coding agent took —
+  // the same event, scenario and pipeline stages the Simulation Lab rendered when it
+  // ran. With no such action yet, the terminal shows the scenario prompt in its
+  // pending state (no trace is invented).
+  const codingEvents = s.events.filter(isCodingEvent);
+  const codingEvt = byTime.find((e) => isCodingEvent(e) && e.scenario && scenarioById(e.scenario)) ?? null;
+  const termScenario = (codingEvt?.scenario ? scenarioById(codingEvt.scenario) : undefined) ?? scenarioById("ep-run-tests");
+  const termStages = codingEvt && termScenario ? pipelineFor(termScenario, codingEvt) : [];
 
   // Identity nodes — same values shown before, now logo-forward.
   const throughVal = sample ? (sample.application ?? sample.plane.toLowerCase()) : "";
@@ -150,30 +169,101 @@ export function IntegrationsPage({ nav }: { nav: (r: string) => void }) {
           id: "connections",
           label: "Connected systems",
           count: CONNECTIONS.length,
-          content: CONNECTIONS.length === 0 ? (
-            <div className="card empty">No connections configured yet.</div>
-          ) : (
-            // The connections themselves, logo-forward. Enforcement tallies live in the
-            // MetricBar above, so this tab opens straight onto the cards.
-            <CardGrid>
-              {CONNECTIONS.map((c, i) => (
-                <EntityCard
-                  key={c.name}
-                  icon={<img src={logoUrl(c.logo)} alt="" className="logo-img" style={{ width: 22, height: 22, objectFit: "contain" }} />}
-                  eyebrow={c.kind}
-                  title={c.name}
-                  status={<StatusChip s={statuses[i]} />}
-                  fields={[
-                    { label: "Scope", value: <span className="dim">{c.detail}</span> },
-                    ...c.caps.map(capOf).map((cap) => ({
-                      label: cap.label,
-                      value: <><StatusChip s={cap.status} /> <span className="faint">{cap.note}</span></>,
-                    })),
-                    { label: "Recorded actions", value: <span className="mono tnum" style={{ fontWeight: 700 }}>{used(c)}</span> },
-                  ]}
-                />
-              ))}
-            </CardGrid>
+          content: (
+            <>
+              {/* "Connect to any AI" — the decision engine behind every coding agent, shown
+                  through the agent's own terminal replaying a real recorded action. */}
+              {termScenario && (
+                <section
+                  // Intrinsic split: two columns while each can be ≥420px, otherwise the terminal stacks under the copy.
+                  style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: "clamp(24px, 4vw, 56px)", alignItems: "center", padding: "10px 0 36px", marginBottom: 28, borderBottom: "1px solid var(--line)" }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div className="eyebrow row" style={{ gap: 7 }}>
+                      <TerminalSquare size={13} /> Coding agents
+                    </div>
+                    <h2 style={{ fontSize: "clamp(26px, 2.6vw, 34px)", fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.12, margin: "12px 0 0", color: "var(--fg)" }}>
+                      Take action from anywhere
+                    </h2>
+                    <p style={{ fontSize: 15, lineHeight: 1.6, color: "var(--fg-2)", margin: "14px 0 0", maxWidth: 460 }}>
+                      The same decision engine sits behind Claude Code, Cursor, Codex and your own agents. Every shell
+                      command, file write and push is held, judged and recorded before it runs — the terminal on the
+                      right is a real recorded action, replayed line for line.
+                    </p>
+
+                    {/* The coding agents the org actually governs, plus the IDE agent Wrapbox sits behind */}
+                    <div className="row" style={{ gap: 8, marginTop: 20, flexWrap: "wrap" }}>
+                      {CODING_AGENTS.map((a) => (
+                        <span key={a.id} className="row small" style={{ gap: 8, padding: "6px 12px 6px 8px", borderRadius: 999, border: "1px solid var(--line-strong)", background: "var(--surface)", fontWeight: 550, cursor: "pointer" }} onClick={() => nav("agents")}>
+                          <AgentMark agentId={a.id} size={16} /> {a.name}
+                        </span>
+                      ))}
+                      <span className="row small" style={{ gap: 8, padding: "6px 12px 6px 8px", borderRadius: 999, border: "1px solid var(--line-strong)", background: "var(--surface)", fontWeight: 550 }}>
+                        <img src={logoUrl("cursor")} alt="" className="logo-img" style={{ width: 16, height: 16 }} /> Cursor
+                      </span>
+                    </div>
+
+                    {/* Derived from the store — the actions those agents actually took */}
+                    <div className="small dim" style={{ marginTop: 18, lineHeight: 1.6 }}>
+                      <span className="mono tnum" style={{ fontWeight: 700, color: "var(--fg)" }}>{codingEvents.length}</span>
+                      {" "}action{codingEvents.length === 1 ? "" : "s"} recorded from {CODING_AGENTS.length} coding agent{CODING_AGENTS.length === 1 ? "" : "s"}
+                      {codingEvt && (
+                        <>
+                          {" · latest "}
+                          <span className="row" style={{ display: "inline-flex", gap: 6, verticalAlign: "middle" }}>
+                            <DecisionChip d={codingEvt.decision} small />
+                            <span className="faint">{timeAgo(codingEvt.timestamp)}</span>
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="row" style={{ gap: 10, marginTop: 22 }}>
+                      <button className="btn btn-primary btn-lg" onClick={() => nav("simlab")}>Run a scenario <ArrowRight size={16} /></button>
+                      <button className="btn btn-lg" onClick={() => nav("agents")}>View agents</button>
+                    </div>
+                  </div>
+
+                  <div className="glow-soft" style={{ borderRadius: 18, minWidth: 0 }}>
+                    <AgentTerminal
+                      scenario={termScenario}
+                      event={codingEvt}
+                      stages={termStages}
+                      visible={termStages.length}
+                      onOpenEvidence={() => codingEvt && setOpenEvt(codingEvt)}
+                    />
+                  </div>
+                </section>
+              )}
+
+              {CONNECTIONS.length === 0 ? (
+                <div className="card empty">No connections configured yet.</div>
+              ) : (
+                <>
+                  {/* The connections themselves, logo-forward. Enforcement tallies live in the MetricBar above. */}
+                  <SectionHead title="Connected systems" sub="Where Wrapbox sits in each system, what it can enforce there, and how many recorded actions passed through" />
+                  <CardGrid>
+                    {CONNECTIONS.map((c, i) => (
+                      <EntityCard
+                        key={c.name}
+                        icon={<img src={logoUrl(c.logo)} alt="" className="logo-img" style={{ width: 22, height: 22, objectFit: "contain" }} />}
+                        eyebrow={c.kind}
+                        title={c.name}
+                        status={<StatusChip s={statuses[i]} />}
+                        fields={[
+                          { label: "Scope", value: <span className="dim">{c.detail}</span> },
+                          ...c.caps.map(capOf).map((cap) => ({
+                            label: cap.label,
+                            value: <><StatusChip s={cap.status} /> <span className="faint">{cap.note}</span></>,
+                          })),
+                          { label: "Recorded actions", value: <span className="mono tnum" style={{ fontWeight: 700 }}>{used(c)}</span> },
+                        ]}
+                      />
+                    ))}
+                  </CardGrid>
+                </>
+              )}
+            </>
           ),
         },
         {
@@ -305,6 +395,14 @@ export function IntegrationsPage({ nav }: { nav: (r: string) => void }) {
           ),
         },
       ]} />
+
+      {openEvt && (
+        <EventDetail
+          e={s.events.find((x) => x.id === openEvt.id) ?? openEvt}
+          onClose={() => setOpenEvt(null)}
+          onNavigate={(r) => { setOpenEvt(null); nav(r); }}
+        />
+      )}
     </div>
   );
 }

@@ -146,8 +146,9 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
                 {!token || !origin ? vaultEmpty : (
                   <div className="card">
                     {/* Steps 1 · 2 · 3 — a left-to-right journey of the same token */}
+                    {/* Inner steps sit one surface up so they read on the black canvas (tokens only — both themes hold) */}
                     <div className="grid g3">
-                      <div className="card">
+                      <div className="card" style={{ background: "var(--surface-2)" }}>
                         <div className="eyebrow">1 · Sent to the AI</div>
                         <div className="row small dim" style={{ gap: 7, marginTop: 8, flexWrap: "nowrap", minWidth: 0 }}>
                           {origin.event.destination && DEST_LOGOS[origin.event.destination] && <DestMark destId={origin.event.destination} size={15} />}
@@ -156,12 +157,12 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
                         <div className="payload" style={{ marginTop: 10 }}>… <span className="hl-tok">{token.id}</span> …</div>
                         <div className="small faint" style={{ marginTop: 8 }}>The real value never left Veridian.</div>
                       </div>
-                      <div className="card">
+                      <div className="card" style={{ background: "var(--surface-2)" }}>
                         <div className="eyebrow">2 · The AI's reply</div>
                         <div className="payload" style={{ marginTop: 10 }}>{reply(<span className="hl-tok">{token.id}</span>)}</div>
                         <div className="small faint" style={{ marginTop: 8 }}>The AI wrote its answer with the token — it never knew the real value.</div>
                       </div>
-                      <div className="card">
+                      <div className="card" style={{ background: "var(--surface-2)" }}>
                         <div className="eyebrow">3 · Coming back through Wrapbox</div>
                         <div className="small dim" style={{ marginTop: 10, lineHeight: 1.55 }}>
                           Wrapbox can swap <span className="mono">{token.id}</span> back for the real value — but only for someone inside the company.

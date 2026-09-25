@@ -7,6 +7,7 @@ import { SEED_CONTRACTS } from "../model/contracts";
 import { BASELINE_KERNEL } from "../engine/kernel";
 import { PageHead, Chip, DecisionChip, SimNote, Payload, names, Avatar, AgentMark, DestMark, SectionHead } from "../ui/kit";
 import { EventDetail } from "../ui/event-detail";
+import { AgentTerminal } from "../ui/agent-terminal";
 import { SCENARIOS, type Scenario } from "../engine/scenarios";
 import { pipelineFor, buildInspection, type PipelineStage } from "../engine/simulate";
 import type { Decision, SimulationEvent } from "../model/types";
@@ -300,37 +301,7 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
                     </div>
                   </div>
                 ) : (
-                  <div className="term">
-                    <div className="term-chrome" style={{ alignItems: "center", gap: 8 }}>
-                      <i /><i /><i />
-                      <span style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <AgentMark agentId={sc.agent} size={13} />
-                        <span className="dim">{userById(sc.user)?.name} · {agentById(sc.agent)?.name} · {sc.application}</span>
-                      </span>
-                    </div>
-                    <span style={{ color: "var(--good)" }}>❯</span> {sc.actionRaw ?? sc.action.toLowerCase()}{"\n"}
-                    {!event && <span className="faint">… press Run to execute</span>}
-                    {event && !finished && <span className="dim">…</span>}
-                    {finished && liveEvent && (
-                      <>
-                        {liveEvent.decision === "ALLOW" && <span style={{ color: "var(--good)" }}>{"✓ allowed — the agent's command runs unchanged"}</span>}
-                        {liveEvent.decision === "BLOCK" && (
-                          <span style={{ color: "var(--bad)" }}>
-                            {"⛔ wrapbox: action blocked\n"}
-                            <span className="dim">{"   reason: "}{liveEvent.decidedBy?.label ?? liveEvent.decisionReasons[0]}{"\n"}</span>
-                            {liveEvent.safeAlternative && <span className="dim">{"   hint: "}{liveEvent.safeAlternative}</span>}
-                          </span>
-                        )}
-                        {liveEvent.decision === "REVIEW" && (
-                          <span style={{ color: "var(--warn)" }}>
-                            {"⏸ wrapbox: authorization required — request filed\n"}
-                            <span className="dim">{"   the agent continues other safe work while this waits"}</span>
-                          </span>
-                        )}
-                        {liveEvent.decision === "CONSTRAIN" && <span style={{ color: "var(--info)" }}>{"✓ completed with protective transform"}</span>}
-                      </>
-                    )}
-                  </div>
+                  <AgentTerminal scenario={sc} event={liveEvent} stages={stages} visible={visible} onOpenEvidence={() => setOpenDetail(true)} />
                 )}
 
                 {/* Before payload preview for content scenarios */}

@@ -1,18 +1,18 @@
 // Get started hub — the front door. Two ways in (set up a fresh workspace as
-import type React from "react";
 // the admin, or explore the Veridian demo), the employee side, and a setup
 // checklist for the CURRENT workspace. Every state, count and decision on this
-// page is read from the store; the decision ticker replays real recorded
+// page is read from the store; the decision composer replays real recorded
 // events and shows nothing when the workspace has none.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
-import { ArrowRight, Building2, Check, Plus, Radio, RotateCcw } from "lucide-react";
+import { ArrowRight, ArrowUp, Building2, Check, ChevronDown, Plus, Radio, RotateCcw } from "lucide-react";
 import {
   useAppState, metrics, switchWorkspace, startFreshWorkspace,
   type AppState, type Region,
 } from "../state/store";
 import { AGENTS, agentById, userById } from "../model/org";
 import { ROLLOUT } from "../model/rollout";
-import type { SimulationEvent } from "../model/types";
+import { pendingRelease } from "../engine/kernel";
+import type { DecidedBy, Plane, SimulationEvent } from "../model/types";
 import { AgentMark, Avatar, Chip, DecisionChip, timeAgo, Progress } from "../ui/kit";
 import { describe } from "../ui/describe";
 
@@ -42,6 +42,32 @@ const depth = (px: number): CSSProperties => ({
   transition: "transform 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
   willChange: "transform",
 });
+
+/** Core Brain layer that produced a decision — the "model" label of the composer.
+ *  Names match the labels the engine writes into `decidedBy.label`. */
+const LAYER: Record<DecidedBy["layer"], string> = {
+  contract: "Intent Contract",
+  safety: "Safety Kernel",
+  blast: "Blast-Radius Governor",
+  context: "Context Engine",
+  envelope: "Task Envelope",
+  standing: "Standing permission",
+  uninspectable: "Fail closed",
+  breakglass: "Break-glass override",
+  default: "Core Brain default",
+};
+
+/** Same plane wording the agent terminal uses. */
+const PLANE: Record<Plane, string> = { ENDPOINT: "Endpoint plane", NETWORK: "Network Extension", GATEWAY: "Gateway" };
+
+/** Text on the .glow composer, which keeps its dark gradient in both themes —
+ *  derived from --accent-fg (white in both) rather than the theme's --fg. */
+const G = {
+  fg: "var(--accent-fg)",
+  fg2: "color-mix(in oklab, var(--accent-fg) 72%, transparent)",
+  fg3: "color-mix(in oklab, var(--accent-fg) 50%, transparent)",
+  fg4: "color-mix(in oklab, var(--accent-fg) 30%, transparent)",
+};
 
 // ---------------------------------------------------------------------------
 // Setup checklist — eight milestones, each derived from the current workspace
@@ -162,77 +188,125 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
   };
 
   const governs = AGENTS.filter((a) => !a.discovered && a.kind !== "internal");
+  // A Safety Kernel release this workspace has not installed yet — the "New:" link is omitted otherwise.
+  const release = pendingRelease(s.kernel);
 
   return (
     <div className="page page-wide">
-      {/* 1 · Hero ------------------------------------------------------- */}
+      {/* 1 · Hero — black canvas, two-line headline, two buttons, then the decision panel */}
       <section
-        className="card hero-prism"
         onMouseMove={onHeroMove}
         onMouseLeave={onHeroLeave}
-        style={{
-          position: "relative", overflow: "hidden",
-          padding: "clamp(24px, 3.4vw, 44px)", borderRadius: "var(--r-xl)",
-          border: "none", boxShadow: "var(--shadow-md)",
-          // The prism is bright in both themes, so the hero keeps a fixed ink palette.
-          ...({
-            "--fg": "#1b0f33", "--fg-2": "rgba(27, 15, 51, 0.8)", "--fg-3": "rgba(27, 15, 51, 0.62)", "--fg-4": "rgba(27, 15, 51, 0.45)",
-            "--ink": "#1b0f33", "--ink-fg": "#ffffff", "--surface": "#ffffff", "--surface-2": "#f6f2f8",
-            "--line": "rgba(27, 15, 51, 0.12)", "--line-strong": "rgba(27, 15, 51, 0.2)", color: "#1b0f33",
-          } as React.CSSProperties),
-        }}
+        style={{ position: "relative", padding: "clamp(12px, 2.6vw, 36px) 0 0" }}
       >
-        <div aria-hidden="true" style={{
-          position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
-          background: "radial-gradient(420px circle at calc((var(--mx, 0) + 1) * 50%) calc((var(--my, 0) + 1) * 50%), rgba(255, 255, 255, 0.28), transparent 70%)",
-        }} />
+        <div style={{ maxWidth: 820, ...depth(-2) }}>
+          <h1 style={{
+            fontSize: "clamp(36px, 4.4vw, 58px)", lineHeight: 1.02, letterSpacing: "-0.04em",
+            fontWeight: 600, margin: 0, color: "var(--fg)", textWrap: "balance",
+          }}>
+            Runtime authorization for every AI agent, from laptop to cloud.
+          </h1>
+          <p style={{ margin: "18px 0 0", fontSize: 16.5, lineHeight: 1.5, color: "var(--fg-2)", maxWidth: "62ch" }}>
+            Claude Code, Codex, ChatGPT, your own agents — every consequential action checked before it runs.
+          </p>
+        </div>
 
-        <div style={{ position: "relative", zIndex: 1, display: "flex", flexWrap: "wrap", alignItems: "center", gap: "32px 40px" }}>
-          <div style={{ flex: "1.15 1 420px", minWidth: 0, ...depth(-3) }}>
-            <span style={{
-              display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 12px 5px 10px", borderRadius: 999,
-              fontSize: 12, fontWeight: 600, color: "var(--fg-2)",
-              background: "color-mix(in oklab, var(--surface) 70%, transparent)",
-              border: "1px solid color-mix(in oklab, var(--accent) 26%, transparent)",
-              backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-            }}>
-              <span style={{ width: 7, height: 7, borderRadius: 999, background: "var(--accent)", boxShadow: "0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent)" }} />
-              Runtime authorization for AI agents
-            </span>
-            <h1 style={{ fontSize: "clamp(34px, 3.9vw, 52px)", lineHeight: 1.03, letterSpacing: "-0.04em", fontWeight: 700, margin: "20px 0 0" }}>
-              Put every AI agent on a{" "}
-              <span style={{ color: "#1b0f33", textDecoration: "underline", textDecorationColor: "rgba(27, 15, 51, 0.35)", textDecorationThickness: 3, textUnderlineOffset: 8 }}>permit</span>.
-            </h1>
-            <p style={{ margin: "16px 0 0", fontSize: 15.5, lineHeight: 1.6, color: "var(--fg-2)", maxWidth: "54ch" }}>
-              Claude Code, Codex, ChatGPT, your own agents — every consequential action checked before it runs.
-            </p>
-            <div className="row" style={{ gap: 10, marginTop: 26 }}>
-              <button className="btn btn-primary btn-lg" onClick={setUp}>
-                {fresh && ob.adminDone ? <Check size={15} /> : <Plus size={15} />}
-                {fresh ? adminCta : "Set up from zero"}
-              </button>
-              <button className="btn btn-lg" onClick={explore} style={{ background: "color-mix(in oklab, var(--surface) 78%, transparent)" }}>
-                Explore the Veridian demo <ArrowRight size={15} />
-              </button>
-            </div>
-            <div className="row" style={{ gap: 10, marginTop: 22 }}>
+        <div className="spread" style={{ marginTop: 26, alignItems: "center" }}>
+          <div className="row" style={{ gap: 10 }}>
+            <button className="btn btn-primary btn-lg" onClick={setUp}>
+              {fresh && ob.adminDone ? <Check size={15} /> : <Plus size={15} />}
+              {fresh ? adminCta : "Set up from zero"}
+            </button>
+            <button className="btn btn-lg" onClick={explore}>
+              Explore the Veridian demo <ArrowRight size={15} />
+            </button>
+          </div>
+          {release && (
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => nav("safety")}
+              title={release.notes[0]}
+              style={{ marginLeft: "auto", marginRight: -10, fontSize: 12.5, gap: 5 }}
+            >
+              <span style={{ color: "var(--fg)", fontWeight: 600 }}>New:</span>
+              <span style={{ color: "var(--fg-2)" }}>Safety Kernel {release.version}</span>
+              <ArrowRight size={13} style={{ color: "var(--fg-2)" }} />
+            </button>
+          )}
+        </div>
+
+        {/* The "video" panel — a black stage with the live decision composer in the middle. */}
+        <div
+          style={{
+            position: "relative", overflow: "hidden", marginTop: 28,
+            borderRadius: "var(--r-xl)", border: "1px solid var(--line)", background: "var(--surface)",
+            display: "flex", flexDirection: "column", minHeight: "clamp(420px, 44vw, 520px)",
+            padding: "clamp(16px, 2.4vw, 28px)",
+          }}
+        >
+          <div aria-hidden="true" style={{
+            position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
+            background: [
+              // pointer-following haze
+              "radial-gradient(520px circle at calc((var(--mx, 0) + 1) * 50%) calc((var(--my, 0) + 1) * 50%), color-mix(in oklab, var(--accent) 9%, transparent), transparent 70%)",
+              // stage light under the composer
+              "radial-gradient(60% 46% at 50% 78%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 72%)",
+            ].join(", "),
+          }} />
+
+          {/* Top row — stream selector + recorded count */}
+          <div className="spread" style={{ position: "relative", zIndex: 1, gap: 10 }}>
+            <button
+              className="pill"
+              onClick={() => nav("live")}
+              title="Open Live Actions"
+              style={{ cursor: "pointer", height: 34, padding: "0 12px 0 14px", fontSize: 13, color: "var(--fg)", background: "var(--surface-2)", boxShadow: "inset 0 0 0 1px var(--line-strong)" }}
+            >
+              <span className={`pill-dot${m.total > 0 ? " live-dot" : ""}`} style={{ background: m.total > 0 ? "var(--allow)" : "var(--fg-4)" }} />
+              Live decisions <ChevronDown size={14} style={{ color: "var(--fg-3)" }} />
+            </button>
+            {m.total > 0 ? (
+              // .pill-ok is hidden below 1000px (a topbar rule), so its look is inlined here.
+              <span className="pill" style={{
+                height: 28, fontSize: 12, padding: "0 12px", color: "var(--allow)",
+                background: "color-mix(in oklab, var(--allow) 8%, transparent)",
+                boxShadow: "inset 0 0 0 1px color-mix(in oklab, var(--allow) 26%, transparent)",
+              }}>
+                {m.total.toLocaleString("en-US")} recorded
+              </span>
+            ) : (
+              <span className="pill" style={{ height: 28, fontSize: 12, padding: "0 12px" }}>None recorded</span>
+            )}
+          </div>
+
+          {/* Centre — the composer */}
+          <div style={{ position: "relative", zIndex: 1, flex: 1, display: "grid", gridTemplateColumns: "minmax(0, 1fr)", justifyItems: "center", alignItems: "center", padding: "24px 0" }}>
+            <DecisionPanel events={s.events} total={m.total} company={company} nav={nav} />
+          </div>
+
+          {/* Bottom row — what is governed, and where the stream comes from */}
+          <div className="spread" style={{ position: "relative", zIndex: 1, gap: 10 }}>
+            <div className="row" style={{ gap: 10 }}>
               <span className="small faint">Governs</span>
               <span style={{ display: "inline-flex" }}>
                 {governs.map((a, i) => (
                   <span key={a.id} title={a.name} style={{
-                    width: 28, height: 28, borderRadius: 8, display: "grid", placeItems: "center",
-                    background: LOGO_TILE, border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)",
+                    width: 26, height: 26, borderRadius: 7, display: "grid", placeItems: "center",
+                    background: LOGO_TILE, border: "1px solid var(--line-strong)",
                     marginLeft: i === 0 ? 0 : -6, position: "relative", zIndex: governs.length - i,
                   }}>
-                    <AgentMark agentId={a.id} size={16} />
+                    <AgentMark agentId={a.id} size={15} />
                   </span>
                 ))}
               </span>
               <span className="small faint">and your own agents</span>
             </div>
+            {s.events.length > 0 && (
+              <button className="btn btn-ghost btn-sm" onClick={() => nav("live")} style={{ marginRight: -10 }}>
+                Live Actions <ArrowRight size={13} />
+              </button>
+            )}
           </div>
-
-          <DecisionPanel events={s.events} total={m.total} company={company} nav={nav} />
         </div>
       </section>
 
@@ -365,12 +439,14 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
 }
 
 // ---------------------------------------------------------------------------
-// Hero glass panel — replays the workspace's latest real decisions
+// Hero composer — a chat-style prompt box that replays the workspace's latest
+// real decisions. The "prompt" is the decision sentence; the "model" is the
+// Core Brain layer that decided it.
 // ---------------------------------------------------------------------------
 
-const ROW = 60;
-const GAP = 8;
-const SHOWN = 3;
+const ROW = 62;
+const GAP = 0;
+const SHOWN = 1; // one decision reads as the prompt; the next slides in from above
 const WINDOW = 8; // replay the latest N recorded decisions
 const windowHeight = (rows: number) => rows * ROW + Math.max(0, rows - 1) * GAP;
 
@@ -409,55 +485,33 @@ function DecisionPanel({ events, total, company, nav }: {
 
   const at = (k: number) => recent[(((t - k) % n) + n) % n];
   const rows = n === 0 ? [] : Array.from({ length: rotates ? SHOWN + 1 : n }, (_, k) => at(k));
+  const current = rows[0]; // the decision currently reading as the prompt
+  const why = current ? (current.decidedBy?.label ?? current.decisionReasons[0] ?? "") : "";
 
   return (
     <div
+      className="glow"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
-      style={{
-        flex: "1 1 340px", minWidth: 0, maxWidth: 520, padding: 16, borderRadius: "var(--r-lg)",
-        background: "color-mix(in oklab, var(--surface) 60%, transparent)",
-        border: "1px solid color-mix(in oklab, var(--fg) 9%, transparent)",
-        boxShadow: "var(--shadow-lg), inset 0 1px 0 color-mix(in oklab, var(--surface) 85%, transparent)",
-        backdropFilter: "blur(18px) saturate(150%)", WebkitBackdropFilter: "blur(18px) saturate(150%)",
-        ...depth(9),
-      }}
+      style={{ width: "100%", maxWidth: 580, minWidth: 0, padding: "18px 18px 14px", color: G.fg, ...depth(6) }}
     >
-      <div className="spread" style={{ marginBottom: 12 }}>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>Decisions, as they happen</span>
-        {total > 0 ? (
-          // .pill-ok is hidden below 1000px (a topbar rule), so its look is inlined here.
-          <span className="pill" style={{
-            height: 24, fontSize: 11.5, padding: "0 10px", color: "var(--allow)",
-            background: "color-mix(in oklab, var(--allow) 8%, transparent)",
-            boxShadow: "inset 0 0 0 1px color-mix(in oklab, var(--allow) 26%, transparent)",
-          }}>
-            <span className="pill-dot live-dot" style={{ background: "var(--allow)" }} />
-            {total.toLocaleString("en-US")} recorded
-          </span>
-        ) : (
-          <span className="pill" style={{ height: 24, fontSize: 11.5, padding: "0 10px" }}>
-            <span className="pill-dot" style={{ background: "var(--fg-4)" }} />
-            None recorded
-          </span>
-        )}
-      </div>
-
       {n === 0 ? (
-        <div style={{
-          height: windowHeight(SHOWN), display: "grid", placeItems: "center", textAlign: "center", padding: 20,
-          borderRadius: 12, border: "1px dashed color-mix(in oklab, var(--fg) 16%, transparent)",
-        }}>
-          <div>
-            <Radio size={20} style={{ color: "var(--fg-3)" }} />
-            <div style={{ fontSize: 13.5, fontWeight: 600, marginTop: 8 }}>No decisions yet — run a go-live self-test in setup</div>
-            <div className="small faint" style={{ marginTop: 4 }}>Nothing shows here until {company} records a real one.</div>
-            <button className="btn btn-sm" style={{ marginTop: 12 }} onClick={() => nav("onboarding/admin")}>
-              Open setup <ArrowRight size={13} />
-            </button>
+        <div style={{ minHeight: windowHeight(SHOWN), display: "flex", alignItems: "center", gap: 14, padding: "4px 2px" }}>
+          <span style={{
+            width: 36, height: 36, borderRadius: 10, flexShrink: 0, display: "grid", placeItems: "center",
+            color: G.fg3, border: `1px dashed ${G.fg4}`,
+          }}>
+            <Radio size={17} />
+          </span>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 14.5, fontWeight: 500, color: G.fg2 }}>No decisions yet — run a go-live self-test in setup</div>
+            <div style={{ fontSize: 12, color: G.fg3, marginTop: 3 }}>Nothing shows here until {company} records a real one.</div>
           </div>
+          <button className="btn btn-sm" onClick={() => nav("onboarding/admin")}>
+            Open setup <ArrowRight size={13} />
+          </button>
         </div>
       ) : (
         <div
@@ -465,8 +519,8 @@ function DecisionPanel({ events, total, company, nav }: {
           style={{
             height: windowHeight(Math.min(n, SHOWN)), overflow: "hidden", position: "relative",
             ...(rotates ? {
-              maskImage: "linear-gradient(to bottom, black 58%, color-mix(in srgb, black 30%, transparent) 100%)",
-              WebkitMaskImage: "linear-gradient(to bottom, black 58%, color-mix(in srgb, black 30%, transparent) 100%)",
+              maskImage: "linear-gradient(to bottom, black 0%, black 84%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 84%, transparent 100%)",
             } : null),
           }}
         >
@@ -476,17 +530,42 @@ function DecisionPanel({ events, total, company, nav }: {
         </div>
       )}
 
-      <div className="spread" style={{ marginTop: 12 }}>
-        <span className="small faint" style={{ ...ellipsis, minWidth: 0, flex: 1 }}>
-          {n === 0 ? `${company} · nothing recorded`
-            : paused && rotates ? "Paused — move away to resume"
-            : `Latest ${n} of ${total.toLocaleString("en-US")} in ${company}`}
-        </span>
-        {n > 0 && (
-          <button className="btn btn-ghost btn-sm" onClick={() => nav("live")}>
-            Live Actions <ArrowRight size={13} />
+      {/* Bottom row — the "model" picker: which Core Brain layer decided, on which plane */}
+      <div className="spread" style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid color-mix(in oklab, var(--accent) 22%, transparent)", gap: 8 }}>
+        <div className="row" style={{ gap: 6, minWidth: 0, flex: 1 }}>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => nav("brain")}
+            title={why || "How the Core Brain decides"}
+            style={{ marginLeft: -8, gap: 5, fontSize: 12.5, color: G.fg2, background: "transparent", maxWidth: "100%" }}
+          >
+            <span style={ellipsis}>
+              Decided by · {current?.decidedBy ? LAYER[current.decidedBy.layer] : n === 0 ? "—" : "Core Brain"}
+            </span>
+            <ChevronDown size={13} style={{ flexShrink: 0 }} />
           </button>
-        )}
+          {current && (
+            <span style={{ fontSize: 12, color: G.fg3, ...ellipsis }}>
+              {PLANE[current.plane]}{paused && rotates ? " · paused" : ""}
+            </span>
+          )}
+        </div>
+        <div className="row" style={{ gap: 8 }}>
+          <span style={{ fontSize: 11.5, color: G.fg3, ...ellipsis }}>
+            {n === 0 ? `${company} · nothing recorded` : `Latest ${n} of ${total.toLocaleString("en-US")} in ${company}`}
+          </span>
+          <button
+            type="button"
+            className="btn btn-accent"
+            onClick={() => nav("live")}
+            aria-label="Open Live Actions"
+            title="Open Live Actions"
+            disabled={n === 0}
+            style={{ width: 30, height: 30, padding: 0, borderRadius: 999 }}
+          >
+            <ArrowUp size={15} strokeWidth={2.5} />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -499,25 +578,21 @@ function TickerRow({ e }: { e: SimulationEvent }) {
   return (
     <div
       title={`${sentence} — ${e.decision}${why ? `\n${why}` : ""}`}
-      style={{
-        height: ROW, flexShrink: 0, display: "flex", alignItems: "center", gap: 12, padding: "0 12px",
-        borderRadius: 12, background: "color-mix(in oklab, var(--surface) 90%, transparent)",
-        border: "1px solid color-mix(in oklab, var(--fg) 7%, transparent)", boxShadow: "var(--shadow-sm)",
-      }}
+      style={{ height: ROW, flexShrink: 0, display: "flex", alignItems: "center", gap: 14, padding: "0 2px" }}
     >
       <span style={{
-        width: 34, height: 34, borderRadius: 9, flexShrink: 0, display: "grid", placeItems: "center",
-        background: LOGO_TILE, border: "1px solid var(--line)",
+        width: 36, height: 36, borderRadius: 10, flexShrink: 0, display: "grid", placeItems: "center",
+        background: LOGO_TILE, border: `1px solid ${G.fg4}`,
       }}>
-        <AgentMark agentId={e.agent} size={18} />
+        <AgentMark agentId={e.agent} size={19} />
       </span>
       <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ ...ellipsis, fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>{sentence}</div>
-        <div style={{ ...ellipsis, fontSize: 11.5, color: "var(--fg-3)", marginTop: 2 }}>
+        <div style={{ ...ellipsis, fontSize: 15, fontWeight: 500, letterSpacing: "-0.01em", color: G.fg }}>{sentence}</div>
+        <div style={{ ...ellipsis, fontSize: 12, color: G.fg3, marginTop: 3 }}>
           {agent?.name ?? e.agent}{why ? ` · ${why}` : ""} · {timeAgo(e.timestamp)}
         </div>
       </div>
-      <DecisionChip d={e.decision} small />
+      <DecisionChip d={e.decision} />
     </div>
   );
 }

@@ -95,14 +95,14 @@ function useRoute(): [Route, (r: Route) => void] {
   return [route, nav];
 }
 
-/** Light / dark theme — light by default, the choice is remembered per browser. */
+/** Dark / light theme — dark by default, the choice is remembered per browser. */
 const THEME_KEY = "wrapbox-theme";
 function useTheme(): ["light" | "dark", () => void] {
   const [theme, setTheme] = useState<"light" | "dark">(
-    () => (document.documentElement.dataset.theme === "dark" ? "dark" : "light")
+    () => (document.documentElement.dataset.theme === "light" ? "light" : "dark")
   );
   useEffect(() => {
-    if (theme === "dark") document.documentElement.dataset.theme = "dark";
+    if (theme === "light") document.documentElement.dataset.theme = "light";
     else delete document.documentElement.dataset.theme;
     try { localStorage.setItem(THEME_KEY, theme); } catch { /* storage unavailable — theme still applies this session */ }
   }, [theme]);
