@@ -68,6 +68,25 @@ export function Stat({
   );
 }
 
+export interface MetricItem { label: string; value: React.ReactNode; note?: string; tone?: string; onClick?: () => void }
+/** Inline KPI strip — one bar of metrics divided by hairlines (replaces repeated stat cards). */
+export function MetricBar({ items }: { items: MetricItem[] }) {
+  return (
+    <div className="metricbar">
+      {items.map((it, i) => (
+        <div key={i} className={`metric ${it.onClick ? "clickable" : ""}`} onClick={it.onClick}>
+          <div className="metric-top">
+            <span className="metric-label">{it.label}</span>
+            {it.tone && <span className="metric-dot" style={{ background: `var(--${it.tone})` }} />}
+          </div>
+          <span className="metric-value">{it.value}</span>
+          {it.note && <span className="metric-note">{it.note}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function PageHead({ title, sub, right, eyebrow }: { title: string; sub?: string; right?: React.ReactNode; eyebrow?: string }) {
   return (
     <div className="page-head">

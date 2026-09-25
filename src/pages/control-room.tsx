@@ -1,11 +1,11 @@
 // Control Room — executive/operations dashboard. Every number derives from
 // the event store; every metric is clickable to its inspectable source.
 import { useAppState, metrics } from "../state/store";
-import { PageHead, Stat, Chip, StatusChip, SimNote, SectionHead } from "../ui/kit";
+import { PageHead, MetricBar, Chip, StatusChip, SimNote, SectionHead } from "../ui/kit";
 import { EventStream } from "../ui/event-stream";
 import { AGENTS, DEVICES } from "../model/org";
 import { CAPABILITIES } from "../model/registries";
-import { Bot, Hand, KeyRound, AlertTriangle, ShieldCheck, Network, Server, ArrowRight } from "lucide-react";
+import { ShieldCheck, Network, Server, ArrowRight } from "lucide-react";
 
 export function ControlRoom({ nav }: { nav: (r: string) => void }) {
   const s = useAppState();
@@ -33,21 +33,21 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
         right={<SimNote />}
       />
 
-      <div className="grid g4">
-        <Stat icon={<Bot size={17} />} label="Active agents" value={activeAgents} note={discovered > 0 ? `+${discovered} discovered, unregistered` : "all registered"} onClick={() => nav("agents")} />
-        <Stat icon={<Hand size={17} />} label="Pending reviews" value={m.pendingReviews} tone={m.pendingReviews > 0 ? "warn" : "good"} note={parked > 0 ? `${parked} task step(s) parked` : "no parked steps"} onClick={() => nav("reviews")} />
-        <Stat icon={<KeyRound size={17} />} label="Secrets protected" value={m.secretsProtected} tone="good" note="credential exfiltration blocked" onClick={() => nav("evidence")} />
-        <Stat icon={<AlertTriangle size={17} />} label="High-risk events" value={m.highRisk} tone={m.highRisk > 0 ? "bad" : "good"} note="risk ≥ high, all planes" onClick={() => nav("evidence")} />
-      </div>
+      <MetricBar items={[
+        { label: "Active agents", value: activeAgents, note: discovered > 0 ? `+${discovered} discovered, unregistered` : "all registered", onClick: () => nav("agents") },
+        { label: "Pending reviews", value: m.pendingReviews, tone: m.pendingReviews > 0 ? "warn" : "good", note: parked > 0 ? `${parked} task step(s) parked` : "no parked steps", onClick: () => nav("reviews") },
+        { label: "Secrets protected", value: m.secretsProtected, tone: "good", note: "credential exfiltration blocked", onClick: () => nav("evidence") },
+        { label: "High-risk events", value: m.highRisk, tone: m.highRisk > 0 ? "bad" : "good", note: "risk ≥ high, all planes", onClick: () => nav("evidence") },
+      ]} />
 
       <div className="section">
         <SectionHead title="Decision mix" sub="How consequential actions resolved across every plane" />
-        <div className="grid g4">
-          <Stat label="Allowed" value={m.counts.ALLOW} note="normal work flowed automatically" onClick={() => nav("live")} />
-          <Stat label="Constrained" value={m.counts.CONSTRAIN} tone="info" note={`${m.transfersTransformed} sensitive transfer(s) transformed`} onClick={() => nav("live")} />
-          <Stat label="Reviewed" value={m.counts.REVIEW} tone="warn" note="exceptions escalated to humans" onClick={() => nav("reviews")} />
-          <Stat label="Blocked" value={m.counts.BLOCK} tone="bad" note="stopped before execution" onClick={() => nav("live")} />
-        </div>
+        <MetricBar items={[
+          { label: "Allowed", value: m.counts.ALLOW, tone: "good", note: "normal work flowed automatically", onClick: () => nav("live") },
+          { label: "Constrained", value: m.counts.CONSTRAIN, tone: "info", note: `${m.transfersTransformed} sensitive transfer(s) transformed`, onClick: () => nav("live") },
+          { label: "Reviewed", value: m.counts.REVIEW, tone: "warn", note: "exceptions escalated to humans", onClick: () => nav("reviews") },
+          { label: "Blocked", value: m.counts.BLOCK, tone: "bad", note: "stopped before execution", onClick: () => nav("live") },
+        ]} />
       </div>
 
       <div className="section">
