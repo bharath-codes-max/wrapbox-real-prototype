@@ -12,7 +12,6 @@ import {
 import { AGENTS, DEVICES, agentById, userById } from "../model/org";
 import { CAPABILITIES } from "../model/registries";
 import { ROLLOUT } from "../model/rollout";
-import { Laptop, Network, ShieldCheck } from "lucide-react";
 import { pendingRelease } from "../engine/kernel";
 import type { DecidedBy, Plane, SimulationEvent } from "../model/types";
 import { AgentMark, Avatar, Chip, DecisionChip, timeAgo, Progress } from "../ui/kit";
@@ -169,10 +168,10 @@ function GovernedBanner({ s, nav }: { s: AppState; nav: (r: string) => void }) {
   DEVICES.forEach((d) => { const os = d.os.split(" ")[0]; plat[os === "macOS" || os === "Windows" ? os : "Linux"] += 1; });
   const platforms = (Object.entries(plat) as [string, number][]).filter(([, n]) => n > 0);
 
-  const stats: { icon: typeof Laptop; label: string; sub: string; value: string }[] = [
-    { icon: Laptop, label: "Runtime", sub: "installed once per machine", value: `${devices} device${devices === 1 ? "" : "s"}` },
-    { icon: Network, label: "Gateway", sub: "in front of each system", value: `${gateways} gateway${gateways === 1 ? "" : "s"}` },
-    { icon: ShieldCheck, label: "Contract", sub: "one policy, both places", value: `${rules} rule${rules === 1 ? "" : "s"}` },
+  const codeLines: { label: string; cmd: string; out: string; route: string }[] = [
+    { label: "wrapboxd · runtime", cmd: "wrapbox fleet --status", out: `✓ ${devices} device${devices === 1 ? "" : "s"} reporting · runtime healthy`, route: "integrations" },
+    { label: "wrapbox · gateway", cmd: "wrapbox gw ls --enforced", out: `✓ ${gateways} gateway${gateways === 1 ? "" : "s"} enforcing`, route: "coverage" },
+    { label: "wrapbox · policy", cmd: "wrapbox policy show", out: `✓ contract active · ${rules} rule${rules === 1 ? "" : "s"}`, route: "intent" },
   ];
 
   return (
@@ -203,15 +202,12 @@ function GovernedBanner({ s, nav }: { s: AppState; nav: (r: string) => void }) {
             <button className="govchip govchip-btn" onClick={() => nav("agents")}>View agents <ArrowRight size={13} /></button>
           </div>
         </div>
-        <div className="stack" style={{ gap: 10, ...depth(3) }}>
-          {stats.map((st) => (
-            <button key={st.label} className="govstat" onClick={() => nav(st.label === "Contract" ? "intent" : st.label === "Gateway" ? "coverage" : "integrations")}>
-              <span className="govstat-ic"><st.icon size={18} /></span>
-              <span style={{ minWidth: 0, flex: 1, textAlign: "left" }}>
-                <span style={{ display: "block", fontSize: 14.5, fontWeight: 600 }}>{st.label}</span>
-                <span style={{ display: "block", fontSize: 12, color: "var(--fg-3)" }}>{st.sub}</span>
-              </span>
-              <span style={{ fontSize: 17, fontWeight: 700, whiteSpace: "nowrap" }}>{st.value}</span>
+        <div className="stack" style={{ gap: 12, ...depth(3) }}>
+          {codeLines.map((c, k) => (
+            <button key={c.label} className="govcode" style={{ animationDelay: `${0.15 + k * 0.14}s` }} onClick={() => nav(c.route)}>
+              <span className="govcode-bar"><span className="govcode-dot" />{c.label}<span className="govcode-live">live</span></span>
+              <span className="govcode-cmd"><span className="govcode-prompt">$</span> {c.cmd}</span>
+              <span className="govcode-out">{c.out}</span>
             </button>
           ))}
         </div>

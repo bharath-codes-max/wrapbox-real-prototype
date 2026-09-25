@@ -1188,21 +1188,30 @@ textarea.input { resize: vertical; line-height: 1.6; }
 .mega-txt b { font: 600 15px var(--sans); color: var(--fg); }
 .mega-txt small { font-size: 13px; color: var(--fg-3); line-height: 1.35; }
 
-/* Icon rail */
-.rail { width: 66px; flex-shrink: 0; background: var(--sidebar); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 16px 0 16px; gap: 6px; }
-.rail-nav { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; overflow-y: auto; width: 100%; scrollbar-width: none; }
+/* Expandable dark-matte rail — collapsed icons, expands to labels on hover. */
+.rail { width: 64px; flex-shrink: 0; position: relative; z-index: 30; }
+.rail-inner {
+  position: absolute; inset: 0 auto 0 0; width: 64px; z-index: 30;
+  background: #26262a; border-right: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex; flex-direction: column; padding: 12px 0 14px; overflow: hidden; white-space: nowrap;
+  transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s;
+}
+.rail:hover .rail-inner { width: 238px; box-shadow: 12px 0 44px -18px rgba(0, 0, 0, 0.55); }
+.rail-nav { flex: 1; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; overflow-x: hidden; padding: 0 12px; scrollbar-width: none; }
 .rail-nav::-webkit-scrollbar { width: 0; }
-.rail-grp { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 44px; }
-.rail-grp + .rail-grp { border-top: 1px solid var(--line); margin-top: 5px; padding-top: 9px; }
-.rail-div { width: 28px; height: 1px; background: var(--line); margin: 3px 0; }
-.rail-btn { position: relative; width: 44px; height: 44px; border-radius: 13px; border: none; background: none; cursor: pointer; display: grid; place-items: center; color: var(--fg-3); transition: background 0.12s, color 0.12s; }
-.rail-btn:hover { background: color-mix(in oklab, var(--fg) 6%, transparent); color: var(--fg); }
-.rail-btn.active { background: var(--fg); color: var(--bg); box-shadow: 0 6px 16px -9px color-mix(in oklab, var(--fg) 70%, transparent); }
-.rail-demo { color: var(--fg-2); }
-.rail-btn .rail-dot { position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--review); box-shadow: 0 0 0 2px var(--sidebar); }
-.rail-tip { position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%); white-space: nowrap; background: var(--fg); color: var(--bg); font: 500 12.5px var(--sans); padding: 5px 10px; border-radius: 7px; opacity: 0; pointer-events: none; transition: opacity 0.12s; z-index: 60; box-shadow: 0 8px 18px -8px rgba(0,0,0,0.3); }
-.rail-btn:hover .rail-tip { opacity: 1; }
-.rail-bottom { display: flex; flex-direction: column; align-items: center; gap: 5px; padding-top: 8px; }
+.rail-grp { display: flex; flex-direction: column; gap: 2px; }
+.rail-grp + .rail-grp { margin-top: 8px; }
+.rail-grp-label { font: 600 10.5px var(--sans); letter-spacing: 0.11em; text-transform: uppercase; color: #6f6f78; padding: 10px 12px 4px; opacity: 0; height: 0; overflow: hidden; transition: opacity 0.16s; }
+.rail:hover .rail-grp-label { opacity: 1; height: auto; }
+.rail-item { position: relative; display: flex; align-items: center; gap: 14px; height: 42px; padding: 0 13px; border: none; background: none; border-radius: 11px; cursor: pointer; color: #a6a6ae; width: 100%; flex-shrink: 0; transition: background 0.12s, color 0.12s; }
+.rail-item > svg { flex-shrink: 0; }
+.rail-item:hover { background: rgba(255, 255, 255, 0.07); color: #fff; }
+.rail-item.active { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.rail-label { font: 500 14px var(--sans); opacity: 0; transition: opacity 0.16s; }
+.rail:hover .rail-label { opacity: 1; }
+.rail-item .rail-dot { position: absolute; top: 9px; left: 30px; width: 7px; height: 7px; border-radius: 50%; background: var(--review); box-shadow: 0 0 0 2px #26262a; transition: left 0.16s; }
+.rail:hover .rail-item .rail-dot { left: auto; right: 14px; }
+.rail-bottom { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px 0; }
 
 /* Light shell: the rail is collapsed, so the page body fills the freed width. */
 :root[data-theme="light"] .main .page { max-width: none; padding-left: clamp(28px, 3.4vw, 60px); padding-right: clamp(28px, 3.4vw, 60px); }
@@ -1215,7 +1224,17 @@ textarea.input { resize: vertical; line-height: 1.6; }
 .govchip b { font-weight: 700; }
 .govchip-btn { cursor: pointer; transition: background 0.13s; }
 .govchip-btn:hover { background: rgba(255, 255, 255, 0.9); }
-.govstat { display: flex; align-items: center; gap: 14px; padding: 15px 18px; border-radius: 15px; background: rgba(255, 255, 255, 0.52); border: 1px solid rgba(27, 15, 51, 0.12); cursor: pointer; transition: background 0.14s, transform 0.14s; color: #1b0f33; width: 100%; backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
-.govstat:hover { background: rgba(255, 255, 255, 0.78); transform: translateY(-1px); }
-.govstat-ic { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; display: grid; place-items: center; background: rgba(27, 15, 51, 0.08); color: #1b0f33; }
+/* Banner right side: 3 stacked terminal cards, live/automated. */
+.govcode { display: flex; flex-direction: column; gap: 5px; text-align: left; padding: 13px 15px; border-radius: 13px; background: #0e0e12; border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer; font-family: var(--mono); box-shadow: 0 12px 30px -16px rgba(0, 0, 0, 0.55); transition: transform 0.14s, border-color 0.14s; }
+.govcode:hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.22); }
+.govcode-bar { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: #8a8a92; }
+.govcode-dot { width: 8px; height: 8px; border-radius: 50%; background: #3fcf7a; box-shadow: 0 0 0 0 rgba(63, 207, 122, 0.5); animation: govpulse 1.9s ease-out infinite; }
+@keyframes govpulse { 0% { box-shadow: 0 0 0 0 rgba(63, 207, 122, 0.5); } 70% { box-shadow: 0 0 0 6px rgba(63, 207, 122, 0); } 100% { box-shadow: 0 0 0 0 rgba(63, 207, 122, 0); } }
+.govcode-live { margin-left: auto; font-size: 9.5px; color: #3fcf7a; letter-spacing: 0.12em; text-transform: uppercase; }
+.govcode-cmd { color: #e8e8e8; font-size: 13px; }
+.govcode-prompt { color: #9a82f7; }
+.govcode-out { color: #3fcf7a; font-size: 12.5px; display: flex; align-items: center; }
+.govcode-out::after { content: ""; width: 7px; height: 13px; background: #3fcf7a; margin-left: 5px; opacity: 0.7; animation: govblink 1s steps(1) infinite; }
+@keyframes govblink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .govcode-dot, .govcode-out::after { animation: none; } }
 @media (max-width: 900px) { .govbanner > div > div:first-child { grid-column: 1 / -1; } }

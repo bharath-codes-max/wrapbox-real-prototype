@@ -328,43 +328,41 @@ function NavLink({ it, active, onClick, badge }: { it: NavItem; active: boolean;
 
 /* ── Light-theme shell: icon rail + mega-menu header (dark keeps the classic sidebar) ── */
 
+// Expandable dark rail: collapsed to icons, expands to labels on hover (a flyout
+// sidebar). Rendered in light theme only; the header carries the brand.
 function RailBtn({ it, active, onClick, dot }: { it: NavItem; active: boolean; onClick: () => void; dot?: boolean }) {
   return (
-    <button className={`rail-btn ${active ? "active" : ""}`} onClick={onClick} aria-label={it.label}>
+    <button className={`rail-item ${active ? "active" : ""}`} onClick={onClick}>
       <it.icon size={19} strokeWidth={1.9} />
+      <span className="rail-label">{it.label}</span>
       {dot && <span className="rail-dot" />}
-      <span className="rail-tip">{it.label}</span>
     </button>
   );
 }
 
-function IconRail({ nav, base, pendingReviews, demoOn }: { nav: (r: string) => void; base: string; pendingReviews: number; demoOn: boolean }) {
+function IconRail({ nav, base, pendingReviews }: { nav: (r: string) => void; base: string; pendingReviews: number }) {
   const [theme, toggleTheme] = useTheme();
   return (
     <aside className="rail">
-      <nav className="rail-nav">
-        <RailBtn it={START_ITEM} active={base === "start"} onClick={() => nav("start")} />
-        <div className="rail-div" />
-        {NAV.map((g, gi) => (
-          <div key={gi} className="rail-grp">
-            {g.items.map((it) => (
-              <RailBtn key={it.route} it={it} active={base === it.route} onClick={() => nav(it.route)} dot={it.route === "reviews" && pendingReviews > 0} />
-            ))}
-          </div>
-        ))}
-      </nav>
-      <div className="rail-bottom">
-        <RailBtn it={SETTINGS_ITEM} active={base === "settings"} onClick={() => nav("settings")} />
-        <button className="rail-btn" onClick={toggleTheme} aria-label="Toggle theme">
-          {theme === "dark" ? <Sun size={19} strokeWidth={1.9} /> : <Moon size={19} strokeWidth={1.9} />}
-          <span className="rail-tip">{theme === "dark" ? "Light theme" : "Dark theme"}</span>
-        </button>
-        {!demoOn && (
-          <button className="rail-btn rail-demo" onClick={() => DEMO_SCRIPT.start(nav)} aria-label="Demo Mode">
-            <Play size={18} strokeWidth={2} />
-            <span className="rail-tip">Demo Mode</span>
+      <div className="rail-inner">
+        <nav className="rail-nav">
+          <RailBtn it={START_ITEM} active={base === "start"} onClick={() => nav("start")} />
+          {NAV.map((g, gi) => (
+            <div key={gi} className="rail-grp">
+              {g.group && <div className="rail-grp-label">{g.group}</div>}
+              {g.items.map((it) => (
+                <RailBtn key={it.route} it={it} active={base === it.route} onClick={() => nav(it.route)} dot={it.route === "reviews" && pendingReviews > 0} />
+              ))}
+            </div>
+          ))}
+        </nav>
+        <div className="rail-bottom">
+          <RailBtn it={SETTINGS_ITEM} active={base === "settings"} onClick={() => nav("settings")} />
+          <button className="rail-item" onClick={toggleTheme} aria-label="Toggle theme">
+            {theme === "dark" ? <Sun size={19} strokeWidth={1.9} /> : <Moon size={19} strokeWidth={1.9} />}
+            <span className="rail-label">{theme === "dark" ? "Light theme" : "Dark theme"}</span>
           </button>
-        )}
+        </div>
       </div>
     </aside>
   );
@@ -503,9 +501,9 @@ export function App() {
   if (light) {
     return (
       <div className="shell-col light-shell">
-        <MegaTopbar nav={nav} base={base} onPalette={() => setPalette(true)} pendingReviews={m.pendingReviews} activeRules={activeRules} />
+        <Topbar nav={nav} onPalette={() => setPalette(true)} />
         <div className="shell">
-          {!focus && <IconRail nav={nav} base={base} pendingReviews={m.pendingReviews} demoOn={demoOn} />}
+          {!focus && <IconRail nav={nav} base={base} pendingReviews={m.pendingReviews} />}
           <main className="main" ref={mainRef} style={demoOn ? { paddingBottom: 90 } : undefined}>
             <div className="parallax-bg" aria-hidden="true" />
             <div key={base} className="route-anim">{page}</div>
