@@ -70,7 +70,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
       {root && (
         <div
           className="card"
-          style={{ background: "var(--accent-soft)", borderColor: "color-mix(in oklab, var(--accent) 28%, white)" }}
+          style={{ background: "var(--accent-soft)", borderColor: "color-mix(in oklab, var(--accent) 28%, var(--surface))" }}
         >
           <div className="spread">
             <span className="eyebrow" style={{ color: "var(--accent)" }}>Latest action on your checkout code</span>
@@ -170,7 +170,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
           </div>
 
           <div
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 13, padding: "16px 20px", borderRadius: "var(--r)", background: "var(--accent-soft)", border: "1px solid color-mix(in oklab, var(--accent) 25%, white)" }}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 13, padding: "16px 20px", borderRadius: "var(--r)", background: "var(--accent-soft)", border: "1px solid color-mix(in oklab, var(--accent) 25%, var(--surface))" }}
           >
             <span style={{ width: 38, height: 38, borderRadius: 11, display: "grid", placeItems: "center", background: "var(--accent)", color: "var(--accent-fg)", flexShrink: 0 }}>
               <Cpu size={21} />

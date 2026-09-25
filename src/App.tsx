@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bot, BrainCircuit, CirclePlay, FileCheck2, FlaskConical, Hand, KeyRound,
-  LayoutGrid, ListChecks, ListTree, Play, Plug, ScrollText, Search,
+  LayoutGrid, ListChecks, ListTree, Moon, Play, Plug, ScrollText, Search, Sun,
   Settings as SettingsIcon, ShieldCheck, Siren, Table2, Timer, Waypoints,
   type LucideIcon,
 } from "lucide-react";
@@ -91,6 +91,20 @@ function useRoute(): [Route, (r: Route) => void] {
   return [route, nav];
 }
 
+/** Light / dark theme — light by default, the choice is remembered per browser. */
+const THEME_KEY = "wrapbox-theme";
+function useTheme(): ["light" | "dark", () => void] {
+  const [theme, setTheme] = useState<"light" | "dark">(
+    () => (document.documentElement.dataset.theme === "dark" ? "dark" : "light")
+  );
+  useEffect(() => {
+    if (theme === "dark") document.documentElement.dataset.theme = "dark";
+    else delete document.documentElement.dataset.theme;
+    try { localStorage.setItem(THEME_KEY, theme); } catch { /* storage unavailable — theme still applies this session */ }
+  }, [theme]);
+  return [theme, () => setTheme((t) => (t === "dark" ? "light" : "dark"))];
+}
+
 /** ⌘K command palette — jump to any screen. */
 function Palette({ open, onClose, nav }: { open: boolean; onClose: () => void; nav: (r: string) => void }) {
   const [q, setQ] = useState("");
@@ -142,6 +156,7 @@ function Palette({ open, onClose, nav }: { open: boolean; onClose: () => void; n
 
 function Topbar({ nav, onPalette }: { nav: (r: string) => void; onPalette: () => void }) {
   const s = useAppState();
+  const [theme, toggleTheme] = useTheme();
   const m = metrics(s);
   const activeRules = s.contracts.filter((c) => c.status === "ACTIVE").reduce((n, c) => n + c.clauses.length, 0);
   return (
@@ -174,6 +189,14 @@ function Topbar({ nav, onPalette }: { nav: (r: string) => void; onPalette: () =>
           <span className="pill-dot live-dot" style={{ background: "var(--allow)" }} />
           Enforcing {activeRules} rules
         </span>
+        <button
+          className="theme-toggle"
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+          title={theme === "dark" ? "Light theme" : "Dark theme"}
+        >
+          {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
         <Avatar userId="u-priya" size={28} />
       </div>
     </header>

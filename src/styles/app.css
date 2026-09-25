@@ -82,6 +82,56 @@
   --violet-soft: #f0eaf5;
 }
 
+/* Dark theme — same warm family, surfaces inverted. Toggled from the header;
+   every surface/text/tone above is re-pointed here, so pages need no changes. */
+:root[data-theme="dark"] {
+  --bg: #1b1a18;
+  --surface: #242321;
+  --surface-2: #2c2b28;
+  --surface-3: #36352f;
+  --line: #36342f;
+  --line-strong: #47453f;
+  --fg: #efece6;
+  --fg-2: #c7c3ba;
+  --fg-3: #98948a;
+  --fg-4: #6f6b63;
+  --accent: #d98463;
+  --accent-2: #e59a7c;
+  --accent-soft: #3b2a22;
+  --accent-active: #f0a88b;
+  --header: #131312;
+  --sidebar: #1f1e1c;
+  --ink: #efece6;
+  --ink-fg: #1b1a18;
+  --allow: #5aa877;
+  --allow-soft: #1e3025;
+  --constrain: #4fae9b;
+  --constrain-soft: #1a2f2b;
+  --review: #c9992f;
+  --review-soft: #352c17;
+  --block: #d0605a;
+  --block-soft: #3a211f;
+  --violet: #b09bd3;
+  --violet-soft: #2d2736;
+  --code-bg: #121211;
+  --code-line: #2b2a27;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 20px -8px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 24px 60px -24px rgba(0, 0, 0, 0.75);
+  color-scheme: dark;
+}
+:root[data-theme="dark"] .topbar { border-bottom-color: rgba(255, 255, 255, 0.07); }
+
+/* Theme toggle — sits on the dark header in both themes */
+.theme-toggle {
+  display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0;
+  border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1); color: #fff; cursor: pointer;
+  transition: background 0.14s, border-color 0.14s;
+}
+.theme-toggle:hover { background: rgba(255, 255, 255, 0.2); border-color: rgba(255, 255, 255, 0.34); }
+
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
 body {
@@ -261,7 +311,7 @@ button { font-family: var(--sans); }
 .filter-bar {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
   padding: 8px 8px 8px 14px; margin-bottom: 12px; border-radius: 10px; font-size: 13px;
-  background: var(--accent-soft); color: var(--fg-2); border: 1px solid color-mix(in oklab, var(--accent) 25%, white);
+  background: var(--accent-soft); color: var(--fg-2); border: 1px solid color-mix(in oklab, var(--accent) 25%, var(--surface));
 }
 
 /* Section rhythm */
@@ -444,14 +494,14 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 .btn:hover { border-color: var(--fg-3); background: var(--surface-2); }
 .btn:disabled { opacity: 0.45; cursor: default; pointer-events: none; }
 .btn-primary { background: var(--ink); border-color: var(--ink); color: var(--ink-fg); }
-.btn-primary:hover { background: #35332e; border-color: #35332e; box-shadow: 0 6px 16px -10px rgba(20, 20, 19, 0.5); }
+.btn-primary:hover { background: color-mix(in oklab, var(--ink) 86%, var(--bg)); border-color: color-mix(in oklab, var(--ink) 86%, var(--bg)); box-shadow: 0 6px 16px -10px rgba(20, 20, 19, 0.5); }
 .btn-accent { background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn-accent:hover { filter: brightness(1.08); background: var(--accent); border-color: var(--accent); }
 .btn-good { background: var(--allow); border-color: var(--allow); color: #fff; }
 .btn-good:hover { filter: brightness(1.08); background: var(--allow); border-color: var(--allow); }
-.btn-danger { background: transparent; border-color: color-mix(in oklab, var(--block) 40%, white); color: var(--block); }
+.btn-danger { background: transparent; border-color: color-mix(in oklab, var(--block) 40%, var(--surface)); color: var(--block); }
 .btn-danger:hover { background: var(--block-soft); border-color: var(--block); }
-.btn-warn { background: transparent; border-color: color-mix(in oklab, var(--review) 40%, white); color: var(--review); }
+.btn-warn { background: transparent; border-color: color-mix(in oklab, var(--review) 40%, var(--surface)); color: var(--review); }
 .btn-warn:hover { background: var(--review-soft); border-color: var(--review); }
 .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 7px; }
 .btn-lg { padding: 10px 20px; font-size: 14px; border-radius: 9px; }
@@ -491,7 +541,7 @@ textarea.input { resize: vertical; line-height: 1.6; }
   border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
 }
 .rule-item .chip { margin-top: 1px; flex-shrink: 0; }
-.rule-item.decided { border-color: color-mix(in oklab, var(--accent) 45%, white); background: var(--accent-soft); }
+.rule-item.decided { border-color: color-mix(in oklab, var(--accent) 45%, var(--surface)); background: var(--accent-soft); }
 .rule-text { font-size: 12.5px; line-height: 1.45; color: var(--fg); }
 .rule-source { font-size: 11.5px; color: var(--fg-3); margin-top: 2px; }
 .rule-decided { color: var(--accent); font-weight: 600; }
@@ -644,12 +694,12 @@ textarea.input { resize: vertical; line-height: 1.6; }
 
 /* Safety Kernel — managed banner, update card, observe mode */
 .kernel-banner { background: linear-gradient(180deg, var(--surface) 0%, color-mix(in oklab, var(--accent-soft) 45%, var(--surface)) 100%); }
-.kernel-update { margin-top: 16px; border-color: color-mix(in oklab, var(--review) 35%, white); }
+.kernel-update { margin-top: 16px; border-color: color-mix(in oklab, var(--review) 35%, var(--surface)); }
 .kernel-impact { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); }
-.kernel-observing { border-color: color-mix(in oklab, var(--review) 40%, white); background: color-mix(in oklab, var(--review-soft) 35%, var(--surface)); }
+.kernel-observing { border-color: color-mix(in oklab, var(--review) 40%, var(--surface)); background: color-mix(in oklab, var(--review-soft) 35%, var(--surface)); }
 .kernel-observe-foot {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
-  margin-top: 14px; padding-top: 12px; border-top: 1px dashed color-mix(in oklab, var(--review) 30%, white);
+  margin-top: 14px; padding-top: 12px; border-top: 1px dashed color-mix(in oklab, var(--review) 30%, var(--surface));
 }
 
 /* Trust graph legend — matches the node colours exactly */

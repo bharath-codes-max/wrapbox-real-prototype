@@ -177,7 +177,7 @@ function EnvelopeCard({ t, nav }: { t: TaskEnvelope; nav: (r: string) => void })
       </div>
 
       {(t.grants?.length ?? 0) > 0 && (
-        <div className="card" style={{ borderColor: "color-mix(in oklab, var(--accent) 35%, white)", background: "var(--accent-soft)", marginTop: 16 }}>
+        <div className="card" style={{ borderColor: "color-mix(in oklab, var(--accent) 35%, var(--surface))", background: "var(--accent-soft)", marginTop: 16 }}>
           <b className="small">Extra scope approved for this task</b>
           {t.grants!.map((g, i) => (
             <div key={i} className="row small dim" style={{ marginTop: 6, gap: 5 }}>
