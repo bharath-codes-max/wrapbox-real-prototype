@@ -23,6 +23,19 @@ import { describe } from "../ui/describe";
 const reducedMotion = () =>
   typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
+/** Live theme, watched via the `data-theme` attribute App.tsx's toggle sets — used only to
+ *  make the composer below noticeably bigger on the light prism card; dark theme (the black
+ *  stage + small composer) is untouched. */
+function useIsLightTheme() {
+  const [light, setLight] = useState(() => document.documentElement.dataset.theme === "light");
+  useEffect(() => {
+    const obs = new MutationObserver(() => setLight(document.documentElement.dataset.theme === "light"));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => obs.disconnect();
+  }, []);
+  return light;
+}
+
 const plural = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
 
 const REGION: Record<Region, string> = { us: "US", eu: "EU", in: "India" };
@@ -133,6 +146,7 @@ function checklist(s: AppState): ChecklistItem[] {
 
 export function StartPage({ nav }: { nav: (r: string) => void }) {
   const s = useAppState();
+  const bigComposer = useIsLightTheme();
   const m = metrics(s);
   const ob = s.onboarding;
   const fresh = s.workspace === "fresh";
@@ -281,7 +295,7 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
 
           {/* Centre — the composer */}
           <div style={{ position: "relative", zIndex: 1, flex: 1, display: "grid", gridTemplateColumns: "minmax(0, 1fr)", justifyItems: "center", alignItems: "center", padding: "24px 0" }}>
-            <DecisionPanel events={s.events} total={m.total} company={company} nav={nav} />
+            <DecisionPanel events={s.events} total={m.total} company={company} nav={nav} big={bigComposer} />
           </div>
 
           {/* Bottom row — what is governed, and where the stream comes from */}
@@ -444,15 +458,17 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
 // Core Brain layer that decided it.
 // ---------------------------------------------------------------------------
 
-const ROW = 62;
+const ROW_BASE = 62;
+const ROW_BIG = 84; // light theme's prism composer — a hero element, not a small floating chip
 const GAP = 0;
 const SHOWN = 1; // one decision reads as the prompt; the next slides in from above
 const WINDOW = 8; // replay the latest N recorded decisions
-const windowHeight = (rows: number) => rows * ROW + Math.max(0, rows - 1) * GAP;
+const windowHeight = (rows: number, rowH: number) => rows * rowH + Math.max(0, rows - 1) * GAP;
 
-function DecisionPanel({ events, total, company, nav }: {
-  events: SimulationEvent[]; total: number; company: string; nav: (r: string) => void;
+function DecisionPanel({ events, total, company, nav, big }: {
+  events: SimulationEvent[]; total: number; company: string; nav: (r: string) => void; big: boolean;
 }) {
+  const rowH = big ? ROW_BIG : ROW_BASE;
   // Chronological (oldest → newest) window of the latest recorded decisions.
   const recent = useMemo(() => [...events].sort((a, b) => a.timestamp - b.timestamp).slice(-WINDOW), [events]);
   const n = recent.length;
@@ -477,11 +493,11 @@ function DecisionPanel({ events, total, company, nav }: {
     const el = listRef.current;
     if (!el || !rotates || reducedMotion()) return;
     el.style.transition = "none";
-    el.style.transform = `translateY(-${ROW + GAP}px)`;
+    el.style.transform = `translateY(-${rowH + GAP}px)`;
     void el.offsetHeight; // commit the start position before animating
     el.style.transition = "transform 0.7s cubic-bezier(0.16, 1, 0.3, 1)";
     el.style.transform = "translateY(0)";
-  }, [t, rotates]);
+  }, [t, rotates, rowH]);
 
   const at = (k: number) => recent[(((t - k) % n) + n) % n];
   const rows = n === 0 ? [] : Array.from({ length: rotates ? SHOWN + 1 : n }, (_, k) => at(k));
@@ -495,19 +511,22 @@ function DecisionPanel({ events, total, company, nav }: {
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
-      style={{ width: "100%", maxWidth: 580, minWidth: 0, padding: "18px 18px 14px", color: G.fg, ...depth(6) }}
+      style={{
+        width: "100%", maxWidth: big ? 880 : 580, minWidth: 0,
+        padding: big ? "30px 32px 24px" : "18px 18px 14px", color: G.fg, ...depth(6),
+      }}
     >
       {n === 0 ? (
-        <div style={{ minHeight: windowHeight(SHOWN), display: "flex", alignItems: "center", gap: 14, padding: "4px 2px" }}>
+        <div style={{ minHeight: windowHeight(SHOWN, rowH), display: "flex", alignItems: "center", gap: big ? 18 : 14, padding: "4px 2px" }}>
           <span style={{
-            width: 36, height: 36, borderRadius: 10, flexShrink: 0, display: "grid", placeItems: "center",
+            width: big ? 48 : 36, height: big ? 48 : 36, borderRadius: big ? 14 : 10, flexShrink: 0, display: "grid", placeItems: "center",
             color: G.fg3, border: `1px dashed ${G.fg4}`,
           }}>
-            <Radio size={17} />
+            <Radio size={big ? 21 : 17} />
           </span>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 14.5, fontWeight: 500, color: G.fg2 }}>No decisions yet — run a go-live self-test in setup</div>
-            <div style={{ fontSize: 12, color: G.fg3, marginTop: 3 }}>Nothing shows here until {company} records a real one.</div>
+            <div style={{ fontSize: big ? 18 : 14.5, fontWeight: 500, color: G.fg2 }}>No decisions yet — run a go-live self-test in setup</div>
+            <div style={{ fontSize: big ? 14 : 12, color: G.fg3, marginTop: 3 }}>Nothing shows here until {company} records a real one.</div>
           </div>
           <button className="btn btn-sm" onClick={() => nav("onboarding/admin")}>
             Open setup <ArrowRight size={13} />
@@ -517,7 +536,7 @@ function DecisionPanel({ events, total, company, nav }: {
         <div
           aria-live="off"
           style={{
-            height: windowHeight(Math.min(n, SHOWN)), overflow: "hidden", position: "relative",
+            height: windowHeight(Math.min(n, SHOWN), rowH), overflow: "hidden", position: "relative",
             ...(rotates ? {
               maskImage: "linear-gradient(to bottom, black 0%, black 84%, transparent 100%)",
               WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 84%, transparent 100%)",
@@ -525,19 +544,19 @@ function DecisionPanel({ events, total, company, nav }: {
           }}
         >
           <div ref={listRef} style={{ display: "flex", flexDirection: "column", gap: GAP, willChange: "transform" }}>
-            {rows.map((e, k) => <TickerRow key={k} e={e} />)}
+            {rows.map((e, k) => <TickerRow key={k} e={e} big={big} />)}
           </div>
         </div>
       )}
 
       {/* Bottom row — the "model" picker: which Core Brain layer decided, on which plane */}
-      <div className="spread" style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid color-mix(in oklab, var(--accent) 22%, transparent)", gap: 8 }}>
+      <div className="spread" style={{ marginTop: big ? 16 : 10, paddingTop: big ? 16 : 10, borderTop: "1px solid color-mix(in oklab, var(--accent) 22%, transparent)", gap: 8 }}>
         <div className="row" style={{ gap: 6, minWidth: 0, flex: 1 }}>
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => nav("brain")}
             title={why || "How the Core Brain decides"}
-            style={{ marginLeft: -8, gap: 5, fontSize: 12.5, color: G.fg2, background: "transparent", maxWidth: "100%" }}
+            style={{ marginLeft: -8, gap: 5, fontSize: big ? 14.5 : 12.5, color: G.fg2, background: "transparent", maxWidth: "100%" }}
           >
             <span style={ellipsis}>
               Decided by · {current?.decidedBy ? LAYER[current.decidedBy.layer] : n === 0 ? "—" : "Core Brain"}
@@ -545,13 +564,13 @@ function DecisionPanel({ events, total, company, nav }: {
             <ChevronDown size={13} style={{ flexShrink: 0 }} />
           </button>
           {current && (
-            <span style={{ fontSize: 12, color: G.fg3, ...ellipsis }}>
+            <span style={{ fontSize: big ? 14 : 12, color: G.fg3, ...ellipsis }}>
               {PLANE[current.plane]}{paused && rotates ? " · paused" : ""}
             </span>
           )}
         </div>
         <div className="row" style={{ gap: 8 }}>
-          <span style={{ fontSize: 11.5, color: G.fg3, ...ellipsis }}>
+          <span style={{ fontSize: big ? 13 : 11.5, color: G.fg3, ...ellipsis }}>
             {n === 0 ? `${company} · nothing recorded` : `Latest ${n} of ${total.toLocaleString("en-US")} in ${company}`}
           </span>
           <button
@@ -561,9 +580,9 @@ function DecisionPanel({ events, total, company, nav }: {
             aria-label="Open Live Actions"
             title="Open Live Actions"
             disabled={n === 0}
-            style={{ width: 30, height: 30, padding: 0, borderRadius: 999 }}
+            style={{ width: big ? 36 : 30, height: big ? 36 : 30, padding: 0, borderRadius: 999 }}
           >
-            <ArrowUp size={15} strokeWidth={2.5} />
+            <ArrowUp size={big ? 17 : 15} strokeWidth={2.5} />
           </button>
         </div>
       </div>
@@ -571,24 +590,25 @@ function DecisionPanel({ events, total, company, nav }: {
   );
 }
 
-function TickerRow({ e }: { e: SimulationEvent }) {
+function TickerRow({ e, big }: { e: SimulationEvent; big: boolean }) {
   const agent = agentById(e.agent);
   const sentence = describe(e);
   const why = e.decidedBy?.label ?? e.decisionReasons[0] ?? "";
+  const rowH = big ? ROW_BIG : ROW_BASE;
   return (
     <div
       title={`${sentence} — ${e.decision}${why ? `\n${why}` : ""}`}
-      style={{ height: ROW, flexShrink: 0, display: "flex", alignItems: "center", gap: 14, padding: "0 2px" }}
+      style={{ height: rowH, flexShrink: 0, display: "flex", alignItems: "center", gap: big ? 18 : 14, padding: "0 2px" }}
     >
       <span style={{
-        width: 36, height: 36, borderRadius: 10, flexShrink: 0, display: "grid", placeItems: "center",
+        width: big ? 48 : 36, height: big ? 48 : 36, borderRadius: big ? 14 : 10, flexShrink: 0, display: "grid", placeItems: "center",
         background: LOGO_TILE, border: `1px solid ${G.fg4}`,
       }}>
-        <AgentMark agentId={e.agent} size={19} />
+        <AgentMark agentId={e.agent} size={big ? 25 : 19} />
       </span>
       <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ ...ellipsis, fontSize: 15, fontWeight: 500, letterSpacing: "-0.01em", color: G.fg }}>{sentence}</div>
-        <div style={{ ...ellipsis, fontSize: 12, color: G.fg3, marginTop: 3 }}>
+        <div style={{ ...ellipsis, fontSize: big ? 19 : 15, fontWeight: 500, letterSpacing: "-0.01em", color: G.fg }}>{sentence}</div>
+        <div style={{ ...ellipsis, fontSize: big ? 14 : 12, color: G.fg3, marginTop: 3 }}>
           {agent?.name ?? e.agent}{why ? ` · ${why}` : ""} · {timeAgo(e.timestamp)}
         </div>
       </div>
