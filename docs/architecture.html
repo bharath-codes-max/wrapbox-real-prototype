@@ -1,0 +1,428 @@
+<title>Wrapbox Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #faf9f5; --surface: #ffffff; --surface-2: #f4f1ea; --line: #e6e0d4; --line-strong: #d6cfc0;
+    --fg: #141413; --fg-2: #4a4843; --fg-3: #7a776f;
+    --blue-fill: #dde8ff; --blue-line: #3562c9; --blue-ink: #1a3f9a;
+    --red-fill: #fbdcda; --red-line: #c1544f; --red-ink: #8f2c28;
+    --green-fill: #dff0df; --green-line: #4e9d69; --green-ink: #22643a;
+    --allow: #4e9d69; --constrain: #3f9e8c; --review: #b0851f; --block: #c1544f;
+    --prism: linear-gradient(90deg, #ec4a22 0%, #ff6a3d 16%, #ff8580 32%, #ff9fcf 50%, #d69bff 64%, #9a82f7 80%, #6d66e6 100%);
+    --shadow: 0 1px 3px rgba(20,20,19,.06); --shadow-lg: 0 24px 60px -24px rgba(20,20,19,.3);
+    --sans: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif; --mono: "Roboto Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #1b1a18; --surface: #242321; --surface-2: #2c2b28; --line: #36342f; --line-strong: #47453f;
+    --fg: #efece6; --fg-2: #c7c3ba; --fg-3: #98948a;
+    --blue-fill: #1e2c4d; --blue-line: #6f93ea; --blue-ink: #b9caff;
+    --red-fill: #3f2422; --red-line: #e07a74; --red-ink: #ffb8b3;
+    --green-fill: #1f3327; --green-line: #6fbe8a; --green-ink: #bfe9cb;
+    --allow: #5aa877; --constrain: #4fae9b; --review: #c9992f; --block: #d0605a;
+    --shadow: 0 1px 3px rgba(0,0,0,.35); --shadow-lg: 0 24px 60px -24px rgba(0,0,0,.75);
+  } }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #1b1a18; --surface: #242321; --surface-2: #2c2b28; --line: #36342f; --line-strong: #47453f;
+    --fg: #efece6; --fg-2: #c7c3ba; --fg-3: #98948a;
+    --blue-fill: #1e2c4d; --blue-line: #6f93ea; --blue-ink: #b9caff;
+    --red-fill: #3f2422; --red-line: #e07a74; --red-ink: #ffb8b3;
+    --green-fill: #1f3327; --green-line: #6fbe8a; --green-ink: #bfe9cb;
+    --allow: #5aa877; --constrain: #4fae9b; --review: #c9992f; --block: #d0605a;
+    --shadow: 0 1px 3px rgba(0,0,0,.35); --shadow-lg: 0 24px 60px -24px rgba(0,0,0,.75);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .wrap { padding-block: 22px 60px; padding-inline: 20px; max-width: 1600px; margin: 0 auto; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-3); }
+  .mono { font-family: var(--mono); font-size: 12px; }
+
+  /* ---- top bar ---- */
+  .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; margin-bottom: 18px; }
+  .top h1 { font-size: 24px; font-weight: 700; }
+  .top .sub { color: var(--fg-2); margin-top: 4px; max-width: 70ch; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--fg-2); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); }
+  .legend i { width: 14px; height: 10px; border-radius: 2px; border: 1.5px solid; }
+  .legend .b i { background: var(--blue-fill); border-color: var(--blue-line); }
+  .legend .r i { background: var(--red-fill); border-color: var(--red-line); }
+  .legend .g i { background: var(--green-fill); border-color: var(--green-line); }
+
+  /* ---- simulate bar ---- */
+  .simbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); margin-bottom: 18px; }
+  .simbar label { font-size: 12px; font-weight: 600; color: var(--fg-3); letter-spacing: .06em; text-transform: uppercase; }
+  .sel { position: relative; display: inline-flex; align-items: center; height: 36px; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--surface); }
+  .sel select { appearance: none; -webkit-appearance: none; height: 100%; border: none; outline: none; background: transparent; color: var(--fg); font: 500 13.5px var(--sans); padding: 0 32px 0 12px; cursor: pointer; max-width: 100%; }
+  .sel:after { content: ""; position: absolute; right: 12px; width: 7px; height: 7px; border-right: 1.5px solid var(--fg-3); border-bottom: 1.5px solid var(--fg-3); transform: rotate(45deg) translateY(-2px); pointer-events: none; }
+  .btn { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 16px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); font: 600 13px var(--sans); cursor: pointer; }
+  .btn:hover { background: var(--surface-2); }
+  .btn:focus-visible, .box:focus-visible, .sel select:focus-visible { outline: 2px solid var(--blue-line); outline-offset: 2px; }
+  .btn.primary { color: #fff; border-color: transparent; background: #141413; }
+  :root[data-theme="dark"] .btn.primary, .dark .btn.primary { background: #efece6; color: #1b1a18; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .simbar .hint { font-size: 12px; color: var(--fg-3); margin-left: auto; max-width: 52ch; }
+  .outcome { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 999px; font: 600 12px var(--mono); letter-spacing: .04em; border: 1px solid var(--line); color: var(--fg-2); background: var(--surface-2); }
+  .outcome i { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-3); }
+  .outcome[data-d="ALLOW"] { color: var(--allow); border-color: var(--allow); } .outcome[data-d="ALLOW"] i { background: var(--allow); }
+  .outcome[data-d="CONSTRAIN"] { color: var(--constrain); border-color: var(--constrain); } .outcome[data-d="CONSTRAIN"] i { background: var(--constrain); }
+  .outcome[data-d="REVIEW"] { color: var(--review); border-color: var(--review); } .outcome[data-d="REVIEW"] i { background: var(--review); }
+  .outcome[data-d="BLOCK"] { color: var(--block); border-color: var(--block); } .outcome[data-d="BLOCK"] i { background: var(--block); }
+
+  /* ---- diagram canvas ---- */
+  .scroller { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+  .canvas { position: relative; min-width: 1480px; padding: 26px 26px 22px; display: grid; grid-template-columns: 168px 196px minmax(760px, 1fr) 196px; grid-template-rows: auto auto auto; column-gap: 46px; row-gap: 26px; }
+  .canvas svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  .wire { fill: none; stroke: var(--fg-3); stroke-width: 1.4; opacity: .8; }
+  .wire.lit { stroke: url(#prism); stroke-width: 3; opacity: 1; filter: drop-shadow(0 0 4px rgba(255,106,61,.55)); }
+  .col { display: flex; flex-direction: column; gap: 10px; align-self: center; }
+  .col-title { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-3); margin-bottom: 2px; }
+
+  .box { position: relative; border: 1.5px solid; border-radius: 8px; padding: 9px 11px; font-size: 12.5px; line-height: 1.35; cursor: pointer; text-align: left; font-family: var(--sans); color: var(--fg); background: var(--surface); transition: transform .15s, box-shadow .15s; }
+  .box:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+  .box b { display: block; font-weight: 600; }
+  .box small { display: block; color: var(--fg-2); font-size: 11.5px; margin-top: 2px; }
+  .box.b { background: var(--blue-fill); border-color: var(--blue-line); }
+  .box.r { background: var(--red-fill); border-color: var(--red-line); }
+  .box.g { background: var(--green-fill); border-color: var(--green-line); }
+  .box.dashed { border-style: dashed; }
+  .box .logo { position: absolute; top: 8px; right: 9px; width: 18px; height: 18px; border-radius: 4px; display: grid; place-items: center; font: 700 9px var(--mono); color: #fff; background: var(--fg-2); }
+  .box.lit { box-shadow: 0 0 0 3px rgba(255,106,61,.35), 0 0 22px rgba(255,106,61,.35); transform: translateY(-1px); }
+  .box.done { box-shadow: inset 0 0 0 2px var(--allow); }
+  .box.done.blk { box-shadow: inset 0 0 0 2px var(--block); }
+
+  /* people (above) and feeds (below) */
+  .people { grid-column: 3; grid-row: 1; display: flex; justify-content: center; gap: 18px; align-items: flex-start; }
+  .feeds { grid-column: 2 / 5; grid-row: 3; display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
+  .people .box, .feeds .box { width: 200px; }
+  .agents { grid-column: 1; grid-row: 2; } .planes { grid-column: 2; grid-row: 2; } .dest { grid-column: 4; grid-row: 2; }
+
+  /* the boundary */
+  .brain { grid-column: 3; grid-row: 2; position: relative; border: 2px solid var(--green-line); border-radius: 12px; padding: 16px 16px 30px; background: color-mix(in oklab, var(--green-fill) 35%, var(--surface)); }
+  .brain-title { position: absolute; left: 16px; bottom: 8px; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--green-ink); }
+  .brain-badge { position: absolute; right: 14px; top: 10px; display: inline-flex; gap: 6px; align-items: center; font: 600 11px var(--mono); color: var(--green-ink); }
+  .brain-badge i { width: 22px; height: 22px; border-radius: 6px; background: var(--prism); }
+  .stages { display: grid; grid-template-columns: 1fr 1.15fr 1.55fr 1fr 1.1fr; gap: 10px; margin-top: 26px; }
+  .stage { border: 1.5px solid var(--green-line); border-radius: 8px; background: var(--surface); padding: 10px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; transition: box-shadow .15s, transform .15s; min-width: 0; }
+  .stage:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+  .stage h3 { font-size: 12.5px; font-weight: 700; color: var(--green-ink); display: flex; gap: 7px; align-items: center; }
+  .stage h3 em { font-style: normal; font: 700 10px var(--mono); width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: var(--green-line); color: #fff; }
+  .stage ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .stage li { font-size: 11.5px; color: var(--fg-2); padding: 4px 7px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--line); line-height: 1.3; }
+  .stage li.lit { background: var(--green-fill); border-color: var(--green-line); color: var(--fg); font-weight: 600; }
+  .stage li.lit.blk { background: var(--red-fill); border-color: var(--red-line); }
+  .stage li.lit.rev { background: color-mix(in oklab, var(--review) 18%, var(--surface)); border-color: var(--review); }
+  .stage.lit { box-shadow: 0 0 0 3px rgba(255,106,61,.35), 0 0 22px rgba(255,106,61,.3); }
+  .decisions { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
+  .decisions span { font: 600 10px var(--mono); padding: 2px 7px; border-radius: 999px; border: 1px solid; }
+  .d-allow { color: var(--allow); border-color: var(--allow); } .d-constrain { color: var(--constrain); border-color: var(--constrain); } .d-review { color: var(--review); border-color: var(--review); } .d-block { color: var(--block); border-color: var(--block); }
+  .decisions span.lit { color: #fff; }
+  .decisions span.lit.d-allow { background: var(--allow); } .decisions span.lit.d-constrain { background: var(--constrain); } .decisions span.lit.d-review { background: var(--review); } .decisions span.lit.d-block { background: var(--block); }
+
+  /* log + questions */
+  .below { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px; margin-top: 18px; }
+  @media (max-width: 900px) { .below { grid-template-columns: 1fr; } }
+  .panel { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); padding: 16px 18px; }
+  .panel h2 { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+  .log { font-family: var(--mono); font-size: 12px; line-height: 1.7; min-height: 120px; max-height: 260px; overflow: auto; }
+  .log div { display: flex; gap: 12px; padding: 2px 0; border-bottom: 1px dashed var(--line); animation: fade .3s ease-out; }
+  .log .t { color: var(--fg-3); flex: 0 0 62px; }
+  .log .k { color: var(--fg-3); flex: 0 0 96px; text-transform: uppercase; font-size: 10.5px; letter-spacing: .06em; padding-top: 2px; }
+  .log .m { color: var(--fg); }
+  .log .m.d-allow { color: var(--allow); font-weight: 600; } .log .m.d-constrain { color: var(--constrain); font-weight: 600; } .log .m.d-review { color: var(--review); font-weight: 600; } .log .m.d-block { color: var(--block); font-weight: 600; }
+  .log .empty { color: var(--fg-3); border: none; }
+  .q { margin: 0; padding-left: 18px; color: var(--fg-2); font-size: 13px; }
+  .q li { margin-bottom: 6px; }
+  @keyframes fade { from { opacity: 0; transform: translateY(3px); } }
+
+  /* drawer */
+  .veil { position: fixed; inset: 0; background: rgba(20,20,19,.32); z-index: 40; animation: fade .2s; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 94vw); z-index: 41; background: var(--surface); border-left: 1px solid var(--line); box-shadow: var(--shadow-lg); padding: 22px 24px; overflow-y: auto; animation: slide .25s cubic-bezier(.16,1,.3,1); padding-top: calc(22px + env(safe-area-inset-top, 0px)); }
+  @keyframes slide { from { transform: translateX(30px); opacity: 0; } }
+  .drawer .tag { display: inline-flex; gap: 6px; align-items: center; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 9px; border-radius: 6px; border: 1.5px solid; margin-bottom: 12px; }
+  .drawer .tag.b { background: var(--blue-fill); border-color: var(--blue-line); color: var(--blue-ink); }
+  .drawer .tag.r { background: var(--red-fill); border-color: var(--red-line); color: var(--red-ink); }
+  .drawer .tag.g { background: var(--green-fill); border-color: var(--green-line); color: var(--green-ink); }
+  .drawer h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .drawer p { color: var(--fg-2); margin: 0 0 12px; }
+  .drawer dl { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; margin: 14px 0 0; font-size: 13px; }
+  .drawer dt { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-3); padding-top: 2px; }
+  .drawer dd { margin: 0; color: var(--fg); }
+  .drawer .close { position: absolute; top: 14px; right: 14px; }
+  .real { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+  .real.yes { background: var(--green-fill); color: var(--green-ink); } .real.sim { background: var(--surface-2); color: var(--fg-2); border: 1px solid var(--line); }
+  @media (prefers-reduced-motion: reduce) { .box, .stage, .log div, .drawer, .veil { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="eyebrow">Wrapbox — technical architecture</div>
+      <h1>Runtime authorization for AI agents — solution architecture</h1>
+      <div class="sub">Every consequential action an agent takes is intercepted on one of three planes, normalized, inspected, decided by one engine, transformed if needed, and sealed into evidence. Click any box to see what it does; pick a scenario and press Simulate to watch a real decision flow through.</div>
+    </div>
+    <div class="legend">
+      <span class="b"><i></i>Existing systems</span>
+      <span class="r"><i></i>External vendor</span>
+      <span class="g"><i></i>Wrapbox (new)</span>
+    </div>
+  </div>
+
+  <div class="simbar">
+    <label for="scenario">Simulate</label>
+    <span class="sel"><select id="scenario"></select></span>
+    <button class="btn primary" id="run">▶ Simulate</button>
+    <button class="btn" id="reset">Reset</button>
+    <span class="outcome" id="outcome"><i></i>no run yet</span>
+    <span class="hint">Outcomes are the decisions the Wrapbox engine returns for these scenarios in the prototype; the step timing is illustrative.</span>
+  </div>
+
+  <div class="scroller">
+    <div class="canvas" id="canvas">
+      <svg class="wires" id="wires" aria-hidden="true">
+        <defs>
+          <linearGradient id="prism" x1="0" x2="1"><stop offset="0" stop-color="#ec4a22"/><stop offset=".5" stop-color="#ff9fcf"/><stop offset="1" stop-color="#6d66e6"/></linearGradient>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--fg-3)"/></marker>
+          <marker id="arrlit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ff6a3d"/></marker>
+        </defs>
+      </svg>
+
+      <!-- People -->
+      <div class="people">
+        <button class="box g" id="intent" data-info="intent"><b>Policy authors · Intent Studio</b><small>Write rules in plain English → one normalized contract</small></button>
+        <button class="box g" id="review" data-info="review"><b>Approvers · Review Center</b><small>REVIEW decisions go to a named person, never the requester</small></button>
+        <button class="box g" id="security" data-info="security"><b>Security · Break Glass + Kernel updates</b><small>Scoped emergency override; observe → enforce</small></button>
+      </div>
+
+      <!-- Agents -->
+      <div class="col agents">
+        <div class="col-title">AI agents in use</div>
+        <button class="box b" id="claude-code" data-info="claude-code"><b>Claude Code</b><small>Anthropic · coding</small></button>
+        <button class="box b" id="codex" data-info="codex"><b>Codex</b><small>OpenAI · coding</small></button>
+        <button class="box b" id="copilot" data-info="copilot"><b>Microsoft Copilot</b><small>enterprise copilot</small></button>
+        <button class="box b" id="chat" data-info="chat"><b>ChatGPT / Claude</b><small>in the browser</small></button>
+        <button class="box b" id="finance" data-info="finance"><b>Internal Finance Agent</b><small>your own agent</small></button>
+        <button class="box b" id="support" data-info="support"><b>Support Agent</b><small>your own agent</small></button>
+        <button class="box r dashed" id="unknown" data-info="unknown"><b>Unknown MCP agent</b><small>unregistered · discovered</small></button>
+      </div>
+
+      <!-- Planes -->
+      <div class="col planes">
+        <div class="col-title">Enforcement planes</div>
+        <button class="box g" id="endpoint" data-info="endpoint"><b>Endpoint runtime</b><small>macOS · file / process / secrets</small></button>
+        <button class="box g" id="network" data-info="network"><b>Network Extension</b><small>HTTPS · uploads · AI destinations</small></button>
+        <button class="box g" id="gateway" data-info="gateway"><b>Gateways</b><small>GitHub · SQL · AWS · Stripe · MCP</small></button>
+      </div>
+
+      <!-- Core Brain boundary -->
+      <div class="brain" id="brain">
+        <div class="brain-badge"><i></i>one decision engine</div>
+        <div class="stages">
+          <div class="stage" id="s-normalize" data-info="normalize"><h3><em>1</em>Normalize</h3><ul><li>Action Ontology → one verb</li><li>Identity chain: user + device + agent + tool + resource</li></ul></div>
+          <div class="stage" id="s-inspect" data-info="inspect"><h3><em>2</em>Inspect</h3><ul><li>Detectors: PII · credentials · source code</li><li>Parsers: Office / PDF · archives · OCR</li><li>Semantic classifier</li><li>Encrypted → fail closed</li></ul></div>
+          <div class="stage" id="s-decide" data-info="decide"><h3><em>3</em>Decide — in this order</h3><ul>
+            <li data-layer="uninspectable">Fail-closed check</li>
+            <li data-layer="contract">Intent Contracts (strictest wins)</li>
+            <li data-layer="safety">Safety Kernel (always on)</li>
+            <li data-layer="blast">Blast-radius governor</li>
+            <li data-layer="context">Context (production · privileged)</li>
+            <li data-layer="envelope">Task envelope</li>
+            <li data-layer="standing">Standing permission</li>
+            <li data-layer="breakglass">Break-glass (never over the Kernel)</li>
+            <li data-layer="default">Default — allow &amp; record</li>
+          </ul></div>
+          <div class="stage" id="s-transform" data-info="transform"><h3><em>4</em>Transform</h3><ul><li>Token Vault · reversible tokenize</li><li>Redact · mask · limit rows</li><li>Originals sealed; scoped restore</li></ul></div>
+          <div class="stage" id="s-enforce" data-info="enforce"><h3><em>5</em>Enforce + Evidence</h3>
+            <div class="decisions"><span class="d-allow">ALLOW</span><span class="d-constrain">CONSTRAIN</span><span class="d-review">REVIEW</span><span class="d-block">BLOCK</span></div>
+            <ul><li>Hash-chained ledger</li><li>Reasons + deciding layer recorded</li></ul></div>
+        </div>
+        <div class="brain-title">Wrapbox Core Brain — policy decision point (one brain, three arms)</div>
+      </div>
+
+      <!-- Destinations -->
+      <div class="col dest">
+        <div class="col-title">Resources &amp; destinations</div>
+        <button class="box b" id="github" data-info="github"><b>GitHub organization</b><small>38 repos · branches</small></button>
+        <button class="box b" id="postgres" data-info="postgres"><b>PostgreSQL</b><small>payments-prod · customer-db</small></button>
+        <button class="box b" id="aws" data-info="aws"><b>AWS</b><small>production · staging</small></button>
+        <button class="box b" id="saas" data-info="saas"><b>Stripe · Salesforce</b><small>refunds · tickets</small></button>
+        <button class="box r" id="extai" data-info="extai"><b>External AI vendors</b><small>OpenAI · Anthropic APIs</small></button>
+        <button class="box r dashed" id="unknown-dest" data-info="unknown-dest"><b>Unknown endpoint</b><small>185.220.101.42</small></button>
+      </div>
+
+      <!-- Feeds -->
+      <div class="feeds">
+        <button class="box g" id="contracts" data-info="contracts"><b>Intent Contracts</b><small>YAML · versioned · coverage-checked</small></button>
+        <button class="box g" id="registry" data-info="registry"><b>Capability Registry</b><small>what each plane can enforce today</small></button>
+        <button class="box g" id="kernel" data-info="kernel"><b>Safety Kernel pack</b><small>Wrapbox-managed · v2026.09.x</small></button>
+        <button class="box b" id="idp" data-info="idp"><b>Identity provider</b><small>Okta / Entra / Google SSO</small></button>
+        <button class="box b" id="mdm" data-info="mdm"><b>MDM</b><small>Jamf / Intune rollout</small></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="below">
+    <div class="panel">
+      <h2>Simulation log</h2>
+      <div class="log" id="log"><div class="empty">Pick a scenario above and press Simulate.</div></div>
+    </div>
+    <div class="panel">
+      <h2>Open questions</h2>
+      <ul class="q">
+        <li>Who owns Safety Kernel pack releases in production — P1 / P2 on-call for a rule that mis-fires?</li>
+        <li>Evidence residency for multi-region tenants (US / EU / IN) — one ledger per region or per tenant?</li>
+        <li>MCP gateway is observe-only until enforcement ships — is that an accepted gap for the pilot?</li>
+        <li>Encrypted archives fail closed by policy — confirm the exception path with Legal.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div id="drawer-root"></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const canvas = $("canvas"), svg = $("wires");
+
+  // ---------- wiring (Genoa-style orthogonal arrows) ----------
+  const EDGES = [
+    ["claude-code","endpoint"],["codex","endpoint"],["copilot","network"],["chat","network"],["finance","gateway"],["support","gateway"],["unknown","network"],
+    ["endpoint","s-normalize"],["network","s-normalize"],["gateway","s-normalize"],
+    ["s-enforce","github"],["s-enforce","postgres"],["s-enforce","aws"],["s-enforce","saas"],["s-enforce","extai"],["s-enforce","unknown-dest"],
+    ["intent","s-decide","down"],["review","s-decide","down"],["security","s-decide","down"],
+    ["contracts","s-decide","up"],["registry","s-decide","up"],["kernel","s-decide","up"],["idp","s-normalize","up"],["mdm","endpoint","up"],
+  ];
+  const rect = (el) => { const c = canvas.getBoundingClientRect(), r = el.getBoundingClientRect(); return { x: r.left - c.left, y: r.top - c.top, w: r.width, h: r.height }; };
+  const paths = new Map();
+  function draw() {
+    svg.querySelectorAll("path.wire").forEach((p) => p.remove()); paths.clear();
+    for (const [a, b, dir] of EDGES) {
+      const A = rect($(a)), B = rect($(b));
+      let d;
+      if (dir === "down") { const x1 = A.x + A.w/2, y1 = A.y + A.h, x2 = B.x + B.w/2, y2 = B.y; const my = y1 + (y2 - y1)*0.45; d = `M${x1},${y1} V${my} H${x2} V${y2 - 2}`; }
+      else if (dir === "up") { const x1 = A.x + A.w/2, y1 = A.y, x2 = B.x + B.w/2, y2 = B.y + B.h; const my = y1 - (y1 - y2)*0.45; d = `M${x1},${y1} V${my} H${x2} V${y2 + 2}`; }
+      else { const x1 = A.x + A.w, y1 = A.y + A.h/2, x2 = B.x, y2 = B.y + B.h/2; const mx = x1 + (x2 - x1)/2; d = `M${x1},${y1} H${mx} V${y2} H${x2 - 2}`; }
+      const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      p.setAttribute("d", d); p.setAttribute("class", "wire"); p.setAttribute("marker-end", "url(#arr)");
+      svg.appendChild(p); paths.set(a + ">" + b, p);
+    }
+  }
+  draw(); addEventListener("resize", draw); document.fonts?.ready?.then(draw);
+
+  // ---------- box details ----------
+  const INFO = {
+    "claude-code": { t: "b", h: "Claude Code", p: "Anthropic's coding agent, run by developers in the terminal. Reads and edits source, runs commands, pushes code.", real: "sim", d: { "Governed by": "Endpoint runtime + GitHub / AWS gateways", "Typical actions": "READ · WRITE · EXECUTE · DEPLOY", "In the app": "Agents · Simulation Lab" } },
+    "codex": { t: "b", h: "Codex", p: "OpenAI's coding agent. Same governance path as Claude Code.", real: "sim", d: { "Governed by": "Endpoint runtime + gateways", "In the app": "Agents" } },
+    "copilot": { t: "b", h: "Microsoft Copilot", p: "Enterprise copilot used from the browser; its uploads leave the laptop over HTTPS.", real: "sim", d: { "Governed by": "Network Extension", "In the app": "Agents · Live Actions" } },
+    "chat": { t: "b", h: "ChatGPT / Claude in the browser", p: "Employees paste files and prompts into hosted AI. Wrapbox sees the upload before it leaves the device.", real: "sim", d: { "Governed by": "Network Extension", "Typical outcome": "CONSTRAIN — PII tokenized in flight" } },
+    "finance": { t: "b", h: "Internal Finance Agent", p: "The company's own agent: SQL queries, exports, refunds.", real: "sim", d: { "Governed by": "SQL + Stripe gateways", "Watch for": "Mass export → Safety Kernel BLOCK" } },
+    "support": { t: "b", h: "Support Agent", p: "The company's support-desk agent: customer lookups, ticket replies, refunds under a standing permission.", real: "sim", d: { "Governed by": "SQL + SaaS gateways", "Limits": "Standing permission · row budget" } },
+    "unknown": { t: "r", h: "Unknown MCP agent", p: "Discovered on a finance laptop, never registered. Its destinations resolve to an unknown address, so the Safety Kernel treats every transfer as high-risk and fails safe.", real: "sim", d: { "Trust": "unknown · risk critical", "Decided by": "Safety Kernel — Unknown high-risk external transfer" } },
+    "endpoint": { t: "g", h: "Endpoint runtime (macOS)", p: "Endpoint Security extension on each managed laptop. Authorizes file open/read/write and process execution before it happens.", real: "sim", d: { "Rollout": "MDM push (Jamf / Intune)", "Skills": "file auth · exec auth · clipboard (pending)", "Status": "ENFORCED" } },
+    "network": { t: "g", h: "Network Extension", p: "Routes the laptop's HTTPS and WebSocket traffic through Wrapbox so uploads to AI tools and other sites are inspected in flight.", real: "sim", d: { "Skills": "HTTPS · WebSocket · file upload · QUIC (degraded)", "Status": "DEGRADED — QUIC downgraded" } },
+    "gateway": { t: "g", h: "Gateways", p: "Agents reach external systems through Wrapbox gateways: GitHub App, SQL proxy with row estimates, AWS broker role, SaaS key swap, MCP gateway.", real: "sim", d: { "GitHub · SQL · Stripe": "ENFORCED", "AWS": "DEGRADED — IAM/S3/ECS governed", "MCP": "UNDERSTOOD ONLY — observe" } },
+    "normalize": { t: "g", h: "1 · Normalize", p: "Different mechanisms become one verb (rm, os.remove, fs.unlink → DELETE), so policy is written once. The full identity chain travels with the action.", real: "yes", d: { "Ontology": "READ · WRITE · DELETE · EXECUTE · NETWORK_SEND · SECRET_ACCESS · PERMISSION_CHANGE · SECURITY_CHANGE · DEPLOY · DATA_EXPORT", "In the app": "Integrations → Action ontology" } },
+    "inspect": { t: "g", h: "2 · Inspect", p: "Content is parsed and classified into typed findings — PII, credentials, source code — with confidence and counts. What cannot be read (encrypted archives) is marked uninspectable and fails closed when a rule protects that data.", real: "yes (registry-shaped fixtures)", d: { "Detectors": "12 registered · 10 enforced", "In the app": "Core Brain → Registries" } },
+    "decide": { t: "g", h: "3 · Decide", p: "One engine, nine checks, always in this order. The strictest answer wins and the deciding layer is written down: contract clause, Safety Kernel rule, blast radius, context, task envelope, standing permission, break-glass, or default.", real: "yes", d: { "Precedence": "explicit BLOCK > safety > constrain > review", "Break-glass": "lifts a hold — never a Kernel BLOCK", "In the app": "Core Brain → How it decides" } },
+    "transform": { t: "g", h: "4 · Transform", p: "A CONSTRAIN decision rewrites the payload: emails and phones become reversible tokens, secrets are redacted, exports are limited. Originals are sealed in the Token Vault and only in-scope requesters can restore them.", real: "yes", d: { "Kinds": "tokenize · redact · mask · hash · limit · rewrite", "In the app": "Token Vault" } },
+    "enforce": { t: "g", h: "5 · Enforce + Evidence", p: "ALLOW proceeds, CONSTRAIN proceeds with the safer payload, REVIEW parks the step for a named approver, BLOCK stops it before execution. Every event is appended to a hash-chained ledger with its reasons.", real: "yes (hash chain illustrative)", d: { "Ledger": "prev → hash per event", "In the app": "Evidence · Live Actions" } },
+    "intent": { t: "g", h: "Intent Studio", p: "Policy authors describe rules in plain English; the drafter compiles them to a normalized contract that Build, Code/YAML, the tester and the runtime all share.", real: "yes", d: { "Guarantee": "one normalized Rule, one matcher", "Activation": "only if the needed skills exist" } },
+    "review": { t: "g", h: "Review Center", p: "REVIEW decisions arrive as bundles with blast radius, expiry and a safer alternative. The approver is routed by team; the requester can never approve their own action.", real: "yes", d: { "Actions": "Approve once · Approve scoped · Constrain · Deny", "Resume": "tasks continue automatically" } },
+    "security": { t: "g", h: "Break Glass + Kernel updates", p: "Security can open a scoped, time-boxed emergency override for one system, loudly recorded. Safety Kernel releases arrive in observe mode and are switched to enforce after review.", real: "yes", d: { "Override": "one resource · ≤ 60 min · notified", "Never yields": "the Safety Kernel" } },
+    "contracts": { t: "g", h: "Intent Contracts", p: "Versioned YAML contracts. Each clause carries the capabilities it needs; coverage is claimed truthfully (ENFORCED / DEGRADED / UNDERSTOOD ONLY).", real: "yes", d: { "In the app": "Intent Studio · Coverage Map" } },
+    "registry": { t: "g", h: "Capability Registry", p: "The single source of what each plane can enforce today. Coverage, onboarding rollout and contract activation all read it.", real: "yes", d: { "In the app": "Coverage Map → Skills" } },
+    "kernel": { t: "g", h: "Safety Kernel pack", p: "Built-in, always-on protections shipped as a versioned pack by Wrapbox: credential exfiltration, destructive production mutation, dangerous permission change, mass export, unknown transfers, history rewrite.", real: "yes (releases bundled in-app)", d: { "Lifecycle": "observe 7 days → enforce", "In the app": "Safety Kernel" } },
+    "idp": { t: "b", h: "Identity provider", p: "SSO ties every agent action to a real person; the directory sync brings in approvers and roles.", real: "sim", d: { "Options": "Okta · Microsoft Entra ID · Google Workspace" } },
+    "mdm": { t: "b", h: "MDM", p: "Pushes the endpoint runtime and the network content-filter profile to managed laptops.", real: "sim", d: { "Options": "Jamf Pro · Microsoft Intune" } },
+    "github": { t: "b", h: "GitHub organization", p: "Branch, push and PR operations flow through the GitHub gateway; force-pushes to main are held for review.", real: "sim", d: { "Gateway": "ENFORCED" } },
+    "postgres": { t: "b", h: "PostgreSQL", p: "Queries are preflighted with row estimates; destructive statements against production are blocked.", real: "sim", d: { "Gateway": "ENFORCED" } },
+    "aws": { t: "b", h: "AWS", p: "IAM, S3 and ECS deploys are governed through a broker role; other services are observed.", real: "sim", d: { "Gateway": "DEGRADED" } },
+    "saas": { t: "b", h: "Stripe · Salesforce", p: "Refunds and ticket replies go through gateway-scoped API keys; spend above budget needs a human.", real: "sim", d: { "Gateway": "ENFORCED" } },
+    "extai": { t: "r", h: "External AI vendors", p: "Hosted models. Approved destinations receive tokenized customer data; credentials never leave.", real: "sim", d: { "Classes": "APPROVED_AI · UNAPPROVED_AI" } },
+    "unknown-dest": { t: "r", h: "Unknown endpoint", p: "An address no destination class recognizes. Transfers here are blocked by the Safety Kernel regardless of company rules.", real: "sim", d: { "Class": "UNKNOWN_EXTERNAL" } },
+  };
+  const root = $("drawer-root");
+  function openInfo(key) {
+    const i = INFO[key]; if (!i) return;
+    const tag = i.t === "b" ? "Existing system" : i.t === "r" ? "External vendor" : "Wrapbox";
+    const real = /^yes/.test(i.real) ? `<span class="real yes">Real logic in the prototype${i.real.length > 3 ? " · " + i.real.slice(4).replace(/[()]/g, "") : ""}</span>` : `<span class="real sim">Simulated integration · behaviour representative</span>`;
+    root.innerHTML = `<div class="veil"></div><aside class="drawer" role="dialog" aria-label="${i.h}">
+      <button class="btn close" id="dclose">✕ Close</button>
+      <span class="tag ${i.t}">${tag}</span><h2>${i.h}</h2><p>${i.p}</p>${real}
+      <dl>${Object.entries(i.d).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl></aside>`;
+    root.querySelector(".veil").onclick = closeInfo; $("dclose").onclick = closeInfo;
+  }
+  function closeInfo() { root.innerHTML = ""; }
+  addEventListener("keydown", (e) => { if (e.key === "Escape") closeInfo(); });
+  document.querySelectorAll("[data-info]").forEach((el) => el.addEventListener("click", () => openInfo(el.dataset.info)));
+
+  // ---------- scenarios (decisions as returned by the prototype's engine) ----------
+  const SCENARIOS = [
+    { id: "env", name: "Claude Code reads .env (local secrets)", agent: "claude-code", plane: "endpoint", verb: "READ → SECRET_ACCESS", findings: "CREDENTIAL ×6 in .env", layer: "contract", why: '"Agents must not read local secrets files" (Engineering guardrails)', decision: "BLOCK", dest: null },
+    { id: "pii", name: "Priya sends customers.csv to an approved AI", agent: "chat", plane: "network", verb: "NETWORK_SEND", findings: "PII.EMAIL ×3 · PII.PHONE ×3", layer: "contract", why: '"Customer email addresses and phone numbers must be reversibly tokenized before transmission to external AI"', decision: "CONSTRAIN", transform: "6 values → EMAIL_TOKEN_001…, PHONE_TOKEN_004… (originals sealed in the vault)", dest: "extai" },
+    { id: "force", name: "Claude Code force-pushes main (14 commits)", agent: "claude-code", plane: "gateway", verb: "WRITE (git push --force origin main)", findings: "SOURCE_CODE · 14 commits rewritten · protected branch", layer: "contract", why: '"Force pushes to main require engineering review" (Engineering guardrails)', decision: "REVIEW", review: "Parked → Review Center · approver: Alex Morgan (Engineering Manager)", dest: "github" },
+    { id: "mcp", name: "Unknown MCP agent sends export.json to 185.220.101.42", agent: "unknown", plane: "network", verb: "NETWORK_SEND", findings: "customer data · destination class UNKNOWN_EXTERNAL", layer: "safety", why: "Safety Kernel — Unknown high-risk external transfer", decision: "BLOCK", dest: "unknown-dest" },
+    { id: "export", name: "Internal Finance Agent exports 500,000 customer rows", agent: "finance", plane: "gateway", verb: "DATA_EXPORT", findings: "PII · 500,000 rows · filedrop.example.org", layer: "safety", why: "Safety Kernel — Mass data export", decision: "BLOCK", dest: "postgres" },
+    { id: "iam", name: "Claude Code attaches AdministratorAccess in AWS", agent: "claude-code", plane: "gateway", verb: "PERMISSION_CHANGE (iam:AttachRolePolicy)", findings: "privileged · production · full admin authority", layer: "safety", why: "Safety Kernel — Dangerous permission change", decision: "BLOCK", dest: "aws" },
+    { id: "tests", name: "Claude Code runs npm test", agent: "claude-code", plane: "endpoint", verb: "EXECUTE (npm test)", findings: "none — no sensitive data", layer: "default", why: "No rule restricts this action", decision: "ALLOW", dest: null },
+  ];
+  const sel = $("scenario");
+  SCENARIOS.forEach((s) => { const o = document.createElement("option"); o.value = s.id; o.textContent = s.name; sel.appendChild(o); });
+  try { const saved = localStorage.getItem("wb-arch-scenario"); if (saved && SCENARIOS.some((s) => s.id === saved)) sel.value = saved; } catch {}
+  sel.addEventListener("change", () => { try { localStorage.setItem("wb-arch-scenario", sel.value); } catch {} });
+
+  const log = $("log"), outcome = $("outcome");
+  const sleep = (ms) => new Promise((r) => setTimeout(r, matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : ms));
+  let t0 = 0, running = false;
+  function line(kind, msg, cls = "") {
+    if (log.querySelector(".empty")) log.innerHTML = "";
+    const d = document.createElement("div");
+    d.innerHTML = `<span class="t">+${String(Date.now() - t0).padStart(4, "0")} ms</span><span class="k">${kind}</span><span class="m ${cls}">${msg}</span>`;
+    log.appendChild(d); log.scrollTop = log.scrollHeight;
+  }
+  const lit = (id, on = true) => { const el = $(id); if (el) el.classList.toggle("lit", on); };
+  const wire = (a, b, on = true) => { const p = paths.get(a + ">" + b); if (p) { p.classList.toggle("lit", on); p.setAttribute("marker-end", on ? "url(#arrlit)" : "url(#arr)"); } };
+  function clear() {
+    document.querySelectorAll(".lit").forEach((el) => el.classList.remove("lit"));
+    document.querySelectorAll(".done").forEach((el) => el.classList.remove("done", "blk"));
+    document.querySelectorAll(".decisions span, .stage li").forEach((el) => el.classList.remove("lit", "blk", "rev"));
+    paths.forEach((p) => { p.classList.remove("lit"); p.setAttribute("marker-end", "url(#arr)"); });
+    outcome.dataset.d = ""; outcome.innerHTML = "<i></i>no run yet";
+    log.innerHTML = '<div class="empty">Pick a scenario above and press Simulate.</div>';
+  }
+  async function run() {
+    if (running) return; running = true; $("run").disabled = true;
+    clear(); log.innerHTML = ""; t0 = Date.now();
+    const s = SCENARIOS.find((x) => x.id === sel.value);
+    const stages = ["s-normalize", "s-inspect", "s-decide", "s-transform", "s-enforce"];
+    lit(s.agent); line("agent", `${$(s.agent).querySelector("b").textContent} attempts: ${s.name}`); await sleep(650);
+    wire(s.agent, s.plane); lit(s.plane); line("intercept", `${$(s.plane).querySelector("b").textContent} holds the action before it executes`); await sleep(700);
+    wire(s.plane, "s-normalize"); lit("s-normalize"); line("normalize", `→ ${s.verb} · identity chain attached`); await sleep(700);
+    lit("s-inspect"); line("inspect", s.findings); await sleep(700);
+    lit("s-decide");
+    const order = ["uninspectable", "contract", "safety", "blast", "context", "envelope", "standing", "breakglass", "default"];
+    for (const layer of order) {
+      const li = $("s-decide").querySelector(`[data-layer="${layer}"]`);
+      li.classList.add("lit"); await sleep(140);
+      if (layer === s.layer) { li.classList.add(s.decision === "BLOCK" ? "blk" : s.decision === "REVIEW" ? "rev" : ""); line("decide", `${s.why} → <b>${s.decision}</b>`, "d-" + s.decision.toLowerCase()); break; }
+      li.classList.remove("lit");
+    }
+    await sleep(700);
+    if (s.decision === "CONSTRAIN") { lit("s-transform"); line("transform", s.transform); await sleep(800); } else { lit("s-transform", false); }
+    lit("s-enforce"); const pill = $("s-enforce").querySelector(".d-" + s.decision.toLowerCase()); pill.classList.add("lit");
+    line("evidence", `evt sealed · hash-chained · decided by: ${s.layer}`); await sleep(500);
+    if (s.decision === "REVIEW") { wire("review", "s-decide"); lit("review"); line("review", s.review, "d-review"); }
+    if (s.decision === "ALLOW" || s.decision === "CONSTRAIN") { if (s.dest) { wire("s-enforce", s.dest); lit(s.dest); line("deliver", `${$(s.dest).querySelector("b").textContent} receives ${s.decision === "CONSTRAIN" ? "the tokenized payload" : "the request"}`); } else line("deliver", "the command runs unchanged on the laptop"); }
+    if (s.decision === "BLOCK") { line("enforce", `stopped before execution — ${s.dest ? $(s.dest).querySelector("b").textContent + " never receives it" : "nothing leaves the laptop"}`, "d-block"); if (s.dest) $(s.dest).classList.add("done", "blk"); }
+    if (s.decision === "REVIEW") line("enforce", `held — ${s.dest ? $(s.dest).querySelector("b").textContent + " untouched until a human decides" : "waiting"}`, "d-review");
+    outcome.dataset.d = s.decision; outcome.innerHTML = `<i></i>${s.decision} · decided by ${s.layer}`;
+    running = false; $("run").disabled = false;
+  }
+  $("run").addEventListener("click", run);
+  $("reset").addEventListener("click", clear);
+})();
+</script>
