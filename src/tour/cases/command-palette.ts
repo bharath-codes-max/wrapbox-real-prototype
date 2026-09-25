@@ -22,6 +22,7 @@ const c: TourCase = {
       action: "click",
       title: "One search box on every screen",
       body: "Sam needs to know if any AI agent tried to send financial data out, but doesn't know the menus. The top search box (or ⌘K) lists every screen.",
+      say: "Okay, Sam from finance wants to know if any AI agent tried to send financial data out, but doesn't know the menus. The top search box, or Command K, lists every screen.",
       waitFor: ".palette",
     },
     {
@@ -32,6 +33,7 @@ const c: TourCase = {
       text: "evid",
       title: "Type a few letters",
       body: "The list narrows as Sam types. After four letters, only one screen is left: Evidence, the record of every decision Wrapbox has made.",
+      say: "The list narrows as Sam types, and after just four letters, only one screen is left: Evidence, the record of every decision Wrapbox has made.",
       waitFor: { selector: ".palette:has(.palette-item:only-child)", text: "Evidence" },
     },
     {
@@ -39,6 +41,7 @@ const c: TourCase = {
       action: "click",
       title: "Straight to the right screen",
       body: "One click and Sam is there, no menus learned. Each record says who acted, through which AI agent, what data was involved and what Wrapbox decided.",
+      say: "Nice, one click and Sam's there, no menus to learn. Each record says who acted, through which AI agent, what data was involved, and what Wrapbox decided.",
       waitFor: { selector: ".page-head", text: "Evidence Explorer" },
     },
     {
@@ -47,6 +50,7 @@ const c: TourCase = {
       text: "financial",
       title: "One word, one record",
       body: "Evidence has its own search. Sam types “financial”, and 20 records narrow to one, tagged FINANCIAL.ACCOUNT: customer account numbers.",
+      say: "Evidence has its own search too. Sam types the word financial, and twenty records narrow down to one, tagged as financial account data, meaning customer account numbers.",
       waitFor: { selector: ".ecard", text: "export.json" },
     },
     {
@@ -54,18 +58,21 @@ const c: TourCase = {
       action: "click",
       title: "There it is",
       body: "An unregistered AI tool on Alex Morgan's finance laptop tried to send account numbers to an unknown address. BLOCK means Wrapbox stopped it. Sam opens the record.",
+      say: "There it is: an unregistered AI tool on Alex Morgan's finance laptop tried to send account numbers to an unknown address. Wrapbox stopped it, and Sam opens the record.",
       waitFor: { within: ".drawer", selector: "h2" },
     },
     {
       target: { within: ".drawer", selector: "ul", text: "Unknown high-risk external transfer" },
       title: "Stopped by an always-on rule",
       body: "The reason is written down. The Safety Kernel, Wrapbox's built-in rules no customer can switch off, stops sensitive data from going to an outside address nobody has vetted.",
+      say: "The reason's written right there. The Safety Kernel, Wrapbox's built-in rules that no customer can switch off, stops sensitive data going to an outside address nobody has vetted.",
       pad: 12,
     },
     {
       target: { within: ".drawer", selector: ".grid", text: "Blocked before transmission" },
       title: "Sam's answer, no menus needed",
       body: "Three clicks and two short searches gave Sam the answer: the file held customer account numbers, and Wrapbox stopped it before that address received anything.",
+      say: "So that's Sam's answer, from three clicks and two short searches. The file held customer account numbers, and Wrapbox stopped it before that address got anything.",
     },
   ],
 };

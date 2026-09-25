@@ -46,7 +46,7 @@ function useStageScale() {
   return scale;
 }
 
-export function Deck({ slides = SLIDES }: { slides?: SlideDef[] }) {
+export function Deck({ slides = SLIDES, showNumber = true }: { slides?: SlideDef[]; showNumber?: boolean }) {
   const SLIDES_ = slides;
   const [idx, setIdx] = useState(() => readHash(SLIDES_.length));
   const [step, setStep] = useState(0);
@@ -140,7 +140,7 @@ export function Deck({ slides = SLIDES }: { slides?: SlideDef[] }) {
               aria-roledescription="slide"
               aria-label={`${idx + 1} of ${SLIDES_.length}: ${slide.title}`}
             >
-              <span className="stage-num" aria-hidden="true">{String(idx + 1).padStart(2, "0")} / {SLIDES_.length}</span>
+              {showNumber && <span className="stage-num" aria-hidden="true">{String(idx + 1).padStart(2, "0")} / {SLIDES_.length}</span>}
               <div className="stage-inner">
                 <Cur active step={step} />
               </div>

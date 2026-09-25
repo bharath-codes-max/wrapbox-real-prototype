@@ -26,6 +26,8 @@ export interface TourStep {
   /** Plain words for everyone: a short headline and one or two sentences. */
   title: string;
   body: string;
+  /** What the narrator says on this step (spoken, friendly, plain English). Falls back to title + body. */
+  say?: string;
   /** After the action, wait until this appears (e.g. the result card). */
   waitFor?: Target;
   /** Extra time (ms) to stay on the result after the action. */

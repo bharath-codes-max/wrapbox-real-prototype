@@ -18,22 +18,26 @@ const c: TourCase = {
       action: "click",
       title: "Open the Trust Graph",
       body: "Maya, a security analyst, needs one picture of who uses which AI agents and what those agents try to reach. Wrapbox builds it from every action agents attempted.",
+      say: "Okay, Maya, a security analyst, needs one picture of who uses which AI agents and what those agents try to reach. Wrapbox builds it from every action they attempted.",
       waitFor: { selector: ".page-head", text: "Trust Graph" },
     },
     {
       target: ".metricband",
       title: "The numbers at a glance",
       body: "Six people, eight AI agents, and twelve systems, files and addresses the agents tried to reach. One agent is a stranger nobody registered; seven connections carried high-risk activity.",
+      say: "Up top, there are six people, eight AI agents, and twelve systems, files and addresses they tried to reach. One agent is a stranger nobody registered, and seven connections carried high-risk activity.",
     },
     {
       target: ".tg-canvas",
       title: "Read the map left to right",
       body: "People → their AI agents → what the agents tried to reach. Red lines mean high risk.",
+      say: "The map reads left to right: people, then their AI agents, then what those agents tried to reach. Any red line means high risk.",
     },
     {
       target: { selector: "svg text", text: "Unknown MCP agent" },
       title: "A red dot is a stranger",
       body: "Nobody registered this \"Unknown MCP agent\", an unvetted AI plug-in; Wrapbox found it itself. Red marks strangers: this agent and the unknown address it tried to reach.",
+      say: "Hmm, this red dot's the Unknown M-C-P agent, an unvetted AI plug-in nobody registered. Wrapbox found it itself, and red marks strangers: this agent and the unknown address it tried to reach.",
       placement: "left",
       pad: 26,
     },
@@ -42,6 +46,7 @@ const c: TourCase = {
       action: "click",
       title: "Open the flagged connections",
       body: "Eight connections are flagged: the seven high-risk lines, plus Alex Morgan's link to the stranger agent. Each gets a card saying why it was flagged.",
+      say: "Next, Maya opens the flagged connections. There are eight: the seven high-risk lines, plus Alex Morgan's link to the stranger agent, and each gets a card saying why.",
       waitFor: { selector: ".card", text: "Risky relationship detected" },
     },
     {
@@ -49,6 +54,7 @@ const c: TourCase = {
       action: "click",
       title: "Trace the stranger's send attempts",
       body: "Two attempts to send data to the unknown address, flagged three ways: high-risk activity, an unregistered agent, an unknown address. Clicking focuses the map on this agent.",
+      say: "This card shows two attempts to send data to that unknown address, flagged three ways: high risk, an unregistered agent, and an unknown address. Clicking it focuses the map on this agent.",
       waitFor: ".ecard.selected",
     },
     {
@@ -56,6 +62,7 @@ const c: TourCase = {
       action: "click",
       title: "Only its connections remain",
       body: "Back on the map, everything else fades. The stranger links to one person, Alex Morgan, and one place: the unknown address, over a red high-risk line.",
+      say: "Back on the map, everything else fades away. The stranger links to just one person, Alex Morgan, and one place, that unknown address, over a red high-risk line.",
       waitFor: ".tg-canvas",
     },
     {
@@ -63,6 +70,7 @@ const c: TourCase = {
       action: "click",
       title: "Did anything get out?",
       body: "Clicking the high-risk number opens the Evidence Explorer: the record of every action Wrapbox checked, with who, which agent, what data and the decision.",
+      say: "Did anything actually get out? Maya clicks the high-risk number, which opens the Evidence Explorer, the record of every action Wrapbox checked: who, which agent, what data, and the decision.",
       waitFor: { selector: ".page-head", text: "Evidence Explorer" },
     },
     {
@@ -71,12 +79,14 @@ const c: TourCase = {
       value: "a-unknown-mcp",
       title: "Filter to the stranger agent",
       body: "Maya narrows the record to the Unknown MCP agent. Exactly two actions come back: the same two send attempts traced on the map.",
+      say: "Maya filters the record down to the Unknown M-C-P agent, and exactly two actions come back, the same two send attempts we just traced on the map.",
       waitFor: { selector: ".fbar", text: "Showing 2 of" },
     },
     {
       target: ".ecard-grid",
       title: "Both attempts were blocked",
       body: "One tried to send a secret server-login key, the other a file of customer IDs and account numbers. Both say BLOCK: Wrapbox stopped them before any data left.",
+      say: "So, one tried to send a secret server login key, the other customer I-Ds and account numbers. Wrapbox blocked both before any data left, and Maya's traced the stranger end to end.",
       placement: "top",
     },
   ],

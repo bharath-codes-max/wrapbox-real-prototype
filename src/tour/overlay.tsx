@@ -3,7 +3,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useOverlay, type Rect } from "./overlay-store";
 
-const GAP = 18, EDGE = 14, CARD_W = 400;
+const GAP = 18, EDGE = 14, CARD_W = 420;
 
 function place(r: Rect | null, pad: number, size: { w: number; h: number }, want: string, vw: number, vh: number) {
   if (!r) return { left: (vw - size.w) / 2, top: (vh - size.h) / 2 };

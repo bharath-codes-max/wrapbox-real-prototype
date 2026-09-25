@@ -20,6 +20,7 @@ const c: TourCase = {
       action: "click",
       title: "Open Integrations",
       body: "Priya, the admin, wants to see where Wrapbox is plugged in. Integrations lists every place it checks AI agents: laptops, the network, GitHub, AWS and more.",
+      say: "Okay, Priya's the admin here, and wants to know where Wrapbox is plugged in today. Integrations lists every place it checks AI agents: laptops, the network, GitHub, A-W-S and more.",
       waitFor: { selector: ".page-head", text: "The places Wrapbox sits" },
     },
     {
@@ -28,6 +29,7 @@ const c: TourCase = {
       // The band's own note for Degraded is "some parts only watched" (AWS governs only IAM,
       // S3 and ECS deploys; everything else there is watched), so no "most" here.
       body: "Four are enforced: Wrapbox can stop a bad action there before it runs. Two are degraded, stopping some parts and only watching others, and one only watches.",
+      say: "So, how strong is each connection? In four places Wrapbox can stop a bad action before it runs, two stop some parts and only watch the rest, and one only watches.",
     },
     {
       // Also resets the page to this tab if an earlier run left another one open.
@@ -35,6 +37,7 @@ const c: TourCase = {
       action: "click",
       title: "Every coding agent, same checks",
       body: "Claude Code, Cursor and Codex go through the same checks. This terminal replays a recorded action: tests run on Daniel's laptop, held and checked by Wrapbox, then allowed.",
+      say: "Claude Code, Cursor and Codex all go through the same checks. This terminal replays a recorded test run on Daniel's laptop: Wrapbox held it, checked it, then allowed it.",
       // The trace itself: the whole terminal is taller than the space under the header.
       waitFor: ".aterm-body",
     },
@@ -42,11 +45,13 @@ const c: TourCase = {
       target: { selector: ".ecard", text: "GitHub Organization" },
       title: "A fully enforced connection",
       body: "Pushes, pull requests and branch changes on the checkout-service code go through Wrapbox first, so it can stop a bad one. Two recorded actions went through here.",
+      say: "GitHub is fully enforced. Pushes, pull requests and branch changes on the checkout service go through Wrapbox first, so it can stop a bad one, and two recorded actions came through here.",
     },
     {
       target: { selector: ".ecard", text: "macOS Endpoint runtime" },
       title: "Protection on the laptops",
       body: "On enrolled laptops, Wrapbox checks file access and program launches before they happen. Clipboard control is marked PENDING: planned, and not counted as protection yet.",
+      say: "On enrolled laptops, Wrapbox checks file access and program launches before they happen. Clipboard control is marked pending, meaning it's planned, but not counted as protection yet.",
     },
     {
       target: { selector: ".ecard", text: "MCP registry" },
@@ -54,12 +59,14 @@ const c: TourCase = {
       // The card's 2 recorded actions are the unregistered server's network sends, which the
       // Network Extension blocked, so don't imply Wrapbox failed to stop that server.
       body: "MCP servers give AI agents extra tools. “Understood only” means Wrapbox sees and sorts their calls but can't stop them yet, and it has spotted one unregistered server.",
+      say: "M-C-P servers give AI agents extra tools. Here, understood only means Wrapbox sees and sorts their calls but can't stop them yet, and it's spotted one unregistered server.",
     },
     {
       target: { selector: "button.tab", text: "Identity model" },
       action: "click",
       title: "Who is behind every action",
       body: "Priya opens the Identity model. The action the terminal replayed is traced end to end: Daniel Kim, on Daniel-MBP, with Claude Code, through the terminal, on checkout-service.",
+      say: "Priya opens the identity model. That replayed action is traced end to end: Daniel Kim, on Daniel's laptop, using Claude Code, through the terminal, on checkout service.",
       // The tabs + panel (only once the Identity tab is showing): its centre falls in the blank
       // gap above the chain, so the cursor doesn't cover the "Through: Terminal" chip.
       waitFor: { selector: ".page-tabs", text: "is never an identity" },
@@ -69,12 +76,14 @@ const c: TourCase = {
       target: { selector: ".small.dim", text: "is never an identity" },
       title: "A real person, not an app",
       body: "Daniel's name comes from the company sign-in (Okta), not from the app the traffic came through. Every decision and evidence record carries this full chain.",
+      say: "Daniel's name comes from the company sign-in, Okta, not from the app the traffic came through. And every decision and evidence record carries this whole chain.",
     },
     {
       target: { selector: "button.tab", text: "Action ontology" },
       action: "click",
       title: "Many ways, one plain verb",
       body: "Agents can do the same thing in many ways. The Action ontology, Wrapbox's dictionary of actions, turns each way into one plain verb, like DELETE.",
+      say: "Agents can do the same thing in lots of ways. The action ontology, which is Wrapbox's dictionary of actions, turns each way into one plain verb, like delete.",
       waitFor: { selector: ".ecard", text: "rm build/tmp.txt" },
     },
     {
@@ -83,6 +92,7 @@ const c: TourCase = {
       text: "tmp.txt",
       title: "Three ways, one rule",
       body: "Priya searches for one file. Deleting it with a shell command, Python or Node.js is the same DELETE, so one rule about deleting covers all three.",
+      say: "Priya searches for one file, and here's the cool part: deleting it with a shell command, Python or Node J-S is the same delete, so one rule about deleting covers all three.",
       waitFor: ".ecard-grid",
       hold: 1800,
     },

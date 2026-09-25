@@ -59,7 +59,7 @@ function CaseIndex() {
 }
 
 if (tc) {
-  const runner = new Runner(tc, { mode, speed: mode === "play" ? num("speed", 1) : 0, from: num("from", 0), shot: num("shot", 0), shotAfter: q.has("after") });
+  const runner = new Runner(tc, { mode, speed: mode === "play" ? num("speed", 1) : 0, from: num("from", 0), shot: num("shot", 0), shotAfter: q.has("after"), voice: mode === "play" && q.get("voice") !== "0" });
   (window as unknown as { __tour: Runner }).__tour = runner;
 
   // The deck drives play / pause.
@@ -67,6 +67,7 @@ if (tc) {
     const d = e.data as { type?: string; cmd?: string } | null;
     if (!d || d.type !== "wrapbox-tour-cmd") return;
     if (d.cmd === "pause") runner.pause(); else if (d.cmd === "play") runner.play(); else if (d.cmd === "toggle") runner.toggle();
+    else if (d.cmd === "voice-on") runner.setVoice(true); else if (d.cmd === "voice-off") runner.setVoice(false);
   });
   // Embedded: deck shortcuts keep working even when focus is inside the app.
   if (window.parent !== window) {

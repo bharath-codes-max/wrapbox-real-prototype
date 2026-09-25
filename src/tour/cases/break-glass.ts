@@ -19,6 +19,7 @@ const c: TourCase = {
       text: "SEV-1: checkout down, hotfix v2.14.1 must ship now",
       title: "An emergency, in plain words",
       body: "Checkout is down. Priya, the admin, opens Break Glass, Wrapbox's emergency override, for Alex's team. It won't start without a written reason, which stays on record.",
+      say: "Checkout's down, and Alex's team has the fix, but production deploys normally wait for a reliability engineer. So Priya, the admin, opens Break Glass, the emergency override, and writes the required reason.",
       placement: "top",
     },
     {
@@ -27,6 +28,7 @@ const c: TourCase = {
       value: "1",
       title: "One system, twenty minutes",
       body: "The fix ships to AWS Production, so the override covers only that one system. It lasts 20 minutes, can't be extended, and 60 is the most anyone gets.",
+      say: "The fix ships to A-W-S Production, so the override covers only that one system. It lasts twenty minutes, can't be extended, and sixty is the most anyone gets.",
       waitFor: { selector: ".grid.g2", text: "Covers only" },
       placement: "bottom",
     },
@@ -35,6 +37,7 @@ const c: TourCase = {
       action: "click",
       title: "Switch it on, loudly",
       body: "One click and it's live, with a countdown already running. It records the reason, who asked, and who was notified: Maya in security, and Alex.",
+      say: "One click and it's live, with the countdown already ticking. It records the reason, who asked, and who got notified: Maya in security, and Alex.",
       waitFor: { selector: "section.card", text: "BREAK-GLASS ACTIVE" },
     },
     {
@@ -43,6 +46,7 @@ const c: TourCase = {
       action: "click",
       title: "Watch the fix get checked",
       body: "Simulation Lab runs agent actions on simulated systems through Wrapbox's real checks. The Gateway tab lists actions on company systems, each showing what Wrapbox would decide right now.",
+      say: "Over in Simulation Lab, agent actions run on simulated systems through Wrapbox's real checks. The Gateway tab lists actions on company systems, each with what Wrapbox would decide right now.",
       waitFor: { selector: ".card > div", text: "Deploy checkout hotfix" },
     },
     {
@@ -50,6 +54,7 @@ const c: TourCase = {
       action: "click",
       title: "Normally, this waits for a yes",
       body: "Claude Code, Daniel's AI coding agent, ships the fix. It's usually REVIEW (paused until a reliability engineer approves), but with the override on, the forecast reads ALLOW.",
+      say: "Claude Code, Daniel's coding agent, ships the fix. Normally that pauses until a reliability engineer says yes, but with the override on, the forecast says it's allowed.",
       waitFor: { selector: ".card", text: "Expected under the brief" },
     },
     {
@@ -57,6 +62,7 @@ const c: TourCase = {
       action: "click",
       title: "Run it: it goes through",
       body: "ALLOW: the deploy runs straight away. Wrapbox shows why: the company rule still asks for a reliability engineer's yes, but the emergency override made the call.",
+      say: "Okay, let's run it, and the deploy goes straight through. Wrapbox shows why: the company rule still wants a reliability engineer's yes, but the emergency override made the call.",
       waitFor: { selector: ".pipe-stage", text: "Decision: ALLOW" },
       pad: 0,
     },
@@ -65,6 +71,7 @@ const c: TourCase = {
       action: "click",
       title: "Now try something dangerous",
       body: "Same system, very different action: Claude Code tries to give an automation account full admin power over AWS Production.",
+      say: "Now let's try something dangerous. Same system, very different action: Claude Code tries to give an automation account full admin power over A-W-S Production.",
       waitFor: { selector: ".card", text: "AdministratorAccess" },
     },
     {
@@ -72,6 +79,7 @@ const c: TourCase = {
       action: "click",
       title: "Still blocked, override or not",
       body: "BLOCK: it never runs. The Safety Kernel, Wrapbox's built-in safety rules, stopped it, and no emergency override can lift those, even on the covered system.",
+      say: "This time it's stopped before it ever runs. Wrapbox's built-in safety rules, the Safety Kernel, blocked it, and no emergency override can lift those, even on the covered system.",
       waitFor: { selector: ".pipe-stage", text: "Decision: BLOCK" },
       pad: 0,
     },
@@ -80,6 +88,7 @@ const c: TourCase = {
       action: "click",
       title: "Everything it let through",
       body: "Back on Break Glass, everything the override let through fits on one line: the deploy. It's also stamped BREAK-GLASS in Evidence, the record of every decision Wrapbox makes.",
+      say: "Back on Break Glass, everything the override let through fits on one line: the deploy. It's also stamped break glass in Evidence, where Wrapbox records every decision it makes.",
       waitFor: { selector: "section.card > div", text: "Overridden under this session" },
     },
     {
@@ -87,6 +96,7 @@ const c: TourCase = {
       action: "click",
       title: "Fixed? End it now",
       body: "The fix is live, so the override is ended early. Its record stays: the reason, the system, the time allowed and the one action it overrode.",
+      say: "Nice, the fix is live, so the override ends early. Its record stays: the reason, the system, the time allowed, and the one action it overrode.",
       waitFor: { selector: ".ecard", text: "SEV-1" },
     },
   ],

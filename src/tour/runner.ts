@@ -10,6 +10,12 @@
 import type { Target, TourCase, TourStep } from "./types";
 import { overlay, type Rect } from "./overlay-store";
 import { advanceTask, installKernelUpdate, simulateById, startFreshWorkspace, startTask } from "../state/store";
+import VOICE from "./voice.json";
+
+// Narration clips (generated at build time by docs/_voice.ts). Dev serves them from
+// /docs/voice; the published tour.html sits next to its voice/ folder.
+const VOICE_BASE = import.meta.env.DEV ? "/docs/voice/" : "voice/";
+const CLIPS = (VOICE as { cases: Record<string, { file: string; ms: number }[]> }).cases;
 
 export type Mode = "play" | "check" | "shot";
 export interface RunOptions {
@@ -18,6 +24,7 @@ export interface RunOptions {
   from: number;         // play: fast-forward to this step first
   shot: number;         // shot: the step to freeze on
   shotAfter: boolean;   // shot: perform the step's action before freezing
+  voice: boolean;       // play: narrate each step (AI voice)
 }
 export interface StepResult { i: number; title: string; found: boolean; waitFor?: boolean; error?: string }
 
@@ -103,12 +110,33 @@ export class Runner {
   private stopped = false;
   private tracked: HTMLElement | null = null;
   private raf = 0;
+  private audio: HTMLAudioElement | null = null;
   results: StepResult[] = [];
 
   constructor(private tc: TourCase, private opt: RunOptions) {}
 
-  pause() { this.paused = true; overlay.set({ status: "paused" }); this.post(); }
-  play() { this.paused = false; overlay.set({ status: "playing" }); this.post(); }
+  pause() { this.paused = true; this.audio?.pause(); overlay.set({ status: "paused" }); this.post(); }
+  play() { this.paused = false; if (this.audio && !this.audio.ended && this.opt.voice) void this.audio.play().catch(() => {}); overlay.set({ status: "playing" }); this.post(); }
+  /** Sound on/off from the deck. Turning it on mid-line resumes that line. */
+  setVoice(on: boolean) {
+    this.opt.voice = on;
+    if (!this.audio) return;
+    this.audio.muted = !on;
+    if (on && !this.paused && !this.audio.ended) this.audio.play().then(() => this.post({ voiceBlocked: false })).catch(() => this.post({ voiceBlocked: true }));
+  }
+  /** Starts step i's narration; returns its length in ms (0 when there is none). */
+  private narrate(i: number): number {
+    const clip = CLIPS[this.tc.id]?.[i];
+    this.audio?.pause();
+    if (!clip || !clip.ms) return 0;
+    const a = new Audio(VOICE_BASE + clip.file);
+    a.muted = !this.opt.voice;
+    this.audio = a;
+    // Browsers only allow sound after the viewer has interacted with the page;
+    // until then the walkthrough keeps its pace silently and the deck offers a sound button.
+    a.play().then(() => this.post({ voiceBlocked: false })).catch(() => this.post({ voiceBlocked: true }));
+    return clip.ms;
+  }
   toggle() { if (this.paused) this.play(); else this.pause(); }
   stop() { this.stopped = true; cancelAnimationFrame(this.raf); }
 
@@ -301,7 +329,8 @@ export class Runner {
     }
     this.track(el);
     overlay.set({ rect: el ? overlay.get().rect : null, pad: step.pad ?? 8, caption: { title: step.title, body: step.body, index: i, total, placement: step.placement ?? "auto", centered: !el } });
-    const read = Math.min(9500, Math.max(3400, 1100 + words(step.title + " " + step.body) * 240));
+    const spoken = this.narrate(i);
+    const read = Math.max(spoken + 600, Math.min(9500, Math.max(3400, 1100 + words(step.title + " " + step.body) * 240)));
     const acting = (step.action ?? "none") !== "none";
     await this.wait(acting ? read * 0.5 : read);
     if (acting) {
@@ -365,6 +394,7 @@ export class Runner {
     this.post();
     await this.wait(900);
     for (let i = from; i < steps.length && !this.stopped; i++) await this.slow(i);
+    if (this.audio && !this.audio.ended) await new Promise<void>((r) => { this.audio!.addEventListener("ended", () => r(), { once: true }); setTimeout(r, 15000); });
     overlay.set({ status: "done" });
     this.post();
     return this.results;

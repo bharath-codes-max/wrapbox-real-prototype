@@ -2,15 +2,15 @@
 // is the actual app (tour.html) running a walkthrough: a cursor, typing and
 // clicks through the product's own screens, pausing on a spotlight with a
 // plain-language card. The right column follows along step by step.
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Pause, Play, RotateCcw, SkipBack, SkipForward, Check } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Pause, Play, RotateCcw, SkipBack, SkipForward, Check, Volume2, VolumeX } from "lucide-react";
 import type { SlideProps } from "./deck";
-import { Reveal, Eyebrow, Display, Lead, SHOT } from "./ui";
+import { Reveal, Display, Lead, SHOT } from "./ui";
 import { photoOf } from "../ui/logos";
 import { CASES } from "../tour/cases";
 import type { TourCase } from "../tour/types";
 
-const APP_W = 1280, APP_H = 800, SCALE = 0.86;
+const APP_W = 1280, APP_H = 800, SCALE = 0.76;
 
 function Face({ userId, name, size = 40 }: { userId: string; name: string; size?: number }) {
   const src = photoOf(userId);
@@ -26,9 +26,8 @@ export function LiveIntro() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 22 }}>
       <div>
-        <Reveal><Eyebrow>Use cases · played live in the product</Eyebrow></Reveal>
         <Reveal i={1}><Display sm>{CASES.length} jobs, played live in the real product.</Display></Reveal>
-        <Reveal i={2}><Lead style={{ fontSize: 20, marginTop: 12, maxWidth: 1240 }}>Each slide runs the actual Wrapbox app. A cursor does what the person would do, and at every important moment it pauses, lights up that part of the screen and explains it in plain words. Press <b>P</b> to pause; click any step to jump to it.</Lead></Reveal>
+        <Reveal i={2}><Lead style={{ fontSize: 20, marginTop: 12, maxWidth: 1240 }}>Each slide runs the actual Wrapbox app. A cursor does what the person would do, and at every important moment it pauses, lights up that part of the screen and explains it in plain words. A friendly AI voice talks you through it. Press <b>P</b> to pause, <b>M</b> for sound; click any step to jump to it.</Lead></Reveal>
       </div>
       <div className="lvroles">
         {roles.map((role, k) => (
@@ -49,7 +48,7 @@ export function LiveIntro() {
 }
 
 /* ---------- one live case ---------- */
-interface TourMsg { type: "wrapbox-tour"; id: string; step: number; total: number; status: string; error?: string; route?: string }
+interface TourMsg { type: "wrapbox-tour"; id: string; step: number; total: number; status: string; error?: string; route?: string; voiceBlocked?: boolean }
 
 // The page the app is on, by its name in the product's own navigation.
 const PAGE: Record<string, string> = {
@@ -61,6 +60,9 @@ const PAGE: Record<string, string> = {
 };
 const pageOf = (route: string) => PAGE[route.split("/")[0]] ?? "Wrapbox";
 
+const VOICE_KEY = "wrapbox-deck-voice";
+function readVoicePref(): boolean { try { return localStorage.getItem(VOICE_KEY) !== "0"; } catch { return true; } }
+
 export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & SlideProps) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [run, setRun] = useState({ key: 0, from: 0 });
@@ -68,6 +70,8 @@ export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & S
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState<string | undefined>();
   const [route, setRoute] = useState(tc.start);
+  const [voice, setVoice] = useState(readVoicePref);
+  const [voiceBlocked, setVoiceBlocked] = useState(false);
   const total = tc.steps.length;
   const poster = Math.min(tc.poster ?? 1, total - 1);
 
@@ -76,6 +80,7 @@ export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & S
       const d = e.data as TourMsg | null;
       if (!d || d.type !== "wrapbox-tour" || d.id !== tc.id || e.source !== frame.current?.contentWindow) return;
       if (d.route) setRoute(d.route);
+      if (typeof d.voiceBlocked === "boolean") setVoiceBlocked(d.voiceBlocked);
       if (SHOT) return; // stills keep the poster step; only the page name is taken from the app
       setStep(d.step); setStatus(d.status); setError(d.error);
     };
@@ -85,30 +90,40 @@ export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & S
 
   const send = useCallback((cmd: string) => frame.current?.contentWindow?.postMessage({ type: "wrapbox-tour-cmd", cmd }, "*"), []);
   const restartAt = useCallback((i: number) => { setStep(i); setStatus("loading"); setError(undefined); setRun((r) => ({ key: r.key + 1, from: Math.min(Math.max(0, i), total - 1) })); }, [total]);
+  const toggleVoice = useCallback(() => {
+    // A click is the gesture browsers need before playing sound; an on-switch while blocked just retries.
+    const on = voiceBlocked ? true : !voice;
+    setVoice(on); setVoiceBlocked(false);
+    try { localStorage.setItem(VOICE_KEY, on ? "1" : "0"); } catch { /* private mode */ }
+    send(on ? "voice-on" : "voice-off");
+  }, [voice, voiceBlocked, send]);
 
-  // P pauses / resumes — typed here or inside the app frame.
+  // P pauses / resumes, M toggles the voice — typed here or inside the app frame.
   useEffect(() => {
-    const on = (e: KeyboardEvent) => { if (e.key === "p" || e.key === "P") send("toggle"); };
-    const onMsg = (e: MessageEvent) => { const d = e.data as { type?: string; key?: string } | null; if (d?.type === "wrapbox-tour-key" && (d.key === "p" || d.key === "P")) send("toggle"); };
+    const act = (k: string) => { if (k === "p" || k === "P") send("toggle"); if (k === "m" || k === "M") toggleVoice(); };
+    const on = (e: KeyboardEvent) => act(e.key);
+    const onMsg = (e: MessageEvent) => { const d = e.data as { type?: string; key?: string } | null; if (d?.type === "wrapbox-tour-key" && d.key) act(d.key); };
     window.addEventListener("keydown", on); window.addEventListener("message", onMsg);
     return () => { window.removeEventListener("keydown", on); window.removeEventListener("message", onMsg); };
-  }, [send]);
+  }, [send, toggleVoice]);
 
-  const src = SHOT
+  // The sound setting is read when a run starts; toggling it later is a message, never a reload.
+  const voiceRef = useRef(voice);
+  voiceRef.current = voice;
+  const src = useMemo(() => SHOT
     ? `tour.html?case=${tc.id}&shot=${poster}&after=1`
-    : `tour.html?case=${tc.id}${run.from ? `&from=${run.from}` : ""}`;
+    : `tour.html?case=${tc.id}&voice=${voiceRef.current ? 1 : 0}${run.from ? `&from=${run.from}` : ""}`,
+  [tc.id, poster, run]);
   const shownStep = SHOT ? poster : step;
   const done = status === "done" && !SHOT;
   const paused = status === "paused";
+  const tint = ((n - 1) % 6) + 1;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div className="lvhead">
-        <Reveal><Eyebrow>Live use case {String(n).padStart(2, "0")} · {tc.persona.role}</Eyebrow></Reveal>
-        <Reveal i={1}><h1 className="lvtitle">{tc.title}</h1></Reveal>
-      </div>
+    <div className="lvwrap">
+      <Reveal><h1 className="lvtitle">{tc.title}</h1></Reveal>
       <div className="lvbody">
-        <Reveal i={2} className="lvframe" style={{ width: APP_W * SCALE }}>
+        <Reveal i={1} className="lvframe" style={{ width: APP_W * SCALE }}>
           <div className="lvbar">
             <span className="lights"><i /><i /><i /></span>
             <span className="lvurl">Wrapbox · {pageOf(route)}</span>
@@ -123,15 +138,16 @@ export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & S
                 title={`${tc.title} — live walkthrough`}
                 width={APP_W}
                 height={APP_H}
+                allow="autoplay"
                 style={{ transform: `scale(${SCALE})` }}
                 tabIndex={-1}
               />
             )}
           </div>
         </Reveal>
-        <Reveal i={3} className="lvside">
+        <Reveal i={2} className={`lvside lvtint-${tint}`}>
           <div className="lvwho">
-            <Face userId={tc.persona.userId} name={tc.persona.name} size={44} />
+            <Face userId={tc.persona.userId} name={tc.persona.name} size={46} />
             <div><b>{tc.persona.name}</b><span>{tc.persona.role}</span></div>
           </div>
           <div className="lvgoal"><span className="label">Why they're here</span><p>{tc.goal}</p></div>
@@ -156,7 +172,10 @@ export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & S
               {done ? <><RotateCcw size={15} /> Replay</> : paused ? <><Play size={15} /> Play</> : <><Pause size={15} /> Pause</>}
             </button>
             <button onClick={() => restartAt(Math.min(total - 1, shownStep + 1))} title="Next step"><SkipForward size={15} /></button>
-            <span className="lvprog">{Math.min(shownStep + 1, total)} / {total}</span>
+            <button className={`lvvoice ${voice && voiceBlocked ? "ask" : ""}`} onClick={toggleVoice} title={voice ? "Narration on — AI-generated voice (M)" : "Narration off (M)"}>
+              {voice && !voiceBlocked ? <Volume2 size={15} /> : <VolumeX size={15} />}
+              <span>{voice && voiceBlocked ? "Tap for voice" : "AI voice"}</span>
+            </button>
           </div>
         </Reveal>
       </div>

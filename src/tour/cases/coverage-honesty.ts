@@ -17,6 +17,7 @@ const c: TourCase = {
       action: "click",
       title: "Open search",
       body: "Leadership asked what Wrapbox can truly enforce today. Priya opens search, which jumps to any screen.",
+      say: "Okay, leadership asked Priya a hard question: of everything Wrapbox promises, what can it actually enforce today? Priya opens search, which jumps straight to any screen.",
       waitFor: ".palette",
     },
     {
@@ -25,6 +26,7 @@ const c: TourCase = {
       text: "Coverage",
       title: "Find the Coverage Map",
       body: "The Coverage Map grades every promise Wrapbox makes by what it can actually deliver right now.",
+      say: "Priya types Coverage to find the Coverage Map. It grades every promise Wrapbox makes by what it can actually deliver, right now.",
       waitFor: { selector: ".palette-item", text: "Coverage Map" },
     },
     {
@@ -32,12 +34,14 @@ const c: TourCase = {
       action: "click",
       title: "Open the Coverage Map",
       body: "Priya opens it. Every grade is worked out live from the switched-on rules and Wrapbox's skills — never typed in.",
+      say: "Priya opens it, and every grade here is worked out live from the switched-on rules and Wrapbox's skills. Nobody types them in.",
       waitFor: { selector: ".card", text: "Coverage posture" },
     },
     {
       target: ".metricband",
       title: "One honest grade per promise",
       body: "Enforced: seen and stopped. Degraded: stopped, not perfectly. Understood only: seen, not stopped yet. Pending: skill not built. Uninspectable: locked content Wrapbox can't open.",
+      say: "Enforced means seen and stopped. Degraded, stopped but not perfectly; understood only, seen but not yet stopped; pending, the skill isn't built; and uninspectable, locked content Wrapbox can't open.",
       pad: 10,
     },
     {
@@ -45,6 +49,7 @@ const c: TourCase = {
       action: "click",
       title: "Open the known gaps",
       body: "Every skill that isn't fully ready is listed openly, with the one holding back the most promises at the top.",
+      say: "Priya opens the known gaps. Every skill that isn't fully ready is listed openly, with the one holding back the most promises right at the top.",
       waitFor: { selector: ".ecard", text: "Cloud (AWS) gateway" },
       placement: "bottom",
     },
@@ -52,6 +57,7 @@ const c: TourCase = {
       target: { selector: ".ecard", text: "Cloud (AWS) gateway" },
       title: "The first thing to fix",
       body: "Wrapbox controls AWS permissions, storage and container deploys, but only watches other AWS services. That weakens one rule and two always-on safety rules.",
+      say: "The first thing to fix is the A-W-S gateway. Wrapbox controls A-W-S permissions, storage and container deploys, but only watches other A-W-S services, which weakens one rule and two always-on safety rules.",
       placement: "bottom",
     },
     {
@@ -59,6 +65,7 @@ const c: TourCase = {
       action: "click",
       title: "A promise kept only in part",
       body: "One click shows the rule: production deploys need approval from the site reliability (SRE) team. Some AWS deploys can't be held for approval yet, so it's Degraded.",
+      say: "Hmm, one click shows the rule: production deploys need the site reliability team's approval. Some A-W-S deploys can't be held for approval yet, so it's kept only in part.",
       waitFor: { selector: ".ecard", text: "Production deployments require SRE approval" },
       placement: "bottom",
     },
@@ -67,6 +74,7 @@ const c: TourCase = {
       action: "click",
       title: "Where rules are switched on",
       body: "Rules are written and switched on in Intent Studio. Earlier, Maya Chen from security drafted a health-data rule that isn't switched on yet.",
+      say: "So, rules get written and switched on in Intent Studio. Earlier, Maya Chen from security drafted a rule about health data, and it isn't switched on yet.",
       waitFor: { selector: ".ecard", text: "PHI handling (draft)" },
     },
     {
@@ -74,6 +82,7 @@ const c: TourCase = {
       action: "click",
       title: "One part needs a missing skill",
       body: "In the draft, removing health data from scanned files would be fully enforced. Spotting health data inside encrypted files needs a skill Wrapbox lacks.",
+      say: "Priya opens the draft. Removing health data from scanned files would be fully enforced, but spotting health data inside encrypted files needs a skill Wrapbox doesn't have.",
       waitFor: { within: ".drawer", selector: ".card", text: "Uninspectable encrypted attachments" },
     },
     {
@@ -81,6 +90,7 @@ const c: TourCase = {
       action: "click",
       title: "Wrapbox refuses a false promise",
       body: "Priya tries Activate, but it stays greyed out. A required skill is missing, so Wrapbox won't switch on protection it can't deliver.",
+      say: "Priya tries Activate, but it stays greyed out: a required skill is missing, so Wrapbox won't switch on a rule it can't back up. That's Priya's honest answer for leadership.",
       waitFor: { within: ".drawer", selector: "div.small", text: "Can't be switched on" },
       placement: "left",
     },

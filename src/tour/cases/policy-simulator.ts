@@ -20,18 +20,21 @@ const c: TourCase = {
       action: "click",
       title: "Open the Policy Simulator",
       body: "Engineers asked to drop one review step. Maya tests the idea here first: a safe preview where nothing changes the live rules.",
+      say: "So, engineers want to drop a review step for code sent to unapproved AI tools. Maya tests the idea here first, in a safe preview that never changes the live rules.",
       waitFor: { selector: ".page-head", text: "Policy Simulator" },
     },
     {
       target: { selector: ".ecard", text: "External AI usage" },
       title: "Today's rules, one tick each",
       body: "Each card is a company policy (a \"contract\"); ticked rules are on. Tags: ALLOW (goes ahead), CONSTRAIN (changed first, e.g. emails masked), REVIEW (a person approves), BLOCK (stopped).",
+      say: "Each card is a company policy, and ticked rules are on. The tags say if an action goes ahead, gets changed first, like masking emails, waits for a person, or gets stopped.",
     },
     {
       target: { selector: "label.rule-item", text: "Source code may go to approved AI" },
       action: "click",
       title: "Switch one rule off, in preview",
       body: "This rule lets code go to approved AI tools, but a person must review it before it goes anywhere else. Maya unticks it, only inside this preview.",
+      say: "This rule lets code go to approved AI tools, but anywhere else needs a person's review first. Maya unticks it, only inside this preview.",
       waitFor: { selector: ".ecard", text: "3 of 4 on in preview" },
     },
     {
@@ -39,6 +42,7 @@ const c: TourCase = {
       action: "click",
       title: "Replay the company's real history",
       body: "Wrapbox runs the company's 20 recorded actions through its live decision engine twice: once under today's rules, once with Maya's change. Nothing is recorded.",
+      say: "Now Wrapbox runs the company's twenty recorded actions through its live decision engine twice, once under today's rules and once with Maya's change. Nothing gets recorded.",
       waitFor: { selector: "button.tab", text: "Your history" },
     },
     {
@@ -46,22 +50,26 @@ const c: TourCase = {
       placement: "top",
       title: "One past action would change",
       body: "Left, today's rules: 2 actions held for a person's approval (REVIEW). Right, with the change: one of them would go straight through (ALLOW).",
+      say: "On the left, today's rules held two actions for a person's approval. On the right, with the change, one of them would just go straight through.",
     },
     {
       target: { selector: ".card", text: "Heads up" },
       title: "A red flag for weaker protection",
       body: "Wrapbox warns when something protected today would simply be allowed. Built-in Safety Kernel rules, which can't be switched off, would still apply either way.",
+      say: "Hmm — Wrapbox warns when something that's protected today would simply be allowed. The built-in Safety Kernel rules can't be switched off, so they'd still apply either way.",
     },
     {
       target: { selector: ".ecard", text: "Sent checkout.ts to FreeAIChat" },
       title: "The exact action at stake",
       body: "Daniel pasted the company's checkout code into FreeAIChat, an unapproved AI tool. Today a person must approve that first; with the change it would go straight out.",
+      say: "Daniel pasted the company's checkout code into Free AI Chat, an unapproved AI tool. Today a person has to okay that first, but with the change it would go straight out.",
     },
     {
       target: { selector: "button.tab", text: "Scenario library" },
       action: "click",
       title: "Try situations not seen yet",
       body: "Maya also replays 23 standard situations, including some this company hasn't met yet. Again, only one outcome changes: REVIEW becomes ALLOW.",
+      say: "Maya also replays twenty-three standard situations, including some this company hasn't run into yet. Again, just one outcome changes: a held action would now go straight through.",
       waitFor: { selector: ".card", text: "1 of 23 outcomes change" },
     },
     {
@@ -69,6 +77,7 @@ const c: TourCase = {
       action: "click",
       title: "A preview, never the real thing",
       body: "This page never changes what Wrapbox enforces: the top bar still says 14 rules. Rules are really switched on or off in Intent Studio.",
+      say: "To be clear, this page never changes what Wrapbox enforces, and the top bar still says fourteen rules. Rules really get switched on or off in Intent Studio.",
       waitFor: { selector: ".card", text: "Open Intent Studio" },
     },
     {
@@ -76,6 +85,7 @@ const c: TourCase = {
       action: "click",
       title: "The live rule is untouched",
       body: "In Intent Studio, External AI usage is still ACTIVE (switched on) with all 4 rules (clauses), the REVIEW one included. Maya's test changed nothing live.",
+      say: "Nice. In Intent Studio, External AI usage is still on with all four rules, review step included. Maya saw the one action that would lose protection, and nothing live changed.",
       waitFor: { selector: ".ecard", text: "External AI usage" },
     },
   ],

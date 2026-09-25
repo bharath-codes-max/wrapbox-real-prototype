@@ -15,12 +15,14 @@ const c: TourCase = {
       target: { selector: ".ecard", text: "Fix checkout and deploy" },
       title: "A coding job with limits",
       body: "Daniel asks Claude Code, an AI coding agent, to fix a checkout bug and ship it. Shipping to production needs a yes, and Alex is the approver.",
+      say: "So here's the job: Daniel asks Claude Code, an AI coding agent, to fix a checkout bug and ship it. Shipping to production needs a yes, and Alex is the approver.",
     },
     {
       target: { within: ".ecard", selector: "button", text: "Start" },
       action: "click",
       title: "Start the job inside a box",
       body: "One click starts the agent inside a permission slip: what it may use on its own. Anything on the Forbidden list, like production, needs a person's yes.",
+      say: "One click starts the agent with a permission slip, listing what it can use on its own. Anything on the Forbidden list, like production, needs a person's yes.",
       waitFor: { selector: ".grid.g2", text: "Forbidden" },
       placement: "top",
     },
@@ -28,6 +30,7 @@ const c: TourCase = {
       target: ".scroll-thin",
       title: "Every step is checked first",
       body: "Steps 1 to 5 were routine, so ALLOW: they simply ran. Step 6 deploys to production, so REVIEW: it is parked, waiting for a person's yes.",
+      say: "Okay, every step gets checked first. Steps one to five were routine, so they just ran, but step six deploys to production, so it's parked, waiting for a person's yes.",
       placement: "top",
     },
     {
@@ -35,6 +38,7 @@ const c: TourCase = {
       action: "hover",
       title: "Safe work keeps going",
       body: "Steps 7 to 9 don't need the deploy, so they finished anyway. Only step 10, the production health check, waits for it.",
+      say: "Meanwhile, steps seven to nine don't need the deploy, so they finished anyway. Only step ten, the production health check, waits for it.",
       waitFor: ".scroll-thin",
       placement: "top",
     },
@@ -43,6 +47,7 @@ const c: TourCase = {
       action: "click",
       title: "Sent to the right person",
       body: "The task names who must decide: Alex, never Daniel, who asked for the change. The link opens the Review Center, where only held actions wait.",
+      say: "The task names who has to decide: Alex, never Daniel, who asked for the change. This link opens the Review Center, where only held actions wait.",
       waitFor: { selector: ".ecard-fields", text: "Decides" },
       pad: 10,
       placement: "top",
@@ -51,6 +56,7 @@ const c: TourCase = {
       target: { selector: ".grid.g3 > div", text: "Production deployments require SRE approval" },
       title: "Why the deploy is waiting",
       body: "A company rule held it: production deploys need sign-off from site reliability (SRE). Alex is the approver this job names for that sign-off.",
+      say: "A company rule held it: production deploys need sign-off from site reliability. And for this job, Alex is the named approver for that sign-off.",
       pad: 10,
     },
     {
@@ -58,6 +64,7 @@ const c: TourCase = {
       action: "click",
       title: "Yes, for this job only",
       body: "Approve scoped: yes to the deploy, and this job alone may use AWS Production until it ends. The queue empties; the health check needs no second yes.",
+      say: "Alex picks Approve scoped: yes to the deploy, and only this job can use AWS Production until it ends. The queue empties, and the health check needs no second yes.",
       waitFor: { selector: ".card", text: "Nothing waiting" },
     },
     {
@@ -65,6 +72,7 @@ const c: TourCase = {
       action: "click",
       title: "The job picked up by itself",
       body: "Back in Tasks, nothing is parked and one job is completed. The moment Alex said yes, the task resumed without anyone restarting it.",
+      say: "Nice. Back in Tasks, nothing's parked and one job is completed. The moment Alex said yes, the task picked up again without anyone restarting it.",
       waitFor: { selector: ".card", text: "finished within envelope" },
     },
     {
@@ -72,6 +80,7 @@ const c: TourCase = {
       action: "click",
       title: "The extra access, on record",
       body: "The job is now under Finished. Alex's scoped yes is written into it: AWS Production, valid for this task only, with Alex's name on it.",
+      say: "The job's now under Finished, and Alex's scoped yes is written right into it: AWS Production, valid for this task only, with Alex's name on it.",
       waitFor: { selector: ".card .card", text: "Extra scope approved" },
     },
     {
@@ -79,6 +88,7 @@ const c: TourCase = {
       action: "hover",
       title: "All ten steps done",
       body: "The job is COMPLETED. Routine steps ran on their own, the deploy waited for Alex's yes, and the health check ran under that same approval.",
+      say: "All ten steps are done. Routine ones ran on their own, the deploy and health check ran on Alex's single yes, and that approval stays on record.",
       waitFor: ".scroll-thin",
       placement: "top",
     },

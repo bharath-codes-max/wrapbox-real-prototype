@@ -14,8 +14,8 @@
 }
 .tour-card.centered { text-align: left; }
 .tour-card-step { font: 600 13px/1 "Inter", system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: #2f6bff; margin-bottom: 10px; }
-.tour-card-title { font: 650 21px/1.3 "Inter", system-ui, sans-serif; letter-spacing: -0.01em; }
-.tour-card-body { margin-top: 8px; font: 400 17px/1.55 "Inter", system-ui, sans-serif; color: #3d3d3a; }
+.tour-card-title { font: 650 22px/1.3 "Inter", system-ui, sans-serif; letter-spacing: -0.01em; }
+.tour-card-body { margin-top: 8px; font: 400 18px/1.55 "Inter", system-ui, sans-serif; color: #3d3d3a; }
 @keyframes tour-in { from { opacity: 0; transform: translateY(6px); } }
 
 .tour-cursor { position: fixed; left: 0; top: 0; width: 0; height: 0; transition: transform .72s cubic-bezier(.22,.9,.3,1); }
