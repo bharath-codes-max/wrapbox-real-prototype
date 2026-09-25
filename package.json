@@ -10,7 +10,8 @@
     "build:portfolio": "vite build --config vite.portfolio.config.ts && cp docs/portfolio-build/portfolio.html docs/portfolio.html && rm -rf docs/portfolio-build",
     "preview": "vite preview --port 5980",
     "test": "tsx --test tests/*.test.ts",
-    "build:v2": "ENTRY=tour vite build --config vite.portfolio.config.ts && cp docs/tour-build/tour.html docs/tour.html && ENTRY=portfolio-v2 vite build --config vite.portfolio.config.ts && cp docs/portfolio-v2-build/portfolio-v2.html docs/portfolio-v2.html && rm -rf docs/tour-build docs/portfolio-v2-build"
+    "build:v2": "ENTRY=tour vite build --config vite.portfolio.config.ts && cp docs/tour-build/tour.html docs/tour.html && ENTRY=portfolio-v2 vite build --config vite.portfolio.config.ts && cp docs/portfolio-v2-build/portfolio-v2.html docs/portfolio-v2.html && rm -rf docs/tour-build docs/portfolio-v2-build",
+    "build:v3": "ENTRY=tour vite build --config vite.portfolio.config.ts && cp docs/tour-build/tour.html docs/tour.html && ENTRY=portfolio-v3 vite build --config vite.portfolio.config.ts && cp docs/portfolio-v3-build/portfolio-v3.html docs/portfolio-v3.html && rm -rf docs/tour-build docs/portfolio-v3-build"
   },
   "dependencies": {
     "framer-motion": "^11.18.2",

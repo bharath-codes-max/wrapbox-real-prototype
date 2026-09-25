@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wrapbox — Product Portfolio v3</title>
+    <meta name="description" content="Wrapbox: runtime authorization for AI agents — a product portfolio from problem space to working product." />
+    <script>
+      // Light is the deck default; a saved dark choice is applied before first paint.
+      try {
+        var q = new URLSearchParams(location.search).get("theme");
+        if (q === "dark" || q === "light") localStorage.setItem("wrapbox-deck-theme", q);
+        if (new URLSearchParams(location.search).has("shot")) document.documentElement.dataset.shot = "1"; // capture mode: no canvas transition
+        document.documentElement.dataset.theme = localStorage.getItem("wrapbox-deck-theme") === "dark" ? "dark" : "light"; document.documentElement.dataset.variant = "v3";
+      } catch (e) { document.documentElement.dataset.theme = "light"; }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="deck"></div>
+    <script type="module" src="/src/portfolio/main-v3.tsx"></script>
+  </body>
+</html>
