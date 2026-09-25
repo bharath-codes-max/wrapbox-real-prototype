@@ -375,8 +375,8 @@ export function App() {
                 <Play size={13} /> Demo Mode
               </button>
             )}
-            <div className="faint" style={{ fontSize: 10, marginTop: 8, lineHeight: 1.45 }}>
-              Wrapbox Real Prototype · integrations simulated · product behavior live
+            <div className="faint" style={{ fontSize: 11, marginTop: 12, lineHeight: 1.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title="Wrapbox Real Prototype · integrations simulated · product behavior live">
+              Prototype · integrations simulated · behavior live
             </div>
           </div>
         </aside>}

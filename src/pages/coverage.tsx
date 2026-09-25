@@ -66,7 +66,8 @@ const CARD_TONE: Record<CoverageStatus, "allow" | "review" | "block" | "constrai
 const fmtStatus = (v: string) => v.replaceAll("_", " ").toLowerCase().replace(/^./, (c) => c.toUpperCase());
 
 function StatusIcon({ s }: { s: CoverageStatus }) {
-  return <span style={{ color: `var(--${STATUS_TONE[s]})`, display: "inline-flex" }}>{STATUS_META[s].icon}</span>;
+  // Monochrome on cards — the status chip carries the colour.
+  return <span style={{ color: "var(--fg)", display: "inline-flex" }} title={fmtStatus(s)}>{STATUS_META[s].icon}</span>;
 }
 
 function RuleCards({ rows, showReason, what }: { rows: CoverageRow[]; showReason?: boolean; what: string }) {

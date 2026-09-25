@@ -301,28 +301,33 @@ button { font-family: var(--sans); }
 
 /* Sidebar — ivory off-white panel */
 .sidebar {
-  width: 248px; flex-shrink: 0; background: var(--sidebar);
+  width: 272px; flex-shrink: 0; background: var(--sidebar);
   border-right: 1px solid var(--line);
   display: flex; flex-direction: column; overflow-y: auto;
   scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent;
 }
-.sidebar-nav { flex: 1; overflow-y: auto; padding: 14px 12px 16px; }
-.nav-group { margin-top: 20px; }
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 18px 14px 18px; }
+.nav-group { margin-top: 26px; }
 .nav-group.first { margin-top: 4px; }
 .nav-group-label {
-  font-size: 10px; font-weight: 600; letter-spacing: 0.11em; text-transform: uppercase;
-  color: var(--fg-3); padding: 0 12px 6px;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--fg-3); padding: 0 12px 8px;
 }
-.nav-group-items { display: flex; flex-direction: column; gap: 1px; }
+.nav-group-items { display: flex; flex-direction: column; gap: 2px; }
 .nav-item {
   position: relative;
-  display: flex; align-items: center; gap: 11px; width: 100%;
-  height: 36px; padding: 0 12px; border: none; background: none; color: var(--fg-2);
-  border-radius: 8px; cursor: pointer; font-size: 13.5px; text-align: left; font-weight: 450;
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  height: 40px; padding: 0 10px; border: none; background: none; color: var(--fg-2);
+  border-radius: 10px; cursor: pointer; font-size: 14px; text-align: left; font-weight: 480;
   font-family: var(--sans);
   transition: background 0.13s, color 0.13s;
 }
-.nav-item svg { flex-shrink: 0; color: var(--fg-3); transition: color 0.13s; }
+/* Icons sit in small monochrome tiles; the active tile inverts (ink tile, canvas icon). */
+.nav-item svg {
+  flex-shrink: 0; color: var(--fg-2); transition: color 0.13s, background 0.13s;
+  width: 15px; height: 15px; padding: 5.5px; box-sizing: content-box; border-radius: 8px;
+  background: color-mix(in oklab, var(--fg) 6%, transparent);
+}
 .nav-item:hover { background: rgba(20, 20, 19, 0.05); color: var(--fg); }
 .nav-item:hover svg { color: var(--fg-2); }
 .nav-item.active { background: var(--accent-soft); color: var(--accent-active); font-weight: 600; }
@@ -336,7 +341,7 @@ button { font-family: var(--sans); }
   font-size: 11px; font-weight: 600; border-radius: 999px; padding: 0 6px; min-width: 18px; text-align: center;
   font-variant-numeric: tabular-nums;
 }
-.sidebar-bottom { padding: 10px 12px 16px; border-top: 1px solid var(--line); }
+.sidebar-bottom { padding: 14px 14px 20px; border-top: 1px solid var(--line); }
 .main { flex: 1; overflow-y: auto; min-width: 0; scroll-behavior: smooth; position: relative; scrollbar-gutter: stable; }
 
 /* Command palette */
@@ -362,9 +367,10 @@ button { font-family: var(--sans); }
    Page scaffolding — generous, ElevenLabs-grade rhythm
    ========================================================================== */
 /* One content width for every page, so edges never jump when switching pages. */
-.page { padding: 32px 40px 100px; max-width: 1360px; margin: 0 auto; }
+.page { padding: 36px 64px 110px; max-width: 1400px; margin: 0 auto; }
+@media (max-width: 1180px) { .page { padding: 30px 40px 100px; } }
 .page-wide { max-width: 1360px; }
-.page-head { margin-bottom: 26px; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.page-head { margin-bottom: 30px; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
 .page-eyebrow {
   font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--accent); margin-bottom: 8px;
@@ -394,7 +400,7 @@ button { font-family: var(--sans); }
 }
 
 /* Section rhythm */
-.section { margin-top: 40px; }
+.section { margin-top: 44px; }
 .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
 .section-title { font-size: 16.5px; font-weight: 600; letter-spacing: -0.01em; }
 .section-sub { font-size: 13px; color: var(--fg-3); margin-top: 2px; }
@@ -405,7 +411,7 @@ button { font-family: var(--sans); }
    ========================================================================== */
 .card {
   background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--r); padding: 18px 20px; box-shadow: var(--shadow);
+  border-radius: var(--r); padding: 20px 22px; box-shadow: var(--shadow);
 }
 .card .card, .drawer .card { box-shadow: none; background: var(--surface); border-color: var(--line); }
 
@@ -433,7 +439,7 @@ button { font-family: var(--sans); }
 
 /* Metric band — borderless KPIs straight on the canvas (airy, un-boxed) */
 .metricband { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0; }
-.metricband .metric { border-left: 1px solid var(--line); padding: 4px 24px; margin-left: 0; }
+.metricband .metric { border-left: 1px solid var(--line); padding: 6px 28px; margin-left: 0; }
 .metricband .metric:first-child { border-left: none; padding-left: 0; }
 .metricband .metric:last-child { padding-right: 0; }
 .metricband .metric-value { font-weight: 700; font-size: 23px; letter-spacing: -0.02em; margin-top: 7px; }
@@ -445,7 +451,7 @@ button { font-family: var(--sans); }
 }
 
 /* Overview panel — KPIs + decision mix combined in one card */
-.overview-card { padding: 20px 24px; }
+.overview-card { padding: 24px 28px; }
 .overview-sep { height: 1px; background: var(--line); margin: 20px -24px; }
 
 /* Decision bar — a single proportional bar instead of four number boxes */
@@ -795,7 +801,7 @@ textarea.input { resize: vertical; line-height: 1.6; }
 /* ==========================================================================
    Onboarding — setup wizard shell + shared step primitives
    ========================================================================== */
-.setup { display: grid; grid-template-columns: 264px minmax(0, 1fr); gap: 36px; max-width: 1360px; margin: 0 auto; padding: 32px 40px 90px; position: relative; z-index: 1; }
+.setup { display: grid; grid-template-columns: 264px minmax(0, 1fr); gap: 40px; max-width: 1400px; margin: 0 auto; padding: 36px 64px 90px; position: relative; z-index: 1; }
 @media (max-width: 900px) { .setup { grid-template-columns: 1fr; gap: 20px; padding: 20px 16px 70px; } .setup-rail { position: static !important; } }
 .setup-rail { position: sticky; top: 24px; align-self: start; }
 .setup-rail-head { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
@@ -964,7 +970,7 @@ textarea.input { resize: vertical; line-height: 1.6; }
 /* ==========================================================================
    EntityCard — the one card used for every list on every page (no tables)
    ========================================================================== */
-.ecard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+.ecard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
 .ecard-grid.cols-1 { grid-template-columns: minmax(0, 1fr); }
 .ecard-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 1100px) { .ecard-grid.cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -974,7 +980,7 @@ textarea.input { resize: vertical; line-height: 1.6; }
 .ecard-grid > .ecard:nth-child(3) { animation-delay: 0.08s; }
 .ecard-grid > .ecard:nth-child(4) { animation-delay: 0.12s; }
 .ecard-grid > .ecard:nth-child(n + 5) { animation-delay: 0.16s; }
-.ecard { display: flex; flex-direction: column; padding: 22px 24px; height: 100%; min-width: 0; }
+.ecard { display: flex; flex-direction: column; padding: 24px 26px; height: 100%; min-width: 0; }
 .ecard-head { display: flex; gap: 12px; align-items: flex-start; }
 .ecard-icon { flex-shrink: 0; display: grid; place-items: center; min-width: 28px; min-height: 28px; }
 .ecard-icon .logo-img { width: 26px !important; height: 26px !important; }
@@ -982,20 +988,19 @@ textarea.input { resize: vertical; line-height: 1.6; }
 .ecard-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-3); line-height: 1.3; }
 .ecard-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; margin-top: 3px; line-height: 1.35; overflow-wrap: anywhere; }
 .ecard-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
-.ecard-fields { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 11px 16px; margin: 18px 0 0; font-size: 13.5px; }
+.ecard-fields { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 12px 18px; margin: 20px 0 0; font-size: 13.5px; }
 .ecard-fields dt { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); padding-top: 2px; }
 .ecard-fields dd { margin: 0; color: var(--fg); min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; overflow-wrap: anywhere; }
 .ecard-body { margin-top: 14px; }
 .ecard.selected { border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
-.ecard[data-tone="block"] { border-color: color-mix(in oklab, var(--block) 45%, var(--line)); }
-.ecard[data-tone="review"] { border-color: color-mix(in oklab, var(--review) 45%, var(--line)); }
-.ecard[data-tone="allow"] { border-color: color-mix(in oklab, var(--allow) 40%, var(--line)); }
-.ecard[data-tone="constrain"] { border-color: color-mix(in oklab, var(--constrain) 40%, var(--line)); }
+/* Tone is carried by the status chip only — card borders stay the neutral hairline and the
+   leading icon stays monochrome (user rule: no coloured borders or coloured icons on cards). */
+.ecard-icon, .ecard-icon > span { color: var(--fg) !important; }
 
 /* Standard filter bar: search + labelled dropdowns + result count */
 .fbar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px;
-  padding: 10px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 20px;
+  padding: 12px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
 }
 .fbar-meta { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .fcount { font-size: 12.5px; color: var(--fg-3); white-space: nowrap; }
@@ -1036,6 +1041,10 @@ textarea.input { resize: vertical; line-height: 1.6; }
 :root:not([data-theme="light"]) .sidebar { border-right-color: var(--line); }
 :root:not([data-theme="light"]) .nav-item.active { background: #161616; }
 :root:not([data-theme="light"]) .nav-item:hover { background: #111111; }
+.nav-item.active svg { background: var(--fg); color: var(--bg); }
+.nav-item:hover:not(.active) svg { background: color-mix(in oklab, var(--fg) 10%, transparent); color: var(--fg); }
+/* Shorter windows: compact the rail so every group stays above the fold. */
+@media (max-height: 860px) { .nav-item { height: 37px; } .nav-group { margin-top: 18px; } .sidebar-nav { padding-top: 12px; } }
 :root:not([data-theme="light"]) .tabs { border-bottom-color: var(--line); }
 :root:not([data-theme="light"]) .tab.active { border-bottom-color: #ffffff; }
 :root:not([data-theme="light"]) .fbar, :root:not([data-theme="light"]) .metricbar, :root:not([data-theme="light"]) .pager { box-shadow: none; }
@@ -1115,5 +1124,25 @@ textarea.input { resize: vertical; line-height: 1.6; }
 :root:not([data-theme="light"]) .sidebar { background: var(--bg); }
 /* Big stat must read in BOTH themes: gradient built from the theme's own ink. */
 .bigstat { background: linear-gradient(180deg, var(--fg) 0%, var(--fg) 55%, color-mix(in oklab, var(--fg) 45%, transparent) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
-:root[data-theme="light"] .glow { background: linear-gradient(180deg, #eaf4ff 0%, #ffffff 100%); }
+/* Light theme only: the Get started composer sits on the ribbed-glass prism card (the earlier
+   hero). Dark keeps the Framer blue glow panel above. */
+:root[data-theme="light"] .glow {
+  position: relative; isolation: isolate; border-color: transparent;
+  box-shadow: 0 24px 60px -28px rgba(120, 60, 200, 0.5);
+  background:
+    radial-gradient(62% 95% at 80% 112%, rgba(9, 34, 46, 0.97) 0%, rgba(9, 34, 46, 0.7) 40%, transparent 76%),
+    radial-gradient(30% 60% at 52% -10%, rgba(255, 236, 246, 0.42), transparent 72%),
+    linear-gradient(90deg, #ec4a22 0%, #ff6a3d 16%, #ff8580 32%, #ff9fcf 50%, #d69bff 64%, #9a82f7 80%, #6d66e6 100%);
+  background-size: 100% 100%, 100% 100%, 130% 100%;
+  animation: prism-drift 18s ease-in-out infinite alternate;
+}
+:root[data-theme="light"] .glow::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.2) 0px, rgba(255, 255, 255, 0.04) 3px, rgba(20, 8, 40, 0.1) 8px, rgba(255, 255, 255, 0.12) 11px);
+  mix-blend-mode: soft-light;
+}
+:root[data-theme="light"] .glow::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(90deg, rgba(150, 24, 40, 0.16) 0%, rgba(150, 24, 40, 0.06) 36%, transparent 55%);
+}
 :root[data-theme="light"] .aterm-line .head, :root[data-theme="light"] .aterm-prompt { color: #f2f2f2; }

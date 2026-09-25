@@ -6,7 +6,13 @@
     <title>Wrapbox</title>
     <script>
       // Dark is the default; apply a saved light choice before first paint.
-      try { if (localStorage.getItem("wrapbox-theme") === "light") document.documentElement.dataset.theme = "light"; } catch (e) {}
+      try {
+        // ?theme=light|dark sets the saved choice (used by the portfolio screenshot capture).
+        var q = new URLSearchParams(location.search).get("theme");
+        if (q === "light") localStorage.setItem("wrapbox-theme", "light");
+        if (q === "dark") localStorage.removeItem("wrapbox-theme");
+        if (localStorage.getItem("wrapbox-theme") === "light") document.documentElement.dataset.theme = "light";
+      } catch (e) {}
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

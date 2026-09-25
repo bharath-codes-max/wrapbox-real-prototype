@@ -144,7 +144,7 @@ export function AgentTerminal({
         <button type="button" className="copy" onClick={copyTrace} disabled={!event}>
           {copied ? "Copied" : "Copy trace"} {copied ? <Check size={15} /> : <Copy size={15} />}
         </button>
-        <button type="button" className="go" onClick={onOpenEvidence} disabled={!done}>Open evidence</button>
+        {onOpenEvidence && <button type="button" className="go" onClick={onOpenEvidence} disabled={!done}>Open evidence</button>}
       </div>
     </div>
   );
