@@ -1,30 +1,38 @@
-// Shared deck primitives: reveals, stats, sources, screenshot frames, autoplay
-// code, logos. Presentation only — numbers and text come from the slides.
+// Shared deck primitives (v2): reveals, type, stats, sources, brand marks,
+// themed autoplay code, and small animated charts. Presentation only.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion, useInView } from "framer-motion";
 import { logoUrl } from "../ui/logos";
 import { research, type Claim } from "./data/research";
 
-/* ---------- reveals ---------- */
 const EASE = [0.16, 1, 0.3, 1] as const;
+export const SHOT = typeof document !== "undefined" && document.documentElement.dataset.shot === "1";
 
-const SHOT = typeof document !== "undefined" && document.documentElement.dataset.shot === "1";
+/* ---------- reveals ---------- */
 export function Reveal({ children, i = 0, y = 18, className, style, delay = 0 }: { children: React.ReactNode; i?: number; y?: number; className?: string; style?: React.CSSProperties; delay?: number }) {
   return (
-    <motion.div className={className} style={style} initial={SHOT ? false : { opacity: 0, y }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE, delay: 0.12 + i * 0.08 + delay }}>
+    <motion.div className={className} style={style} initial={SHOT ? false : { opacity: 0, y }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE, delay: 0.1 + i * 0.07 + delay }}>
       {children}
     </motion.div>
   );
 }
 
 /* ---------- text ---------- */
-export const Eyebrow = ({ children }: { children: React.ReactNode }) => <div className="eyebrow">{children}</div>;
-export const Display = ({ children, sm, className = "", style }: { children: React.ReactNode; sm?: boolean; className?: string; style?: React.CSSProperties }) => <h1 className={`display ${sm ? "sm" : ""} ${className}`} style={style}>{children}</h1>;
+export const Eyebrow = ({ children }: { children: React.ReactNode }) => <div className="eyebrow"><i />{children}</div>;
+export const Display = ({ children, sm, xs, className = "", style }: { children: React.ReactNode; sm?: boolean; xs?: boolean; className?: string; style?: React.CSSProperties }) => <h1 className={`display ${sm ? "sm" : ""} ${xs ? "xs" : ""} ${className}`} style={style}>{children}</h1>;
 export const Lead = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => <p className="lead" style={style}>{children}</p>;
+export function Head({ eyebrow, title, lead }: { eyebrow: React.ReactNode; title: React.ReactNode; lead?: React.ReactNode }) {
+  return (
+    <div className="head-row">
+      <div><Reveal><Eyebrow>{eyebrow}</Eyebrow></Reveal><Reveal i={1}><Display sm>{title}</Display></Reveal></div>
+      {lead && <Reveal i={2}><Lead style={{ fontSize: 21 }}>{lead}</Lead></Reveal>}
+    </div>
+  );
+}
 
 /* ---------- numbers ---------- */
 export function CountUp({ to, decimals = 0, suffix = "", prefix = "", duration = 1.1, className, style }: { to: number; decimals?: number; suffix?: string; prefix?: string; duration?: number; className?: string; style?: React.CSSProperties }) {
-  const reduced = useReducedMotion();
+  const reduced = useReducedMotion() || SHOT;
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true });
   const [v, setV] = useState(reduced ? to : 0);
@@ -38,74 +46,44 @@ export function CountUp({ to, decimals = 0, suffix = "", prefix = "", duration =
   return <span ref={ref} className={className} style={style}>{prefix}{v.toFixed(decimals)}{suffix}</span>;
 }
 
-export function Stat({ value, label, sub, n, md, i = 0 }: { value: React.ReactNode; label: React.ReactNode; sub?: React.ReactNode; n?: number; md?: boolean; i?: number }) {
+export function Stat({ value, label, sub, n, md, ink, i = 0, brand }: { value: React.ReactNode; label: React.ReactNode; sub?: React.ReactNode; n?: number; md?: boolean; ink?: boolean; i?: number; brand?: string }) {
   return (
     <Reveal i={i} className="stat">
-      <div className={`v ${md ? "md" : ""}`}>{value}{n !== undefined && <sup className="sup">{n}</sup>}</div>
+      <div className={`v ${md ? "md" : ""} ${ink ? "ink" : ""}`}>{value}{n !== undefined && <sup className="sup">{n}</sup>}</div>
       <div className="l">{label}</div>
-      {sub && <div className="s">{sub}</div>}
+      {sub && <div className="s">{brand && <Brand name={brand} size={22} />}{sub}</div>}
     </Reveal>
   );
 }
 
 /* ---------- sources ---------- */
-/** Publication strings from the corpus can carry notes ("accessed 2026-09 (page undated)"); show the date only. */
 export function fmtDate(p: string): string {
   const m = p.match(/\d{4}-\d{2}(-\d{2})?/);
   if (m && !/accessed/i.test(p.slice(0, m.index))) return m[0];
   return /accessed/i.test(p) ? "accessed 2026-09" : p.slice(0, 12);
-}
-export function Sources({ ids, extra = [] }: { ids: string[]; extra?: { n: number; label: string; url?: string }[] }) {
-  const org = (s: string) => (s.length > 34 ? s.slice(0, 32) + "…" : s);
-  const items = ids.map((id, k) => { const c = claimById(id); return c ? { n: k + 1, label: `${org(c.source_org)} — ${c.source_title.length > 52 ? c.source_title.slice(0, 50) + "…" : c.source_title} (${fmtDate(c.published)})`, url: c.source_url } : null; }).filter(Boolean) as { n: number; label: string; url?: string }[];
-  const all = [...items, ...extra];
-  if (!all.length) return null;
-  return (
-    <div className="sources" aria-label="Sources">
-      {all.map((s) => <span key={s.n}><b>{s.n}</b> {s.url ? <a href={s.url} target="_blank" rel="noreferrer">{s.label}</a> : s.label}</span>)}
-    </div>
-  );
 }
 export function claimById(id: string): Claim | undefined {
   for (const t of Object.values(research.topics)) { const c = t.claims.find((x) => x.id === id); if (c) return c; }
   return undefined;
 }
 export function claimsOf(topic: string): Claim[] { return research.topics[topic]?.claims ?? []; }
-
-/* ---------- screenshots ---------- */
-const shotFiles = import.meta.glob("./shots/*.jpg", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
-const shotByName: Record<string, string> = {};
-for (const [p, u] of Object.entries(shotFiles)) shotByName[p.split("/").pop()!.replace(/\.jpg$/, "")] = u;
-export function shotUrl(name: string): string | undefined {
-  const theme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
-  return shotByName[`${name}-${theme}`] ?? shotByName[`${name}-dark`] ?? shotByName[`${name}-light`];
-}
-let lightboxSetter: ((s: { src: string; cap: string } | null) => void) | null = null;
-export function Lightbox() {
-  const [s, set] = useState<{ src: string; cap: string } | null>(null);
-  useEffect(() => { lightboxSetter = set; return () => { lightboxSetter = null; }; }, []);
-  useEffect(() => { if (!s) return; const on = (e: KeyboardEvent) => { if (e.key === "Escape") set(null); }; window.addEventListener("keydown", on, true); return () => window.removeEventListener("keydown", on, true); }, [s]);
-  if (!s) return null;
-  return <div className="lightbox" onClick={() => set(null)} role="dialog" aria-label={s.cap}><img src={s.src} alt={s.cap} /><div className="cap">{s.cap} · Esc to close</div></div>;
-}
-export function Shot({ name, url, alt, fit, style, className = "" }: { name: string; url?: string; alt: string; fit?: boolean; style?: React.CSSProperties; className?: string }) {
-  const [, force] = useState(0);
-  useEffect(() => { const mo = new MutationObserver(() => force((n) => n + 1)); mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); return () => mo.disconnect(); }, []);
-  const src = shotUrl(name);
-  return (
-    <button type="button" className={`shot-btn ${className}`} style={style} onClick={() => src && lightboxSetter?.({ src, cap: alt })} aria-label={`Enlarge: ${alt}`}>
-      <div className={`frame ${fit ? "fit" : ""}`} style={fit ? { height: "100%", display: "flex", flexDirection: "column" } : undefined}>
-        <div className="bar"><i /><i /><i /><span className="url">{url ?? `wrapbox.app/#${name}`}</span></div>
-        {src ? <img src={src} alt={alt} style={fit ? { flex: 1, minHeight: 0 } : undefined} /> : <div style={{ padding: 40, color: "#8a8a8f", fontFamily: "var(--mono)", fontSize: 13 }}>screenshot: {name}</div>}
-      </div>
-    </button>
-  );
+export function Sources({ ids }: { ids: string[] }) {
+  const org = (s: string) => (s.length > 30 ? s.slice(0, 28) + "…" : s);
+  const items = ids.map((id, k) => { const c = claimById(id); return c ? { n: k + 1, label: `${org(c.source_org)} — ${c.source_title.length > 46 ? c.source_title.slice(0, 44) + "…" : c.source_title} (${fmtDate(c.published)})`, url: c.source_url } : null; }).filter(Boolean) as { n: number; label: string; url: string }[];
+  if (!items.length) return null;
+  return <div className="sources" aria-label="Sources">{items.map((s) => <span key={s.n}><b>{s.n}</b> <a href={s.url} target="_blank" rel="noreferrer">{s.label}</a></span>)}</div>;
 }
 
-/* ---------- logos ---------- */
-export const Logo = ({ name, size = 20, style }: { name: string; size?: number; style?: React.CSSProperties }) => <img src={logoUrl(name)} alt="" width={size} height={size} style={{ borderRadius: Math.round(size / 4), background: "#fff", padding: Math.max(1, Math.round(size / 10)), ...style }} />;
+/* ---------- brand marks ---------- */
+const brandFiles = import.meta.glob("./brands/*.{svg,png}", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
+const brandByName: Record<string, string> = {};
+for (const [p, u] of Object.entries(brandFiles)) brandByName[p.split("/").pop()!.replace(/\.(svg|png)$/, "")] = u;
+export function brandUrl(name: string): string { return brandByName[name] ?? logoUrl(name); }
+export function Brand({ name, size = 36, bare, title, style }: { name: string; size?: number; bare?: boolean; title?: string; style?: React.CSSProperties }) {
+  return <span className={`brand ${bare ? "bare" : ""}`} style={{ width: size, height: size, borderRadius: Math.round(size / 4), ...style }} title={title ?? name}><img src={brandUrl(name)} alt={title ?? name} /></span>;
+}
 
-/* ---------- autoplay code ---------- */
+/* ---------- autoplay code (themed by CSS) ---------- */
 type Tok = { c: string; t?: string };
 const KW = /\b(const|let|function|return|if|else|for|of|export|import|from|interface|type|switch|case|break|default|new|true|false|null|undefined|async|await|throw|in|as)\b/;
 function tokenize(src: string, lang: string): Tok[] {
@@ -125,7 +103,7 @@ function tokenize(src: string, lang: string): Tok[] {
   return out;
 }
 export function TypeCode({ code, lang = "ts", title, active = true, cps = 55, delay = 0.4, style, autoScroll = true }: { code: string; lang?: "ts" | "yaml" | "bash"; title?: string; active?: boolean; cps?: number; delay?: number; style?: React.CSSProperties; autoScroll?: boolean }) {
-  const reduced = useReducedMotion();
+  const reduced = useReducedMotion() || SHOT;
   const [n, setN] = useState(reduced ? code.length : 0);
   const pre = useRef<HTMLPreElement>(null);
   useEffect(() => {
@@ -152,7 +130,41 @@ export function TypeCode({ code, lang = "ts", title, active = true, cps = 55, de
   );
 }
 
+/* ---------- charts ---------- */
+export function Donut({ pct, size = 260, stroke = 26, label, sub }: { pct: number; size?: number; stroke?: number; label: React.ReactNode; sub?: React.ReactNode }) {
+  const r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  return (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-2)" strokeWidth={stroke} />
+        <motion.circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--acc)" strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c} initial={SHOT ? { strokeDashoffset: c * (1 - pct / 100) } : { strokeDashoffset: c }} animate={{ strokeDashoffset: c * (1 - pct / 100) }} transition={{ duration: 1.3, ease: EASE, delay: 0.3 }} />
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", textAlign: "center" }}>
+        <div><div style={{ fontSize: size * 0.24, fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1 }}>{label}</div>{sub && <div className="small" style={{ marginTop: 6 }}>{sub}</div>}</div>
+      </div>
+    </div>
+  );
+}
+export function Bars({ items, height = 300, fmt = (v: number) => String(v) }: { items: { label: string; value: number; note?: string }[]; height?: number; fmt?: (v: number) => string }) {
+  const max = Math.max(...items.map((i) => i.value));
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 28, alignItems: "end", height }}>
+      {items.map((it, k) => {
+        const h = Math.max(6, (it.value / max) * (height - 84));
+        return (
+          <div key={it.label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, height: "100%", justifyContent: "flex-end" }}>
+            <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1 }}>{fmt(it.value)}</div>
+            {it.note && <div className="small" style={{ fontSize: 14, color: "var(--acc)", fontWeight: 700 }}>{it.note}</div>}
+            <motion.div initial={SHOT ? false : { scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ duration: 1, ease: EASE, delay: 0.3 + k * 0.15 }} style={{ width: "100%", height: h, borderRadius: 14, background: k === items.length - 1 ? "var(--acc)" : "color-mix(in oklab, var(--acc) 45%, var(--surface-2))", transformOrigin: "bottom" }} />
+            <div className="small" style={{ fontWeight: 600, color: "var(--ink-2)" }}>{it.label}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ---------- misc ---------- */
 export const Chip = ({ tone, children }: { tone: "allow" | "constrain" | "review" | "block" | "neutral"; children: React.ReactNode }) => <span className={`chip ${tone}`}>{children}</span>;
-export const Pill = ({ children, acc, logo }: { children: React.ReactNode; acc?: boolean; logo?: string }) => <span className={`pill ${acc ? "acc" : ""}`}>{logo && <img src={logoUrl(logo)} alt="" />}{children}</span>;
+export const Pill = ({ children, acc, logo, brand }: { children: React.ReactNode; acc?: boolean; logo?: string; brand?: string }) => <span className={`pill ${acc ? "acc" : ""}`}>{logo && <img src={logoUrl(logo)} alt="" />}{brand && <img src={brandUrl(brand)} alt="" />}{children}</span>;
 export const decisionTone = (d: string) => (d === "ALLOW" ? "allow" : d === "CONSTRAIN" ? "constrain" : d === "REVIEW" ? "review" : "block") as "allow" | "constrain" | "review" | "block";

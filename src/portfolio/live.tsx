@@ -24,15 +24,15 @@ export function decideOnce(sc: Scenario, prevHash: string): SimulationEvent {
 }
 
 export const LAYERS: { key: string; label: string; cap: string }[] = [
-  { key: "uninspectable", label: "Fail closed", cap: "uninspectable + protected clause" },
-  { key: "contract", label: "Intent Contracts", cap: "checkRule · strictest wins" },
-  { key: "safety", label: "Safety Kernel", cap: "kernelHits · vendor-managed" },
-  { key: "blast", label: "Blast-Radius Governor", cap: "BLAST_LIMITS" },
+  { key: "uninspectable", label: "Fail closed", cap: "uninspectable content" },
+  { key: "contract", label: "Intent Contracts", cap: "strictest wins" },
+  { key: "safety", label: "Safety Kernel", cap: "vendor-managed" },
+  { key: "blast", label: "Blast-Radius Governor", cap: "thresholds" },
   { key: "context", label: "Context", cap: "production · privileged" },
   { key: "envelope", label: "Task envelope", cap: "scoped authority" },
   { key: "standing", label: "Standing permission", cap: "everyday budgets" },
   { key: "default", label: "Default", cap: "allow & record" },
-  { key: "breakglass", label: "Break-glass", cap: "scoped · never over the Kernel" },
+  { key: "breakglass", label: "Break-glass", cap: "never over the Kernel" },
 ];
 
 /* ---------------- LiveDecide: pick a scenario, watch decide() run ---------------- */
@@ -65,7 +65,7 @@ export function LiveDecide({ active, autoplay = true }: { active: boolean; autop
   const scanPos = scanning ? Math.min(LAYERS.findIndex((l) => l.key === decidedLayer), Math.floor((visible - brainIdx) * 3)) : -1;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 28, height: "100%", minHeight: 0 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 400px", gap: 28, height: "100%", minHeight: 0 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
         <div className="seg-btns">
           {DEMO_IDS.map((d) => { const s = scenario(d); return <button key={d} type="button" className={`btn sm ${d === id ? "on" : ""}`} onClick={() => { setId(d); run(d); }}><img src={logoUrl(AGENT_LOGOS[s.agent] ?? "mcp")} alt="" width={14} height={14} style={{ borderRadius: 3, background: "#fff", padding: 1 }} />{s.title}</button>; })}
@@ -77,7 +77,7 @@ export function LiveDecide({ active, autoplay = true }: { active: boolean; autop
         </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
-        <div className="small" style={{ fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase" }}>brain.ts · decide() — in this order</div>
+        <div className="label">brain.ts · decide() — in this order</div>
         <div className="layers">
           {LAYERS.map((l, i) => (
             <div key={l.key} className={`layer ${litLayer === l.key ? "decided" : scanPos === i ? "lit" : ""}`}>
@@ -123,9 +123,9 @@ export function DrafterDemo({ active }: { active: boolean }) {
   const clauses = useMemo(() => (text.trim().length > 4 ? draftClauses(text) : []), [text]);
   const yaml = useMemo(() => clauses.map(clauseYaml).join("\n"), [clauses]);
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, height: "100%", minHeight: 0 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 5fr) minmax(0, 6fr)", gap: 28, height: "100%", minHeight: 0 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
-        <div className="small mono" style={{ fontSize: 12, letterSpacing: ".1em", textTransform: "uppercase" }}>Describe — edit the sentence, the policy follows</div>
+        <div className="label">Describe — edit the sentence, the policy follows</div>
         <textarea className="ta" value={text} onChange={(e) => { setTyping(false); setText(e.target.value); }} spellCheck={false} aria-label="Intent in plain English" />
         <div className="stack" style={{ gap: 10, overflow: "auto", minHeight: 0 }}>
           {clauses.map((c, i) => {
@@ -152,7 +152,7 @@ export function DrafterDemo({ active }: { active: boolean }) {
       <div style={{ minHeight: 0, display: "flex", flexDirection: "column" }}>
         <div className="code" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
           <div className="cbar"><span className="lights"><i /><i /><i /></span><span>contract.yaml — normalized rule (draftClauses())</span></div>
-          <pre style={{ flex: 1, minHeight: 0, overflow: "auto" }}>{yaml ? yaml.split("\n").map((l, k) => <span key={k} className={/^\s*-?\s*[\w]+:/.test(l) ? "" : ""}>{l.replace(/^(\s*-?\s*)([\w]+)(:)/, "$1$2$3")}{"\n"}</span>) : <span className="c"># waiting for intent…</span>}</pre>
+          <pre style={{ flex: 1, minHeight: 0, overflow: "auto", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{yaml ? yaml.split("\n").map((l, k) => <span key={k}>{l}{"\n"}</span>) : <span className="c"># waiting for intent…</span>}</pre>
         </div>
       </div>
     </div>
