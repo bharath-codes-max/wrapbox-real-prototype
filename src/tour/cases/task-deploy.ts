@@ -1,33 +1,33 @@
 import type { TourCase } from "../types";
 
-// Alex's team runs a ten-step agent job; only the production deploy waits for him.
+// Alex's team runs a ten-step agent job; only the production deploy waits for Alex's yes.
 const c: TourCase = {
   id: "task-deploy",
   order: 55,
   persona: { userId: "u-alex", name: "Alex Morgan", role: "Engineering Manager" },
   title: "Approve one risky step mid-job",
   goal: "Daniel's coding agent is fixing a checkout bug, and Alex decides whether the fix may go to production.",
-  outcome: "The safe steps ran on their own, the deploy waited for Alex's yes, and the whole job finished with his approval on record.",
+  outcome: "The safe steps ran on their own, the deploy waited for Alex's yes, and the whole job finished with that approval on record.",
   start: "tasks",
   poster: 3,
   steps: [
     {
       target: { selector: ".ecard", text: "Fix checkout and deploy" },
       title: "A coding job with limits",
-      body: "Daniel asks Claude Code, an AI coding agent, to fix a checkout bug and ship it. The agent never touches production on its own: Alex must say yes first.",
+      body: "Daniel asks Claude Code, an AI coding agent, to fix a checkout bug and ship it. Shipping to production needs a yes, and Alex is the approver.",
     },
     {
       target: { within: ".ecard", selector: "button", text: "Start" },
       action: "click",
       title: "Start the job inside a box",
-      body: "One click sets the agent to work inside a permission slip: only the places and actions listed here. Forbidden items, like production, can't happen without a person's yes.",
+      body: "One click starts the agent inside a permission slip: what it may use on its own. Anything on the Forbidden list, like production, needs a person's yes.",
       waitFor: { selector: ".grid.g2", text: "Forbidden" },
       placement: "top",
     },
     {
       target: ".scroll-thin",
       title: "Every step is checked first",
-      body: "Steps 1 to 5 are routine, so ALLOW: they just ran. Step 6 deploys to production, so REVIEW: Wrapbox parks it until a person says yes.",
+      body: "Steps 1 to 5 were routine, so ALLOW: they simply ran. Step 6 deploys to production, so REVIEW: it is parked, waiting for a person's yes.",
       placement: "top",
     },
     {
@@ -42,7 +42,7 @@ const c: TourCase = {
       target: { selector: "a", text: "Review Center" },
       action: "click",
       title: "Sent to the right person",
-      body: "The task names who must decide: Alex, never Daniel, who asked for the change. The link opens the Review Center, where only exceptions like this wait.",
+      body: "The task names who must decide: Alex, never Daniel, who asked for the change. The link opens the Review Center, where only held actions wait.",
       waitFor: { selector: ".ecard-fields", text: "Decides" },
       pad: 10,
       placement: "top",
@@ -50,13 +50,13 @@ const c: TourCase = {
     {
       target: { selector: ".card", text: "Waiting for approval to deploy" },
       title: "Everything needed to decide",
-      body: "The exact command, the rule that held it, and a safer option: deploy to staging first. Alex sees it all before choosing.",
+      body: "The exact command, the rule that held it, and a safer path: deploy to staging, then ask for a short production window. Alex sees it all before choosing.",
     },
     {
       target: { selector: "button", text: "Approve scoped" },
       action: "click",
       title: "Yes, for this job only",
-      body: "Approve scoped lets this job, and only this job, keep using AWS Production until it's done. The review queue is now empty, and the health check won't have to ask again.",
+      body: "Approve scoped says yes to the deploy and lets this job alone use AWS Production until it ends. The queue empties; the health check won't ask again.",
       waitFor: { selector: ".card", text: "Nothing waiting" },
     },
     {
@@ -70,14 +70,14 @@ const c: TourCase = {
       target: { selector: ".tab", text: "Finished" },
       action: "click",
       title: "The extra access, on record",
-      body: "The job moved to Finished. Alex's scoped yes is written into it: AWS Production, valid for this task only, with his name on it.",
+      body: "The job is now under Finished. Alex's scoped yes is written into it: AWS Production, valid for this task only, with Alex's name on it.",
       waitFor: { selector: ".card .card", text: "Extra scope approved" },
     },
     {
       target: { selector: ".scroll-thin > div", text: "Verify production health" },
       action: "hover",
       title: "All ten steps done",
-      body: "The job is COMPLETED. Routine steps ran on their own, the deploy waited for Alex's yes, and the health check ran under his scoped approval.",
+      body: "The job is COMPLETED. Routine steps ran on their own, the deploy waited for Alex's yes, and the health check ran under that same approval.",
       waitFor: ".scroll-thin",
       placement: "top",
     },

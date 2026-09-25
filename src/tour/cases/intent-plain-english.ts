@@ -1,6 +1,6 @@
 import type { TourCase } from "../types";
 
-// Reference case: Priya writes a company rule in her own words.
+// Reference case: Priya writes a company rule in plain words.
 // Priya is the persona the product records as author on Save as draft, and the header avatar.
 const c: TourCase = {
   id: "intent-plain-english",
@@ -8,7 +8,7 @@ const c: TourCase = {
   persona: { userId: "u-priya", name: "Priya Menon", role: "Admin" },
   title: "Write a rule in plain English",
   goal: "Priya wants customer emails and phone numbers disguised before they are sent outside the company.",
-  outcome: "Her own sentence became a rule Wrapbox can check, saved as a draft that changes nothing until someone switches it on.",
+  outcome: "Priya's own sentence became a rule Wrapbox can check, saved as a draft that changes nothing until someone switches it on.",
   start: "intent",
   poster: 4,
   steps: [
@@ -16,7 +16,7 @@ const c: TourCase = {
       target: { selector: "button", text: "Draft contract" },
       action: "click",
       title: "Start a new rule",
-      body: "In Wrapbox, a written company rule is called a contract. Priya opens the drafter to write a new one.",
+      body: "Priya wants customer emails and phone numbers disguised before they leave the company. Wrapbox calls a written company rule a contract, so Priya drafts one.",
       waitFor: { within: ".drawer", selector: ".field", nth: 0 },
     },
     {
@@ -30,14 +30,14 @@ const c: TourCase = {
       target: ".drawer textarea",
       action: "type",
       text: "Customer email addresses and phone numbers must be tokenized before they are sent anywhere outside the company.",
-      title: "Say it the way you'd say it",
-      body: "Priya types the rule the way she'd tell a colleague. 'Tokenized' just means each email or phone number is swapped for a harmless stand-in.",
+      title: "Write it in everyday words",
+      body: "Priya swaps the example text for one plain sentence. 'Tokenized' means each email or phone number is replaced with a stand-in code before it leaves.",
     },
     {
       target: { within: ".drawer", selector: "button", text: "Compile" },
       action: "click",
       title: "Turn the sentence into a rule",
-      body: "Wrapbox reads her sentence and works out which data it protects and what must happen to it.",
+      body: "Wrapbox reads the sentence and works out which data it protects and what must happen to that data.",
       waitFor: { within: ".drawer", selector: ".card", nth: 0 },
     },
     {
@@ -47,25 +47,29 @@ const c: TourCase = {
     },
     {
       target: { within: ".drawer", selector: ".row", text: "Coverage rollup" },
-      title: "It only promises what it can keep",
-      body: "ENFORCED means Wrapbox has the live skill to check this today. If a needed skill were missing, it would say so and refuse to switch the rule on.",
+      title: "No promise it can't keep",
+      body: "ENFORCED means Wrapbox has a working check for this today. If a needed check were missing, it would say so and refuse to switch the rule on.",
       pad: 10,
     },
     {
       target: { within: ".drawer", selector: "button", text: "Save as draft" },
       action: "click",
-      title: "Saved, but not switched on",
-      body: "The new rule joins the team's list as a DRAFT. Nothing changes for anyone until someone turns it on.",
+      title: "Saved as a draft",
+      body: "The rule joins the team's list as a DRAFT under Priya's name. The top bar's rule count doesn't move: a draft changes nothing yet.",
       waitFor: { selector: ".ecard", text: "Protect customer contact details" },
     },
     {
       target: { selector: ".ecard", text: "Protect customer contact details" },
       action: "click",
       title: "The finished rule, spelled out",
-      body: "Opened, the draft lists where it applies — AI tools, outside websites, unknown destinations and partners — and the live skill that checks it. It stays off until someone presses Activate.",
+      body: "Opened, it shows what the rule covers: emails and phone numbers sent to AI tools, outside websites, unknown destinations or partners — and the check it relies on.",
       waitFor: { within: ".drawer", selector: ".card", text: "requires" },
-      // Wide enough to take in the Activate / Simulate impact row under the clause card.
-      pad: 46,
+    },
+    {
+      target: { within: ".drawer", selector: ".row", text: "Activate" },
+      title: "Ready, and still switched off",
+      body: "Priya's sentence is now a rule Wrapbox can check. It stays off until someone presses Activate, and Simulate impact lets the team try it safely first.",
+      pad: 10,
     },
   ],
 };

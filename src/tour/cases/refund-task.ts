@@ -1,9 +1,9 @@
 import type { TourCase } from "../types";
 
 // Jordan hands a whole support ticket to the Support Agent. The $1,240 refund
-// is over the spending limit, so it parks and goes to Sam in Finance; the
-// viewer plays Sam's part and approves it once, the decision is recorded under
-// Sam's name, and the job then finishes by itself.
+// is over the agent's $20-per-action spending limit, so it parks and goes to
+// Sam in Finance; the viewer plays Sam's part and approves it once, the
+// decision is recorded under Sam's name, and the job then finishes by itself.
 const c: TourCase = {
   id: "refund-task",
   order: 60,
@@ -18,8 +18,8 @@ const c: TourCase = {
       // The four job cards each have a Start button; the refund job is the third.
       target: { selector: "button", text: "Start", exact: true, nth: 2 },
       action: "click",
-      title: "Hand a whole ticket to an agent",
-      body: "Jordan, a support lead, hands refund ticket #4821 to the Support Agent. Wrapbox checks each of its six steps before it runs, and one is held for a person straight away.",
+      title: "Jordan hands over a ticket",
+      body: "Jordan, a support lead, gives refund ticket #4821 to the Support Agent, but not free rein over money. Wrapbox checks each step first; one already waits for approval.",
       waitFor: { selector: ".card", text: "Task envelopes" },
       pad: 10,
     },
@@ -27,13 +27,13 @@ const c: TourCase = {
       target: { selector: "[role=tab]", text: "In progress" },
       action: "click",
       title: "Every step is checked first",
-      body: "ALLOW steps ran on their own. CONSTRAIN: the ticket went to the AI for a draft, with the customer's email and phone swapped for stand-ins. REVIEW: the refund waits for a person.",
+      body: "ALLOW: ran as asked. CONSTRAIN: ran with a change — the AI drafted the reply without seeing the customer's real email or phone. REVIEW: waits for a person.",
       waitFor: { selector: ".scroll-thin", text: "Refund $1,240" },
     },
     {
       target: { selector: ".card .card", text: "Safe Continuation active" },
       title: "Only the refund needs a yes",
-      body: "Safe Continuation: Wrapbox holds only the risky step, the refund, for Sam in Finance. Steps that don't need it are done; the reply and ticket close wait for it.",
+      body: "Safe Continuation: only the risky step stops. The refund waits for Sam in Finance; steps that need the refund (the reply, closing the ticket) wait with it.",
       placement: "top",
     },
     {
@@ -41,7 +41,8 @@ const c: TourCase = {
       action: "click",
       title: "Go where approvals happen",
       body: "The Review Center is where people decide the few actions an agent may not take alone. A request never goes to the person who made it.",
-      waitFor: ".page-head",
+      // The page's own promise: every request goes to the right approver, never the requester.
+      waitFor: { selector: ".sim-note", text: "never the requester" },
     },
     {
       target: { selector: "[role=tab]", text: "Awaiting your decision" },
@@ -55,21 +56,21 @@ const c: TourCase = {
       // The whole request card: what Sam is asked to approve, and why it stopped.
       target: { selector: ".card", text: "exceeds budget" },
       title: "Why the refund stopped",
-      body: "Any single action that spends more than $20 needs a person's yes, and this refund is $1,240. The Blast-Radius Governor named here is that spending cap.",
+      body: "The Blast-Radius Governor checks how much one action can affect. An agent may spend up to $20 per action on its own; this refund is $1,240.",
       placement: "top",
     },
     {
       target: { selector: "button", text: "Approve once" },
       action: "click",
-      title: "Approve this refund, once",
-      body: "Playing Sam's part, one click approves this refund only. It leaves the waiting list, and the agent gets no standing power to refund again.",
+      title: "Approve just this one refund",
+      body: "Playing Sam's part, we click Approve once. Only this refund goes ahead, the waiting list empties, and the agent's $20 limit stays as it is.",
       waitFor: { selector: ".card.empty", text: "Nothing waiting" },
     },
     {
       target: { selector: "[role=tab]", text: "Resolved" },
       action: "click",
       title: "Sam's yes is on record",
-      body: "Under Resolved, the refund now reads Approved once, with Jordan Lee as requester and Sam Rivera as approver. Who asked and who decided stay on record.",
+      body: "The refund now shows as approved and issued. The record keeps who asked (Jordan Lee), who decided (Sam Rivera) and when.",
       waitFor: { selector: ".ecard", text: "88142" },
     },
     {
@@ -83,7 +84,7 @@ const c: TourCase = {
       target: { selector: "[role=tab]", text: "Finished" },
       action: "click",
       title: "Six steps, all done",
-      body: "The refund went through once Sam approved; then the agent replied to the customer and closed the ticket. Every step keeps its decision on record.",
+      body: "After Sam's yes, the refund ran, then the agent sent the reply and closed the ticket. Each step's decision, including Sam's approval, stays on record.",
       waitFor: { selector: ".scroll-thin", text: "Close the ticket" },
     },
   ],

@@ -140,7 +140,7 @@ export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & S
               return (
                 <li key={i} className={`${cur ? "cur" : ""} ${past ? "done" : ""}`} onClick={() => restartAt(i)} title="Play from this step">
                   <span className="lvn">{past ? <Check size={12} strokeWidth={3} /> : i + 1}</span>
-                  <span className="lvst"><b>{s.title}</b>{cur && <em>{s.body}</em>}</span>
+                  <span className="lvst"><b>{s.title}</b></span>
                 </li>
               );
             })}
@@ -154,7 +154,7 @@ export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & S
               {done ? <><RotateCcw size={15} /> Replay</> : paused ? <><Play size={15} /> Play</> : <><Pause size={15} /> Pause</>}
             </button>
             <button onClick={() => restartAt(Math.min(total - 1, shownStep + 1))} title="Next step"><SkipForward size={15} /></button>
-            <span className="lvprog">Step {Math.min(shownStep + 1, total)} of {total}</span>
+            <span className="lvprog">{Math.min(shownStep + 1, total)} / {total}</span>
           </div>
         </Reveal>
       </div>

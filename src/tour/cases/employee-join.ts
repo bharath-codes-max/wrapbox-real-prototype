@@ -1,35 +1,35 @@
 import type { TourCase } from "../types";
 
-// Daniel, a developer, has joined Veridian (the seeded setup checklist marks it
-// done). The story is what that means for his AI coding agent: it is registered
-// to him, an everyday request runs untouched, a request for secrets is stopped
-// before it runs, and both land on his agent's record.
+// Daniel Kim, a developer, has joined Veridian (the seeded setup checklist marks
+// it done). The story is what that means for Daniel's AI coding agent: it is
+// registered to Daniel, an everyday request runs untouched, a request for
+// secrets is stopped before it runs, and both land on the agent's own record.
 const c: TourCase = {
   id: "employee-join",
   order: 15,
   persona: { userId: "u-daniel", name: "Daniel Kim", role: "Developer" },
   title: "A new developer's agent, governed",
-  goal: "Daniel has joined Veridian as a developer, and his AI coding agent must be governed without slowing his work.",
-  outcome: "His everyday agent work runs untouched, a grab for secrets is stopped before it runs, and both land on his agent's record.",
+  goal: "Daniel Kim has joined Veridian as a developer, and the company needs Daniel's AI coding agent governed without slowing the work down.",
+  outcome: "Everyday agent work runs untouched, a grab for secrets is stopped before it runs, and both land on the agent's own record.",
   start: "start",
   poster: 6,
   steps: [
     {
       target: { selector: ".setup-step", text: "An employee joins" },
       title: "A new developer on the team",
-      body: "The setup checklist shows Daniel Kim has joined Veridian as a developer. Now we follow what that means for his AI coding agent.",
+      body: "Earlier, Daniel Kim joined Veridian as a developer, and the setup checklist marks it done. Now we follow Daniel's AI coding agent.",
     },
     {
       target: { selector: ".rail-item", text: "Agents" },
       action: "click",
-      title: "His coding agent is known",
-      body: "Wrapbox lists Claude Code under Daniel's name, on his laptop Daniel-MBP, with the tools it uses and where it can send data. So far: 10 events, 2 blocked.",
+      title: "The coding agent is known",
+      body: "Wrapbox lists Claude Code with Daniel as its owner, on the laptop Daniel-MBP, plus its tools and where it can send data. So far: 10 events, 2 blocked.",
       waitFor: { selector: ".ecard", text: "Claude Code" },
     },
     {
       target: { selector: ".rail-item", text: "Simulation Lab" },
       action: "click",
-      title: "Watch his agent at work",
+      title: "Watch the agent at work",
       body: "The Simulation Lab plays an agent's request through Wrapbox. As this note says, the laptop is simulated, but the decision comes from the company's real rules.",
       waitFor: { selector: ".sim-note", text: "Environments simulated" },
     },
@@ -52,14 +52,14 @@ const c: TourCase = {
       target: { selector: ".stream-item", text: "Agent reads .env" },
       action: "click",
       title: "Now a riskier request",
-      body: "Chasing a config problem, the agent tries to open .env, a file of passwords and keys. 'Right now: BLOCK' is Wrapbox's forecast under today's rules; now we play it for real.",
+      body: "Chasing a config problem, the agent tries to open .env, a file of passwords and keys. 'Right now: BLOCK' predicts it will be stopped under today's rules.",
       waitFor: { selector: ".card", text: "attempts to read .env" },
     },
     {
       target: { selector: "button", text: "Run", exact: true },
       action: "click",
       title: "Secrets stay locked",
-      body: "Wrapbox finds two API keys and a password inside, and the rule against reading secrets files stops it. BLOCK means the agent never gets the file, and is offered a safer path.",
+      body: "Wrapbox finds two API keys and a password; the rule against reading secrets files stops it. The agent never sees the file and gets a safer path.",
       waitFor: { selector: ".aterm-line", text: "Decision BLOCK" },
       hold: 2400,
     },
@@ -74,8 +74,8 @@ const c: TourCase = {
     {
       target: { selector: ".ecard", text: "Claude Code" },
       action: "click",
-      title: "One record for his agent",
-      body: "Claude Code's own record now starts with the two requests we just played: secrets read blocked, source read allowed. Its earlier history sits below.",
+      title: "The agent's own record",
+      body: "Claude Code's record, owned by Daniel, now opens with the two requests we just played: the secrets read blocked, the source read allowed. Earlier history sits below.",
       waitFor: { selector: ".drawer div.small", text: "Tried to open the secrets file" },
       hold: 2400,
     },

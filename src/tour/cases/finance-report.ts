@@ -2,14 +2,14 @@ import type { TourCase } from "../types";
 
 // Sam hands the Q3 revenue report to the finance agent. The routine steps run
 // on their own; the bulk customer export parks for Maya, who steers it to the
-// safer version, and the job finishes by itself with a record of her decision.
+// safer version, and the job finishes by itself with a record of Maya's decision.
 const c: TourCase = {
   id: "finance-report",
   order: 62,
   persona: { userId: "u-sam", name: "Sam Rivera", role: "Finance Controller" },
   title: "Build a report, safely",
   goal: "Sam needs the Q3 revenue report and wants the finance agent to build it without free rein over customer data.",
-  outcome: "The routine work ran on its own, the one risky export waited for Maya, and the report finished using the safer version she chose, with a record of who decided.",
+  outcome: "The routine steps ran on their own, the one risky export waited for Maya, and the job finished using the safer version Maya chose, with a record of who decided.",
   start: "tasks",
   poster: 2,
   steps: [
@@ -23,18 +23,22 @@ const c: TourCase = {
       target: { selector: "button", text: "Start", exact: true, nth: 1 },
       action: "click",
       title: "Start the job, inside its limits",
-      body: "Sam presses Start. The agent may use customer data and write and send the report, but never passwords, secret files or the payments database.",
+      // The engine holds forbidden scope for approval (REVIEW); stricter layers may still block,
+      // so the caption states the yes as necessary, not sufficient.
+      body: "Sam presses Start. The agent may read customer data and write and send the report. Passwords, secret files and the payments database are off-limits without a person's yes.",
       waitFor: { selector: ".grid.g2", text: "Forbidden" },
     },
     {
       target: ".scroll-thin",
       title: "Routine steps ran on their own",
-      body: "Wrapbox checked each step just before it ran. Four got ALLOW, meaning cleared to run: both revenue queries, the charts and the summary. No one had to approve them.",
+      body: "Wrapbox checked each step just before it ran. Four got ALLOW, cleared to run with no one's approval: both revenue queries, the charts and the summary.",
     },
     {
       target: { selector: ".card .card", text: "Safe Continuation active" },
       title: "One step is paused",
-      body: "Safe Continuation: the customer export is parked until a person decides, while the rest carries on. Only sending the report to the CFO waits for it.",
+      body: "The customer export got REVIEW: held until a person decides. Safe Continuation means the rest kept going; only sending the report to the CFO waits for it.",
+      // Above the card, so step 4's REVIEW / PARKED chips in the timeline stay visible.
+      placement: "top",
     },
     {
       target: { selector: "a", text: "Review Center" },
@@ -46,34 +50,34 @@ const c: TourCase = {
     {
       target: { selector: ".card", text: "Safer alternative" },
       title: "Why it was held",
-      body: "A company rule says bulk exports of customer records need a security review, and this one is 50,000 rows. The card offers a safer option: a summary, or 500 rows at most.",
+      body: "A company rule says bulk customer exports need a security review, and this one is 50,000 rows. The safer option: a summary, or 500 rows at most.",
     },
     {
       target: { selector: "button", text: "Constrain" },
       action: "click",
       title: "Maya picks the safer version",
-      body: "Not just yes or no: Maya picks Constrain, so the export may run only in that safer form. Nothing is left waiting in her queue.",
+      body: "Not just yes or no: Maya picks Constrain, meaning the export may run, but only in the safer form. Nothing is left waiting for a decision.",
       waitFor: { selector: ".card", text: "Nothing waiting" },
     },
     {
       target: { selector: ".rail-item", text: "Tasks" },
       action: "click",
       title: "The job carried on by itself",
-      body: "Back in Tasks, Sam's job is no longer in progress: it has moved to Finished. Maya's decision restarted it automatically; nobody had to run it again.",
-      waitFor: { selector: ".tab", text: "Finished" },
+      body: "Back in Tasks, nothing is parked and one job is completed. Maya's decision resumed it automatically; nobody had to press Start again.",
+      waitFor: { selector: ".card", text: "Completed" },
     },
     {
       target: { selector: ".tab", text: "Finished" },
       action: "click",
       title: "The report is finished",
-      body: "All six steps now show done, and the report went to the CFO. Step 4 keeps its REVIEW tag to show it was held. The job is marked COMPLETED.",
+      body: "All six steps show done, and the report went to the CFO. Step 4 keeps its REVIEW tag as a reminder it was held. The job reads COMPLETED.",
       waitFor: ".scroll-thin",
     },
     {
       target: { within: ".scroll-thin", selector: "div", text: "Export every customer" },
       action: "click",
       title: "A record of who decided",
-      body: "Clicking the export step opens its record: outcome constrained, decided by Maya Chen, under the rule that held it. The 50,000 above is what the agent first asked for.",
+      body: "Clicking the export step opens its record: constrained by Maya Chen, under the rule that held it. The 50,000 above is what the agent first asked for.",
       waitFor: { within: ".drawer", selector: "dl.kv", text: "Reviewer" },
     },
   ],
