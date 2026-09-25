@@ -61,7 +61,7 @@ export function Understand() {
       <div className="cols cols-4" style={{ gap: 18, flex: 1, alignItems: "stretch" }}>
         {INCIDENT_CLIPS.map((x, k) => {
           const c = RPLUS[x.rid];
-          return c ? <Clip key={x.rid} i={k + 2} tone="block" brand={x.brand} org={c.source_org} title={c.source_title} date={fmtDate(c.published)} quote={c.quote} url={c.source_url} headline={x.head} /> : null;
+          return c ? <Clip key={x.rid} i={k + 2} tone="block" tint={k + 1} brand={x.brand} org={c.source_org} title={c.source_title} date={fmtDate(c.published)} quote={c.quote} url={c.source_url} headline={x.head} /> : null;
         })}
       </div>
       <Reveal i={6} className="card acc" style={{ marginTop: 20, padding: "18px 26px" }}>
@@ -83,7 +83,7 @@ export function Numbers() {
       <div className="cols" style={{ gridTemplateColumns: "1fr 1fr", gap: 44, flex: 1, alignItems: "stretch" }}>
         {hook && (
           <Reveal i={2}>
-            <a className="card ink" href={hook.source_url} target="_blank" rel="noreferrer" style={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", gap: 18, textDecoration: "none", padding: "34px 38px" }}>
+            <a className="card hook" href={hook.source_url} target="_blank" rel="noreferrer" style={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", gap: 18, textDecoration: "none", padding: "34px 38px" }}>
               <div className="row" style={{ gap: 12 }}><Brand name="ibm" size={40} /><span style={{ fontWeight: 700, fontSize: 16 }}>IBM · Cost of a Data Breach 2025</span></div>
               <div style={{ fontSize: 168, fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 0.9 }}>{hookNum}</div>
               <div style={{ fontSize: 24, fontWeight: 600, lineHeight: 1.25, maxWidth: "20ch" }}>of AI-breached organizations had no AI access controls in place.</div>
@@ -94,7 +94,7 @@ export function Numbers() {
         <div className="clip-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 16, minHeight: 0 }}>
           {STAT_CLIPS.map((rid, k) => {
             const c = RPLUS[rid];
-            return c ? <Clip key={rid} i={k + 3} org={c.source_org} title={c.source_title} date={fmtDate(c.published)} headline={c.figure} quote={c.quote} url={c.source_url} /> : null;
+            return c ? <Clip key={rid} i={k + 3} tint={k + 3} org={c.source_org} title={c.source_title} date={fmtDate(c.published)} headline={c.figure} quote={c.quote} url={c.source_url} /> : null;
           })}
         </div>
       </div>

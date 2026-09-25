@@ -28,6 +28,8 @@ const USER_PHOTOS: Record<string, string> = {
   "u-daniel": "dev.k",
   "u-maya": "meera.i",
   "u-alex": "rohan.d",
+  "u-jordan": "kiran.b",
+  "u-sam": "sara.t",
 };
 export const photoOf = (userId: string): string | undefined =>
   photoByName[USER_PHOTOS[userId] ?? ""];

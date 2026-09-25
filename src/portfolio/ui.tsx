@@ -188,9 +188,10 @@ const SRC_LOGO: [RegExp, string][] = [
 export function srcLogo(org: string): string | null { for (const [re, k] of SRC_LOGO) if (re.test(org)) return k; return null; }
 function initials(org: string): string { return org.replace(/[^A-Za-z ]/g, " ").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase(); }
 
-export function Clip({ brand, org, title, headline, quote, date, url, i = 0, tone }: { brand?: string; org: string; title?: string; headline?: React.ReactNode; quote?: string; date?: string; url?: string; i?: number; tone?: "block" | "review" }) {
+export function Clip({ brand, org, title, headline, quote, date, url, i = 0, tone, tint }: { brand?: string; org: string; title?: string; headline?: React.ReactNode; quote?: string; date?: string; url?: string; i?: number; tone?: "block" | "review"; tint?: number }) {
   const logo = brand ?? srcLogo(org);
   const meta = [title, date].filter(Boolean).join(" · ");
+  const cls = `clip ${tone ? `clip-${tone}` : ""} ${tint ? `clip-t${((tint - 1) % 6) + 1}` : ""}`;
   const inner = (
     <>
       <div className="clip-bar">
@@ -205,13 +206,13 @@ export function Clip({ brand, org, title, headline, quote, date, url, i = 0, ton
   return (
     <Reveal i={i}>
       {url
-        ? <a className={`clip ${tone ? `clip-${tone}` : ""}`} href={url} target="_blank" rel="noreferrer">{inner}</a>
-        : <div className={`clip ${tone ? `clip-${tone}` : ""}`}>{inner}</div>}
+        ? <a className={cls} href={url} target="_blank" rel="noreferrer">{inner}</a>
+        : <div className={cls}>{inner}</div>}
     </Reveal>
   );
 }
 
 /* ---------- misc ---------- */
 export const Chip = ({ tone, children }: { tone: "allow" | "constrain" | "review" | "block" | "neutral"; children: React.ReactNode }) => <span className={`chip ${tone}`}>{children}</span>;
-export const Pill = ({ children, acc, logo, brand }: { children: React.ReactNode; acc?: boolean; logo?: string; brand?: string }) => <span className={`pill ${acc ? "acc" : ""}`}>{logo && <img src={logoUrl(logo)} alt="" />}{brand && <img src={brandUrl(brand)} alt="" />}{children}</span>;
+export const Pill = ({ children, acc, logo, brand, className = "" }: { children: React.ReactNode; acc?: boolean; logo?: string; brand?: string; className?: string }) => <span className={`pill ${acc ? "acc" : ""} ${className}`}>{logo && <img src={logoUrl(logo)} alt="" />}{brand && <img src={brandUrl(brand)} alt="" />}{children}</span>;
 export const decisionTone = (d: string) => (d === "ALLOW" ? "allow" : d === "CONSTRAIN" ? "constrain" : d === "REVIEW" ? "review" : "block") as "allow" | "constrain" | "review" | "block";

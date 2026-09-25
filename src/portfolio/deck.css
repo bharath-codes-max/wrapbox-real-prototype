@@ -41,6 +41,8 @@ body[data-phase="synthesize"] { --acc: #7c3aed; }
 body[data-phase="ideate"] { --acc: #b45309; }
 body[data-phase="prototype"] { --acc: #059669; }
 body[data-phase="test"] { --acc: #0d9488; }
+body[data-phase="usecases"] { --acc: #0369a1; }
+:root[data-theme="dark"] body[data-phase="usecases"] { --acc: #38bdf8; }
 :root[data-theme="dark"] body[data-phase="understand"] { --acc: #818cf8; }
 :root[data-theme="dark"] body[data-phase="research"] { --acc: #4d8dff; }
 :root[data-theme="dark"] body[data-phase="portfolio"] { --acc: #4d8dff; }
@@ -363,3 +365,68 @@ a.clip:hover { border-color: var(--acc-line); transform: translateY(-2px); box-s
 .clip-grid .clip-head { font-size: 17px; }
 .clip-grid .clip-quote { font-size: 13px; padding-left: 11px; }
 .clip-grid .clip-src small { font-size: 11.5px; }
+
+/* Ice-cream tones — one soft flavour per card; dark theme keeps them as a faint tint. */
+:root[data-theme="light"] { --ice1: #fff4e1; --ice2: #e6f6ee; --ice3: #fde9ee; --ice4: #e8eeff; --ice5: #eef6e3; --ice6: #ffece2; --ice-hook: #e3e8ff; }
+:root[data-theme="dark"] { --ice1: #1b1710; --ice2: #0f1a14; --ice3: #1b1114; --ice4: #10141f; --ice5: #121810; --ice6: #1b1410; --ice-hook: #10132a; }
+.clip-t1 { background: var(--ice1); } .clip-t2 { background: var(--ice2); } .clip-t3 { background: var(--ice3); }
+.clip-t4 { background: var(--ice4); } .clip-t5 { background: var(--ice5); } .clip-t6 { background: var(--ice6); }
+.clip[class*="clip-t"] { border-color: transparent; }
+.clip[class*="clip-t"] .clip-quote { border-left-color: color-mix(in oklab, var(--ink) 22%, transparent); }
+.card.hook { background: var(--ice-hook); color: var(--ink); border-color: transparent; }
+.card.hook .body { color: var(--ink-2); }
+
+/* ---------- use-case slides ---------- */
+.ucgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; flex: 1; align-content: start; }
+.uccell { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 16px 18px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); min-height: 132px; }
+.uccell .uccell-n { position: absolute; top: 12px; right: 14px; font: 700 12px var(--mono); color: var(--ink-3); }
+.uccell .uccell-t { font-size: 16px; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; margin-top: 4px; }
+.uccell .uccell-p { font-size: 13px; color: var(--ink-3); margin-top: auto; }
+.uccell-sum { background: var(--acc); border-color: transparent; color: var(--acc-ink); justify-content: center; }
+.uccell-sum .uccell-t { margin-top: 0; }
+.uccell-sum .uccell-p { color: var(--acc-ink); opacity: 0.88; margin-top: 8px; line-height: 1.35; }
+.ucface { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--line-strong); flex-shrink: 0; }
+.ucface-mono { display: grid; place-items: center; background: var(--acc); color: var(--acc-ink); font: 700 12px var(--mono); }
+/* head: full-width single/double-line title (the shared .head-row reserves a lead column) */
+.uchead { margin-bottom: 18px; }
+.uchead .eyebrow { margin-bottom: 8px; }
+.display.uc { font-size: 40px; line-height: 1.1; letter-spacing: -0.025em; font-weight: 900; }
+/* captures: virtual time freezes the terminal's entrance animation, so lines would stay invisible */
+html[data-shot="1"] .aterm-line { animation: none; }
+/* left column: the live demo, then what it leaves behind */
+.ucdemo { display: flex; flex-direction: column; gap: 12px; min-height: 0; min-width: 0; }
+.ucterm { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.ucterm .aterm { flex: 1; min-height: 0; font-size: 13px; line-height: 1.5; }
+.ucterm .aterm-foot { display: none; }
+.ucterm .aterm-body { padding: 12px 16px 8px; }
+.ucterm .aterm-box { padding: 12px 12px 8px; margin: 6px 0 12px; }
+.ucterm .aterm-prompt { margin-bottom: 10px; }
+.ucterm .aterm-line { margin-bottom: 7px; }
+.uc-code .code pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.55; padding: 12px 16px; }
+.uc-code.sm .code pre { font-size: 12px; line-height: 1.5; padding: 10px 14px; }
+.uc-code.sm .code .cbar { height: 32px; font-size: 12px; }
+.ucfoot { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; flex-shrink: 0; }
+.ucfoot .ucrow { grid-template-columns: 92px minmax(0, 1fr); gap: 12px; }
+.ucfoot .uclabel { padding-top: 2px; }
+.pill.sm { padding: 4px 10px; font-size: 12.5px; }
+/* right column: the explanation */
+.ucpanel { display: flex; flex-direction: column; gap: 10px; padding: 16px 20px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); min-height: 0; min-width: 0; overflow: hidden; }
+.ucrow { display: grid; grid-template-columns: 108px minmax(0, 1fr); gap: 12px; align-items: start; }
+.uclabel { font: 700 11px var(--sans); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); padding-top: 3px; }
+.uctext { font-size: 14px; line-height: 1.4; color: var(--ink-2); }
+.uctext.sm { font-size: 13px; line-height: 1.4; }
+.uctext.strong { color: var(--ink); font-weight: 600; }
+.ucpath { display: flex; flex-wrap: wrap; gap: 3px 4px; align-items: center; }
+.ucpath code { font: 500 11.5px var(--mono); padding: 2px 6px; border-radius: 6px; background: var(--acc-soft); color: var(--acc); border: 1px solid var(--acc-line); }
+.ucpath i { font-style: normal; color: var(--ink-3); margin: 0 2px; }
+.ucreal { padding-top: 8px; border-top: 1px dashed var(--line-strong); font: 400 11.5px var(--mono); color: var(--ink-3); line-height: 1.4; }
+.ucsteps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ucstep { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 8px; align-items: start; padding: 5px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); transition: background 0.2s, border-color 0.2s; min-width: 0; }
+.ucstep-n { font: 700 10.5px var(--mono); width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--ink-2); margin-top: 1px; }
+.ucstep-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ucstep-ui { font-size: 13.5px; font-weight: 600; line-height: 1.28; color: var(--ink); }
+.ucstep-sys { font: 400 11px var(--mono); color: var(--ink-3); line-height: 1.3; }
+.ucstep.done { border-color: var(--acc-line); }
+.ucstep.done .ucstep-n { background: var(--acc); color: var(--acc-ink); }
+.ucstep.cur { border-color: var(--acc); background: var(--acc-soft); }
+.ucstep.cur .ucstep-n { background: var(--acc); color: var(--acc-ink); }

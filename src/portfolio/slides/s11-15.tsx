@@ -110,7 +110,7 @@ export function Close() {
         <Reveal i={7} style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "flex-end", textAlign: "right" }}>
           <Display sm style={{ fontSize: 60 }}>Thank you.</Display>
           <div className="body">Bharath Salla · Wrapbox</div>
-          <div className="row" style={{ gap: 8 }}><Pill>github.com/bharath-codes-max/wrapbox-real-prototype</Pill></div>
+          <div className="row" style={{ gap: 8 }}><Pill acc>wrapbox.io</Pill></div>
           <div className="small">Press <span className="kbd">Home</span> to start over</div>
         </Reveal>
       </div>
