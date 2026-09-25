@@ -40,16 +40,18 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
         right={<SimNote />}
       />
 
-      <MetricBar band items={[
-        { label: "Active agents", value: activeAgents, note: discovered > 0 ? `+${discovered} discovered, unregistered` : "all registered", onClick: () => nav("agents") },
-        { label: "Pending reviews", value: m.pendingReviews, tone: m.pendingReviews > 0 ? "warn" : "good", note: parked > 0 ? `${parked} task step(s) parked` : "no parked steps", onClick: () => nav("reviews") },
-        { label: "Secrets protected", value: m.secretsProtected, tone: "good", note: "credential exfiltration blocked", onClick: () => nav("evidence") },
-        { label: "High-risk events", value: m.highRisk, tone: m.highRisk > 0 ? "bad" : "good", note: "risk ≥ high, all planes", onClick: () => nav("evidence") },
-      ]} />
+      <div className="card">
+        <MetricBar band items={[
+          { label: "Active agents", value: activeAgents, note: discovered > 0 ? `+${discovered} discovered, unregistered` : "all registered", onClick: () => nav("agents") },
+          { label: "Pending reviews", value: m.pendingReviews, tone: m.pendingReviews > 0 ? "warn" : "good", note: parked > 0 ? `${parked} task step(s) parked` : "no parked steps", onClick: () => nav("reviews") },
+          { label: "Secrets protected", value: m.secretsProtected, tone: "good", note: "credential exfiltration blocked", onClick: () => nav("evidence") },
+          { label: "High-risk events", value: m.highRisk, tone: m.highRisk > 0 ? "bad" : "good", note: "risk ≥ high, all planes", onClick: () => nav("evidence") },
+        ]} />
+      </div>
 
       <div className="section">
         <SectionHead title="Decision mix" sub={`How ${totalDecided} consequential actions resolved across every plane`} />
-        <div className="decisionbar">
+        <div className="card decisionbar">
           <div className="decision-track">
             {DECISIONS.map((d) => {
               const c = m.counts[d.key];
@@ -105,7 +107,9 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
 
       <div className="section">
         <SectionHead title="Recent activity" sub="The live decision stream, newest first" right={<button className="btn btn-sm" onClick={() => nav("live")}>Live Actions <ArrowRight size={13} /></button>} />
-        <EventStream events={s.events} nav={nav} compact limit={8} filters={false} bare />
+        <div className="card card-pad-0">
+          <EventStream events={s.events} nav={nav} compact limit={8} filters={false} bare />
+        </div>
       </div>
     </div>
   );
