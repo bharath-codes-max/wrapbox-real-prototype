@@ -269,7 +269,7 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
                   {event && !finished && <span className="dim">…</span>}
                   {finished && liveEvent && (
                     <>
-                      {liveEvent.decision === "ALLOW" && <span style={{ color: "var(--good)" }}>{"✓ completed"}{sc.id === "ep-run-tests" ? "\n  42 passing (3.2s)" : ""}</span>}
+                      {liveEvent.decision === "ALLOW" && <span style={{ color: "var(--good)" }}>{"✓ allowed — the agent's command runs unchanged"}</span>}
                       {liveEvent.decision === "BLOCK" && (
                         <span style={{ color: "var(--bad)" }}>
                           {"⛔ wrapbox: action blocked\n"}

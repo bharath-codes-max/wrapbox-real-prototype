@@ -156,7 +156,9 @@ export function CoverageMap({ nav }: { nav: (r: string) => void }) {
         )}
 
         {tab === "gaps" && (
-          <div className="card card-pad-0">
+          m.gaps.length === 0
+            ? <div className="card empty">No gaps — every skill your switched-on rules rely on is fully enforced.</div>
+            : <div className="card card-pad-0">
             <table className="tbl">
               <thead><tr><th>Skill</th><th>Plane</th><th>Status</th><th>Affects</th><th>Why</th></tr></thead>
               <tbody>
@@ -194,7 +196,9 @@ export function CoverageMap({ nav }: { nav: (r: string) => void }) {
         )}
 
         {tab === "skills" && (
-          <div className="card card-pad-0">
+          CAPABILITIES.length === 0
+            ? <div className="card empty">No skills registered yet.</div>
+            : <div className="card card-pad-0">
             <table className="tbl">
               <thead><tr><th>Capability</th><th>Plane</th><th>Status</th><th>Note</th></tr></thead>
               <tbody>
@@ -212,7 +216,9 @@ export function CoverageMap({ nav }: { nav: (r: string) => void }) {
         )}
 
         {tab === "data" && (
-          <div className="card card-pad-0">
+          DATA_TYPES.length === 0
+            ? <div className="card empty">No data classes registered yet.</div>
+            : <div className="card card-pad-0">
             <table className="tbl">
               <thead><tr><th>Class</th><th>Family</th><th>Example</th><th>Severity</th></tr></thead>
               <tbody>

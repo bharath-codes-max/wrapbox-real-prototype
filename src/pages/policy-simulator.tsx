@@ -104,6 +104,9 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
           title="1 · Propose a change"
           sub="Untick a rule to try switching it off. Tick a switched-off contract to try switching it on."
         />
+        {active.length === 0 && inactive.length === 0 && (
+          <div className="card empty">No contracts to compare yet. Write one in Intent Studio, then return here to test changes against your history.</div>
+        )}
         <div className="grid g2">
           {active.map((c) => (
             <div className="card" key={c.id}>

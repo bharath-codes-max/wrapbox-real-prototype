@@ -59,6 +59,9 @@ export function StandingPage({ nav }: { nav: (r: string) => void }) {
 
       <div className="section">
         <SectionHead title="Permissions" sub="Every standing permission, what it allows, what it never allows, and what would change if you revoked it" />
+        {s.standing.length === 0 && (
+          <div className="card empty"><ShieldCheck size={18} className="dim" /><div>No standing permissions yet. Until one is granted, every agent action on these systems needs a human yes.</div></div>
+        )}
         <div className="grid" style={{ gap: 16 }}>
           {s.standing.map((p) => {
             const on = isActive(p);

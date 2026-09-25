@@ -75,6 +75,9 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
 
       <div className="section">
         <SectionHead title="Intent Contracts" sub="Each row is authored intent compiled to enforceable clauses — open one to inspect its machine representation" />
+        {s.contracts.length === 0 ? (
+          <div className="card empty"><FileText size={18} className="dim" /><div>No contracts yet. Describe a rule in plain English above, then <b>Use this draft</b> to compile your first one.</div></div>
+        ) : (
         <div className="card card-pad-0">
           <table className="tbl">
             <thead><tr><th>Contract</th><th>Author</th><th>Clauses</th><th>Coverage</th><th>Status</th><th>Version</th></tr></thead>
@@ -92,6 +95,7 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {/* Policy Autopilot */}
