@@ -355,6 +355,7 @@ export class Runner {
       overlay.set({ index: n, pad: step.pad ?? 8, cursor: p ? { ...p, visible: true } : overlay.get().cursor, caption: { title: step.title, body: step.body, index: n, total: steps.length, placement: step.placement ?? "auto", centered: !spot }, error: step.target && !el ? `Couldn't find: ${describe(step.target)}` : overlay.get().error });
       await this.settle();
       overlay.set({ status: "done" });
+      this.post(); // the deck labels the frame with the page actually on screen
       return this.results;
     }
     // play

@@ -75,7 +75,9 @@ export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & S
     const on = (e: MessageEvent) => {
       const d = e.data as TourMsg | null;
       if (!d || d.type !== "wrapbox-tour" || d.id !== tc.id || e.source !== frame.current?.contentWindow) return;
-      setStep(d.step); setStatus(d.status); setError(d.error); if (d.route) setRoute(d.route);
+      if (d.route) setRoute(d.route);
+      if (SHOT) return; // stills keep the poster step; only the page name is taken from the app
+      setStep(d.step); setStatus(d.status); setError(d.error);
     };
     window.addEventListener("message", on);
     return () => window.removeEventListener("message", on);
@@ -109,7 +111,7 @@ export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & S
         <Reveal i={2} className="lvframe" style={{ width: APP_W * SCALE }}>
           <div className="lvbar">
             <span className="lights"><i /><i /><i /></span>
-            <span className="lvurl">Wrapbox · {pageOf(SHOT ? (tc.steps.slice(0, poster + 1).reverse().find((s) => s.route)?.route ?? tc.start) : route)}</span>
+            <span className="lvurl">Wrapbox · {pageOf(route)}</span>
             <span className="lvlive"><i />Running live</span>
           </div>
           <div className="lvview" style={{ width: APP_W * SCALE, height: APP_H * SCALE }}>
