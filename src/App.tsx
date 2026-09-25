@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bot, BrainCircuit, CirclePlay, FileCheck2, FlaskConical, Hand, KeyRound,
-  Check, ChevronDown, LayoutGrid, ListChecks, ListTree, Moon, Play, Plug, RotateCcw, Rocket, ScrollText, Search, Sun,
+  ArrowRight, Check, ChevronDown, LayoutGrid, ListChecks, ListTree, Moon, Play, Plug, RotateCcw, Rocket, ScrollText, Search, Sun,
   Settings as SettingsIcon, ShieldCheck, Siren, Table2, Timer, Waypoints,
   type LucideIcon,
 } from "lucide-react";
 import { useAppState, getState, metrics, switchWorkspace, startFreshWorkspace, type Workspace } from "./state/store";
+import { KERNEL_RELEASES, installedRules, pendingRelease } from "./engine/kernel";
 import { WrapboxWordmark } from "./ui/logo";
 import { Avatar } from "./ui/kit";
 import { ControlRoom } from "./pages/control-room";
@@ -269,6 +270,42 @@ function WorkspaceMenu({ nav }: { nav: (r: string) => void }) {
   );
 }
 
+/** Second nav bar (light shell): the Safety Kernel release channel. Shows a real
+ *  pending release when there is one, otherwise the installed version — never a
+ *  made-up announcement. */
+function KernelBar({ nav }: { nav: (r: string) => void }) {
+  const s = useAppState();
+  const pending = pendingRelease(s.kernel);
+  const installed = KERNEL_RELEASES.find((r) => r.version === s.kernel.version);
+  const rules = installedRules(s.kernel).length;
+  const observing = Object.values(s.kernel.modes).filter((m) => m === "observing").length;
+  return (
+    <div className="subbar">
+      {pending ? (
+        <>
+          <span className="subbar-tag new">New</span>
+          <span className="subbar-text">
+            <b>Safety Kernel {pending.version}</b>
+            <span className="subbar-sep">·</span>
+            {pending.notes[0].replace(/^New rule:\s*/, "")}
+          </span>
+          <button className="subbar-link" onClick={() => nav("safety")}>Review &amp; install <ArrowRight size={13} /></button>
+        </>
+      ) : (
+        <>
+          <span className="subbar-tag">Safety Kernel</span>
+          <span className="subbar-text">
+            <b>{installed?.version ?? s.kernel.version}</b> installed
+            <span className="subbar-sep">·</span>
+            {rules} always-on rules{observing > 0 ? ` · ${observing} observing` : ""}
+          </span>
+          <button className="subbar-link" onClick={() => nav("safety")}>Release notes <ArrowRight size={13} /></button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Topbar({ nav, onPalette }: { nav: (r: string) => void; onPalette: () => void }) {
   const s = useAppState();
   const [theme, toggleTheme] = useTheme();
@@ -502,6 +539,7 @@ export function App() {
     return (
       <div className="shell-col light-shell">
         <Topbar nav={nav} onPalette={() => setPalette(true)} />
+        <KernelBar nav={nav} />
         <div className="shell">
           {!focus && <IconRail nav={nav} base={base} pendingReviews={m.pendingReviews} />}
           <main className="main" ref={mainRef} style={demoOn ? { paddingBottom: 90 } : undefined}>
