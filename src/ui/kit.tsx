@@ -69,10 +69,10 @@ export function Stat({
 }
 
 export interface MetricItem { label: string; value: React.ReactNode; note?: string; tone?: string; onClick?: () => void }
-/** Inline KPI strip — one bar of metrics divided by hairlines (replaces repeated stat cards). */
-export function MetricBar({ items }: { items: MetricItem[] }) {
+/** Inline KPIs. `band` = borderless straight on the canvas; default = one carded strip. */
+export function MetricBar({ items, band }: { items: MetricItem[]; band?: boolean }) {
   return (
-    <div className="metricbar">
+    <div className={band ? "metricband" : "metricbar"}>
       {items.map((it, i) => (
         <div key={i} className={`metric ${it.onClick ? "clickable" : ""}`} onClick={it.onClick}>
           <div className="metric-top">

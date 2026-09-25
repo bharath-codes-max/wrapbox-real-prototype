@@ -6,61 +6,57 @@
    ========================================================================== */
 
 :root {
-  /* Surfaces — soft cool canvas behind white cards that lift off it (Stripe / Linear) */
-  --bg: #f3f4f7;
-  --surface: #ffffff;
-  --surface-2: #f4f5f7;
-  --surface-3: #e9ebef;
-  --line: #e8eaee;
-  --line-strong: #d9dbe1;
-  /* Ink — near-black, faintly cool */
-  --fg: #1a1b1e;
-  --fg-2: #55585f;
-  --fg-3: #888b93;
-  --fg-4: #b4b7bf;
-  /* Brand */
-  --accent: #1848ff;
-  --accent-2: #5a82ff;
-  --accent-soft: #eef1fe;
+  /* Anthropic / Claude — warm cream canvas, coral accent, matte dark header */
+  --bg: #faf9f5;          /* cream canvas */
+  --surface: #ffffff;      /* clean white cards lift off the cream */
+  --surface-2: #f5f0e8;    /* warm inset / hover / sidebar */
+  --surface-3: #efe9de;    /* warm strong */
+  --line: #e9e3d8;         /* warm hairline */
+  --line-strong: #ddd5c7;
+  /* Ink — warm near-black */
+  --fg: #141413;
+  --fg-2: #3d3d3a;
+  --fg-3: #6c6a64;
+  --fg-4: #98958c;
+  /* Brand — Anthropic coral */
+  --accent: #cc785c;
+  --accent-2: #d98b70;
+  --accent-soft: #f6ece5;
   --accent-fg: #ffffff;
-  /* Stripe-indigo header bar (brand-color chrome over a light app) */
-  --header: #635bff;
-  --ink: #1a1b1e;
-  --ink-fg: #ffffff;
-  /* Dark matte graphite rail */
-  --nav: #17181a;
-  --nav-2: #1f2023;
-  --nav-line: rgba(255, 255, 255, 0.08);
-  --nav-fg: rgba(255, 255, 255, 0.94);
-  --nav-fg-dim: rgba(255, 255, 255, 0.62);
-  --nav-fg-faint: rgba(255, 255, 255, 0.40);
-  --nav-accent: #7d97ff;
-  /* Decision tones */
-  --allow: #0a8a5c;
-  --allow-soft: #e7f5ee;
-  --constrain: #6b45e0;
-  --constrain-soft: #f0ecfd;
-  --review: #b26500;
-  --review-soft: #fbf1df;
-  --block: #d6224a;
-  --block-soft: #fcebee;
-  /* Code surfaces (kept dark, like the main prototype) */
-  --code-bg: #16171a;
-  --code-line: #26282d;
-  /* Radius scale — tighter, Attio-grade */
-  --r-sm: 7px;
-  --r: 10px;
-  --r-lg: 14px;
-  --r-xl: 20px;
-  /* Shadows — soft card lift over the canvas; deeper elevation for popovers/drawers */
-  --shadow-sm: 0 1px 1px rgba(17, 20, 28, 0.03);
-  --shadow: 0 1px 2px rgba(17, 20, 28, 0.05), 0 1px 3px -1px rgba(17, 20, 28, 0.04);
-  --shadow-md: 0 4px 12px -4px rgba(17, 20, 28, 0.10), 0 12px 32px -16px rgba(17, 20, 28, 0.14);
-  --shadow-lg: 0 24px 60px -24px rgba(17, 20, 28, 0.28);
-  /* Type */
-  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --brandfont: "IBM Plex Sans", "Geist", ui-sans-serif, system-ui, sans-serif;
+  --accent-active: #a9583e;
+  /* Matte dark warm-gray header (the ONLY dark chrome; body stays light) */
+  --header: #2a2925;
+  --header-fg: #faf9f5;
+  --header-line: rgba(255, 255, 255, 0.10);
+  --ink: #201f1c;
+  --ink-fg: #faf9f5;
+  /* Decision tones — warm-aligned */
+  --allow: #4e9d69;
+  --allow-soft: #eaf3ec;
+  --constrain: #3f9e8c;
+  --constrain-soft: #e6f2ef;
+  --review: #b0851f;
+  --review-soft: #f8f0da;
+  --block: #c1544f;
+  --block-soft: #f8e9e6;
+  /* Code surfaces — warm dark, matches the header */
+  --code-bg: #201f1c;
+  --code-line: #35332e;
+  /* Radius scale (Anthropic: sm6 / md8 / lg12 / xl16) */
+  --r-sm: 6px;
+  --r: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  /* Shadows — faint, low-alpha warm */
+  --shadow-sm: 0 1px 2px rgba(20, 20, 19, 0.04);
+  --shadow: 0 1px 3px rgba(20, 20, 19, 0.06);
+  --shadow-md: 0 6px 20px -8px rgba(20, 20, 19, 0.14);
+  --shadow-lg: 0 24px 60px -24px rgba(20, 20, 19, 0.24);
+  /* Type — Inter body, Newsreader serif display, JetBrains mono */
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Newsreader", ui-serif, Georgia, "Times New Roman", serif;
+  --brandfont: "Inter", ui-sans-serif, system-ui, sans-serif;
   color-scheme: light;
 }
 
@@ -82,8 +78,8 @@
   --warn-soft: var(--review-soft);
   --bad: var(--block);
   --bad-soft: var(--block-soft);
-  --violet: #6b45e0;
-  --violet-soft: #f0ecfd;
+  --violet: #8a6db0;
+  --violet-soft: #f0eaf5;
 }
 
 * { box-sizing: border-box; }
@@ -122,7 +118,7 @@ button { font-family: var(--sans); }
   display: flex; align-items: center; gap: 14px;
   height: 60px; padding: 0 20px; flex-shrink: 0;
   background: var(--header);
-  border-bottom: 1px solid rgba(14, 16, 60, 0.18);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.28);
 }
 .topbar-div { height: 24px; width: 1px; background: rgba(255, 255, 255, 0.18); margin: 0 2px; }
 .sidebar-brand { display: inline-flex; align-items: center; gap: 10px; padding: 2px 4px; cursor: pointer; background: none; border: none; flex-shrink: 0; }
@@ -175,9 +171,9 @@ button { font-family: var(--sans); }
 .live-dot { animation: livepulse 2s ease-in-out infinite; }
 @media (max-width: 1000px) { .topbar-search { display: none; } .pill-ok { display: none; } }
 
-/* Sidebar — light rail */
+/* Sidebar — warm cream panel (deeper than the canvas) */
 .sidebar {
-  width: 256px; flex-shrink: 0; background: var(--surface);
+  width: 248px; flex-shrink: 0; background: var(--surface-2);
   border-right: 1px solid var(--line);
   display: flex; flex-direction: column; overflow-y: auto;
   scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent;
@@ -199,9 +195,9 @@ button { font-family: var(--sans); }
   transition: background 0.13s, color 0.13s;
 }
 .nav-item svg { flex-shrink: 0; color: var(--fg-3); transition: color 0.13s; }
-.nav-item:hover { background: var(--surface-2); color: var(--fg); }
+.nav-item:hover { background: rgba(20, 20, 19, 0.05); color: var(--fg); }
 .nav-item:hover svg { color: var(--fg-2); }
-.nav-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 550; }
+.nav-item.active { background: var(--surface); color: var(--accent); font-weight: 600; box-shadow: var(--shadow-sm); }
 .nav-item.active svg { color: var(--accent); }
 .nav-active-bar {
   position: absolute; left: 0; top: 8px; bottom: 8px; width: 2.5px;
@@ -244,8 +240,8 @@ button { font-family: var(--sans); }
   font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--accent); margin-bottom: 8px;
 }
-.page-title { font-size: 26px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.15; }
-.page-sub { color: var(--fg-2); margin-top: 8px; font-size: 14px; max-width: 760px; line-height: 1.55; }
+.page-title { font-family: var(--serif); font-size: 32px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.12; }
+.page-sub { color: var(--fg-2); margin-top: 9px; font-size: 14.5px; max-width: 780px; line-height: 1.6; }
 
 /* Tabs — one table at a time instead of a long scroll */
 .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; }
@@ -305,6 +301,35 @@ button { font-family: var(--sans); }
   .metric:nth-child(odd) { border-left: none; }
   .metric:nth-child(-n+2) { border-top: none; }
 }
+
+/* Metric band — borderless KPIs straight on the canvas (airy, un-boxed) */
+.metricband { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0; }
+.metricband .metric { border-left: 1px solid var(--line); padding: 4px 28px 4px 0; margin-left: 28px; }
+.metricband .metric:first-child { border-left: none; margin-left: 0; padding-left: 0; }
+.metricband .metric-value { font-family: var(--serif); font-weight: 500; font-size: 34px; letter-spacing: -0.01em; margin-top: 8px; }
+.metricband .metric-label { color: var(--fg-3); }
+@media (max-width: 760px) {
+  .metricband { grid-auto-flow: row; grid-template-columns: 1fr 1fr; gap: 22px 0; }
+  .metricband .metric { border-left: 1px solid var(--line); margin-left: 22px; padding-right: 12px; }
+  .metricband .metric:nth-child(odd) { border-left: none; margin-left: 0; }
+}
+
+/* Decision bar — a single proportional bar instead of four number boxes */
+.decisionbar { margin-top: 4px; }
+.decision-track { display: flex; height: 40px; border-radius: 10px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--line); background: var(--surface); }
+.decision-seg { display: flex; align-items: center; justify-content: center; min-width: 0; cursor: pointer; transition: filter 0.14s; position: relative; }
+.decision-seg:hover { filter: brightness(0.94); }
+.decision-seg > span { font-size: 12px; font-weight: 600; color: #fff; font-variant-numeric: tabular-nums; padding: 0 4px; white-space: nowrap; }
+.decision-legend { display: flex; flex-wrap: wrap; gap: 18px 28px; margin-top: 16px; }
+.decision-leg { display: flex; align-items: baseline; gap: 8px; cursor: pointer; }
+.decision-leg .dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; align-self: center; }
+.decision-leg .n { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.decision-leg .lbl { font-size: 12.5px; color: var(--fg-3); }
+
+/* Clickable content card + plane icon chip */
+.clickable-card { cursor: pointer; transition: border-color 0.16s, box-shadow 0.16s, transform 0.16s; }
+.clickable-card:hover { border-color: var(--line-strong); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.plane-icon { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--surface-2); color: var(--fg-2); flex-shrink: 0; }
 .card + .card { margin-top: 16px; }
 /* Wide tables scroll sideways inside their card instead of clipping columns. */
 .card-pad-0 { padding: 0; overflow-x: auto; overflow-y: hidden; }
@@ -414,7 +439,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 .btn:hover { border-color: var(--fg-3); background: var(--surface-2); }
 .btn:disabled { opacity: 0.45; cursor: default; pointer-events: none; }
 .btn-primary { background: var(--ink); border-color: var(--ink); color: var(--ink-fg); }
-.btn-primary:hover { background: #313337; border-color: #313337; box-shadow: 0 6px 16px -10px rgba(20, 22, 26, 0.5); }
+.btn-primary:hover { background: #35332e; border-color: #35332e; box-shadow: 0 6px 16px -10px rgba(20, 20, 19, 0.5); }
 .btn-accent { background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn-accent:hover { filter: brightness(1.08); background: var(--accent); border-color: var(--accent); }
 .btn-good { background: var(--allow); border-color: var(--allow); color: #fff; }
@@ -526,7 +551,7 @@ textarea.input { resize: vertical; line-height: 1.6; }
    Demo mode bar
    ========================================================================== */
 .demo-bar {
-  position: fixed; bottom: 0; left: 256px; right: 0; z-index: 30;
+  position: fixed; bottom: 0; left: 248px; right: 0; z-index: 30;
   background: color-mix(in oklab, var(--surface) 90%, transparent);
   backdrop-filter: saturate(140%) blur(16px);
   border-top: 1px solid var(--line); padding: 16px 32px;
