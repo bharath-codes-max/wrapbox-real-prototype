@@ -57,7 +57,13 @@ export function Deck() {
   const steps = slide.steps ?? 1;
   const shot = document.documentElement.dataset.shot === "1";
 
-  useEffect(() => { history.replaceState(null, "", `#/${idx + 1}`); document.body.dataset.phase = slide.phase; }, [idx, slide.phase]);
+  useEffect(() => {
+    // A sandboxed preview (e.g. an artifact iframe on a different origin than its
+    // own document URL) throws SecurityError on history.replaceState — never let
+    // that crash the deck; the hash is a nicety, not a requirement to render.
+    try { history.replaceState(null, "", `#/${idx + 1}`); } catch { /* sandboxed preview — hash nav still works via location.hash below */ }
+    document.body.dataset.phase = slide.phase;
+  }, [idx, slide.phase]);
   useEffect(() => {
     const on = () => { const n = readHash(); setDir(n > idx ? 1 : -1); setIdx(n); setStep(0); };
     window.addEventListener("hashchange", on);

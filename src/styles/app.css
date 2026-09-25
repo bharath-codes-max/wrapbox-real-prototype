@@ -1213,6 +1213,15 @@ textarea.input { resize: vertical; line-height: 1.6; }
 .rail:hover .rail-item .rail-dot { left: auto; right: 14px; }
 .rail-bottom { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px 0; }
 
+/* Light theme: the rail matches the app's light surface, not dark matte. */
+:root[data-theme="light"] .rail-inner { background: var(--surface); border-right: 1px solid var(--line); }
+:root[data-theme="light"] .rail-grp-label { color: var(--fg-4); }
+:root[data-theme="light"] .rail-item { color: var(--fg-3); }
+:root[data-theme="light"] .rail-item:hover { background: var(--surface-2); color: var(--fg); }
+:root[data-theme="light"] .rail-item.active { background: var(--surface-3); color: var(--fg); }
+:root[data-theme="light"] .rail-item .rail-dot { box-shadow: 0 0 0 2px var(--surface); }
+:root[data-theme="light"] .rail:hover .rail-inner { box-shadow: 12px 0 32px -18px rgba(20, 20, 19, 0.16); }
+
 /* Light shell: the rail is collapsed, so the page body fills the freed width. */
 :root[data-theme="light"] .main .page { max-width: none; padding-left: clamp(28px, 3.4vw, 60px); padding-right: clamp(28px, 3.4vw, 60px); }
 :root[data-theme="light"] .main .page.page-wide { max-width: none; }
