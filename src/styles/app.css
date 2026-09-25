@@ -272,6 +272,21 @@ button { font-family: var(--sans); }
 .topbar .pill { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28); color: #fff; }
 .topbar .pill-ok { background: rgba(255, 255, 255, 0.14); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); color: #fff; }
 .topbar .pill-review { background: rgba(255, 255, 255, 0.14); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); color: #fff; }
+
+/* Light theme: a clean white top nav (ElevenLabs-style) instead of dark matte. */
+:root[data-theme="light"] .topbar { background: var(--surface); border-bottom: 1px solid var(--line); }
+:root[data-theme="light"] .topbar-div { background: var(--line-strong); }
+:root[data-theme="light"] .workspace-menu { color: var(--fg); }
+:root[data-theme="light"] .workspace-menu:hover { background: var(--surface-2); }
+:root[data-theme="light"] .workspace-menu .faint { color: var(--fg-3); }
+:root[data-theme="light"] .topbar-search { border-color: var(--line-strong); background: var(--surface-2); color: var(--fg-3); }
+:root[data-theme="light"] .topbar-search:hover { background: var(--surface-3); color: var(--fg); border-color: var(--line-strong); }
+:root[data-theme="light"] .topbar .kbd { background: var(--surface-3); color: var(--fg-2); }
+:root[data-theme="light"] .topbar .pill { box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--fg); }
+:root[data-theme="light"] .topbar .pill-ok { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--fg); }
+:root[data-theme="light"] .topbar .pill-review { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--fg); }
+:root[data-theme="light"] .theme-toggle { border-color: var(--line-strong); background: var(--surface-2); color: var(--fg-2); }
+:root[data-theme="light"] .theme-toggle:hover { background: var(--surface-3); border-color: var(--line-strong); }
 .kbd {
   display: grid; place-items: center; height: 20px; min-width: 20px;
   border-radius: 6px; background: color-mix(in oklab, var(--fg) 7%, transparent);
