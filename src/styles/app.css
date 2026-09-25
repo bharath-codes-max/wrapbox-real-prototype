@@ -24,8 +24,8 @@
   --accent-soft: #f6ece5;
   --accent-fg: #ffffff;
   --accent-active: #a9583e;
-  /* Light chrome — header matches the ivory sidebar for a seamless top-left */
-  --header: #fdfcf7;
+  /* Navy-blue header bar (brand chrome over a light app) */
+  --header: #132a4d;
   --ink: #201f1c;
   --ink-fg: #faf9f5;
   /* Decision tones — warm-aligned */
@@ -112,34 +112,38 @@ button { font-family: var(--sans); }
 .shell { display: flex; flex: 1; min-height: 0; }
 .content-col { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
 
-/* Topbar — light chrome, seamless with the ivory sidebar */
+/* Topbar — navy-blue header over a light app */
 .topbar {
   position: sticky; top: 0; z-index: 40;
   display: flex; align-items: center; gap: 14px;
   height: 56px; padding: 0 20px; flex-shrink: 0;
   background: var(--header);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.25);
 }
-.topbar-div { height: 22px; width: 1px; background: var(--line-strong); margin: 0 2px; }
+.topbar-div { height: 22px; width: 1px; background: rgba(255, 255, 255, 0.16); margin: 0 2px; }
 .sidebar-brand { display: inline-flex; align-items: center; gap: 10px; padding: 2px 4px; cursor: pointer; background: none; border: none; flex-shrink: 0; }
 .workspace-menu {
   display: inline-flex; align-items: center; gap: 8px;
   border: none; background: none; cursor: pointer;
-  font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--fg);
+  font-family: var(--sans); font-size: 13px; font-weight: 600; color: #fff;
   padding: 6px 10px; border-radius: 8px; transition: background 0.12s;
 }
-.workspace-menu:hover { background: var(--surface-3); }
-.workspace-menu .faint { color: var(--fg-3); font-weight: 400; }
+.workspace-menu:hover { background: rgba(255, 255, 255, 0.12); }
+.workspace-menu .faint { color: rgba(255, 255, 255, 0.68); font-weight: 400; }
 .workspace-dot { width: 8px; height: 8px; border-radius: 3px; background: var(--accent); }
 .topbar-search {
   display: flex; align-items: center; gap: 10px;
   height: 34px; width: min(400px, 30vw);
-  border-radius: 9px; border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--fg-3); font-size: 13px; font-family: var(--sans);
+  border-radius: 9px; border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.78); font-size: 13px; font-family: var(--sans);
   padding: 0 12px; cursor: pointer; transition: background 0.14s, color 0.14s, border-color 0.14s;
 }
-.topbar-search:hover { background: var(--surface); color: var(--fg-2); border-color: var(--line-strong); }
+.topbar-search:hover { background: rgba(255, 255, 255, 0.2); color: #fff; border-color: rgba(255, 255, 255, 0.34); }
+.topbar .kbd { background: rgba(255, 255, 255, 0.2); color: #fff; }
+.topbar .pill { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28); color: #fff; }
+.topbar .pill-ok { background: rgba(255, 255, 255, 0.14); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); color: #fff; }
+.topbar .pill-review { background: rgba(255, 255, 255, 0.14); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); color: #fff; }
 .kbd {
   display: grid; place-items: center; height: 20px; min-width: 20px;
   border-radius: 6px; background: color-mix(in oklab, var(--fg) 7%, transparent);
@@ -575,8 +579,15 @@ textarea.input { resize: vertical; line-height: 1.6; }
 /* ==========================================================================
    Trust graph
    ========================================================================== */
+.tg-canvas {
+  background: radial-gradient(120% 90% at 28% 12%, #1a396a 0%, #10264a 48%, #0a1a35 100%);
+  border-radius: var(--r); padding: 6px 10px;
+  box-shadow: inset 0 1px 40px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
 .tg-svg { width: 100%; height: auto; display: block; }
 .tg-node { cursor: pointer; }
+.tg-canvas .tg-label { font-size: 12px; fill: rgba(255, 255, 255, 0.82); font-family: var(--sans); }
+.tg-col-head { fill: rgba(255, 255, 255, 0.42); font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-family: var(--sans); }
 .tg-label { font-size: 12px; fill: var(--fg-2); font-family: var(--sans); }
 .tg-edge { stroke: var(--line-strong); }
 

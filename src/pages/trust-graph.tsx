@@ -82,37 +82,74 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
           right={selected ? <button className="btn btn-sm btn-ghost" onClick={() => setSelected(null)}>Clear focus</button> : undefined}
         />
         <div className="card">
+          <div className="tg-canvas">
           <svg className="tg-svg" viewBox={`0 0 860 ${height}`}>
+            <defs>
+              <filter id="tg-glow" x="-60%" y="-60%" width="220%" height="220%">
+                <feGaussianBlur stdDeviation="3.2" result="b" />
+                <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+              {(Object.entries(colors) as [keyof typeof colors, string][]).map(([k, c]) => (
+                <radialGradient key={k} id={`tg-${k}`} cx="35%" cy="35%" r="75%">
+                  <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+                  <stop offset="45%" stopColor={c} />
+                  <stop offset="100%" stopColor={c} stopOpacity="0.85" />
+                </radialGradient>
+              ))}
+              <radialGradient id="tg-risk" cx="35%" cy="35%" r="75%">
+                <stop offset="0%" stopColor="#ffd5da" />
+                <stop offset="45%" stopColor="#ff5a6e" />
+                <stop offset="100%" stopColor="#e0324a" />
+              </radialGradient>
+            </defs>
+
+            {/* Column captions */}
+            <text className="tg-col-head" x="100" y="24" textAnchor="middle">People</text>
+            <text className="tg-col-head" x="370" y="24" textAnchor="middle">AI agents</text>
+            <text className="tg-col-head" x="640" y="24" textAnchor="middle">Resources &amp; destinations</text>
+
+            {/* Edges — glowing curved links */}
             {selEdges.map((e, i) => {
               const a = byId.get(e.from); const b = byId.get(e.to);
               if (!a || !b) return null;
               const mx = (a.x + b.x) / 2;
+              const dim = selected && !(e.from === selected || e.to === selected);
               return (
-                <g key={i}>
-                  <path
-                    d={`M ${a.x + 8} ${a.y} C ${mx} ${a.y}, ${mx} ${b.y}, ${b.x - 8} ${b.y}`}
-                    fill="none"
-                    stroke={e.risky ? "#ef5f74" : "#c7cbd6"}
-                    strokeWidth={Math.min(4, 1 + e.count * 0.4)}
-                    opacity={selected && !(e.from === selected || e.to === selected) ? 0.15 : 0.85}
-                  />
+                <path
+                  key={i}
+                  d={`M ${a.x + 9} ${a.y} C ${mx} ${a.y}, ${mx} ${b.y}, ${b.x - 9} ${b.y}`}
+                  fill="none"
+                  stroke={e.risky ? "#ff5a6e" : "#5f83c4"}
+                  strokeWidth={Math.min(4, 1 + e.count * 0.45)}
+                  strokeLinecap="round"
+                  opacity={dim ? 0.08 : e.risky ? 0.9 : 0.4}
+                  filter={e.risky && !dim ? "url(#tg-glow)" : undefined}
+                />
+              );
+            })}
+
+            {/* Nodes — glowing orbs */}
+            {nodes.map((n) => {
+              const focused = selected === n.id;
+              const connected = selected && edges.some((e) => (e.from === selected && e.to === n.id) || (e.to === selected && e.from === n.id));
+              const faded = selected && !focused && !connected;
+              const r = focused ? 11 : n.kind === "agent" ? 8.5 : 7;
+              const fill = n.risky ? "url(#tg-risk)" : `url(#tg-${n.kind})`;
+              const glow = n.risky ? "#ff5a6e" : colors[n.kind];
+              return (
+                <g key={n.id} className="tg-node" onClick={() => setSelected(focused ? null : n.id)} opacity={faded ? 0.28 : 1}>
+                  <circle cx={n.x} cy={n.y} r={r + 7} fill={glow} opacity={n.risky ? 0.34 : 0.16} filter="url(#tg-glow)" />
+                  <circle cx={n.x} cy={n.y} r={r} fill={fill} stroke="rgba(255,255,255,0.55)" strokeWidth={focused ? 1.6 : 1} />
+                  <text className="tg-label" x={n.kind === "user" ? n.x - 13 : n.x + 13} y={n.y + 3.5}
+                    textAnchor={n.kind === "user" ? "end" : "start"}
+                    style={{ fill: n.risky ? "#ff8f9c" : undefined, fontWeight: n.risky || focused ? 600 : 400 }}>
+                    {n.label}
+                  </text>
                 </g>
               );
             })}
-            {nodes.map((n) => (
-              <g key={n.id} className="tg-node" onClick={() => setSelected(selected === n.id ? null : n.id)}
-                 opacity={selected && n.id !== selected && !edges.some((e) => (e.from === selected && e.to === n.id) || (e.to === selected && e.from === n.id)) ? 0.3 : 1}>
-                <circle cx={n.x} cy={n.y} r={n.id === selected ? 10 : 7}
-                  fill={n.risky ? "#ef5f74" : colors[n.kind]}
-                  stroke={n.risky ? "#ef5f74" : "none"} strokeWidth={n.risky ? 6 : 0} strokeOpacity={0.25} />
-                <text className="tg-label" x={n.kind === "user" ? n.x - 12 : n.x + 12} y={n.y + 3}
-                  textAnchor={n.kind === "user" ? "end" : "start"}
-                  style={{ fill: n.risky ? "#ef5f74" : undefined, fontWeight: n.risky ? 700 : 400 }}>
-                  {n.label}
-                </text>
-              </g>
-            ))}
           </svg>
+          </div>
 
           {/* Legend + observed-agent marks, sitting on the hero card. */}
           <div className="spread" style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--line)", gap: 12 }}>
