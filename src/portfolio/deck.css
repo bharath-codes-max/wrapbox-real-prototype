@@ -488,8 +488,8 @@ html[data-shot="1"] .aterm-line { animation: none; }
    ========================================================================== */
 html[data-variant="v3"] .stage *:not(.lvface):not(.ucface):not(.lvn):not(.lights i):not(.eyebrow i):not(.dot):not(.lvlive i):not(.ucstep-n):not(.ucface-mono):not(.lvface-mono) { border-radius: 0 !important; }
 
-:root[data-theme="light"][data-variant="v3"] { --bg: #f1f6fc; --ink: #0d0d0d; --ink-2: #2e2e33; --ink-3: #5c5c66; --line: rgba(13, 13, 13, 0.14); --line-strong: #0d0d0d; }
-:root[data-theme="light"][data-variant="v3"] body { --acc: #0d0d0d; --acc-ink: #ffffff; --acc-soft: #fff7a8; --acc-line: #0d0d0d;
+:root[data-theme="light"][data-variant="v3"] { --bg: #f1f6fc; --ink: #0d0d0d; --ink-2: #2e2e33; --ink-3: #5c5c66; --line: rgba(13, 13, 13, 0.14); --line-strong: rgba(13, 13, 13, 0.28); --v3-line: rgba(13, 13, 13, 0.28); }
+:root[data-theme="light"][data-variant="v3"] body { --acc: #0d0d0d; --acc-ink: #ffffff; --acc-soft: #fff7a8; --acc-line: rgba(13, 13, 13, 0.28);
   background:
     radial-gradient(560px 460px at 56% 44%, rgba(255, 246, 40, 0.62), rgba(255, 246, 40, 0) 70%),
     radial-gradient(460px 400px at 103% 104%, rgba(255, 244, 40, 0.5), rgba(255, 244, 40, 0) 70%),
@@ -503,19 +503,19 @@ html[data-variant="v3"] .stage *:not(.lvface):not(.ucface):not(.lvn):not(.lights
 :root[data-theme="light"][data-variant="v3"] .display em { color: inherit; background: linear-gradient(transparent 62%, #fff45c 62%, #fff45c 92%, transparent 92%); }
 /* cards: translucent white, black hairline, flat */
 :root[data-theme="light"][data-variant="v3"] :is(.card, .clip, .tile, .uccell, .lvrole, .lvside, .ucpanel, .ucstep) {
-  background: rgba(255, 255, 255, 0.58); border: 1.5px solid var(--ink); box-shadow: none;
+  background: rgba(255, 255, 255, 0.58); border: 1px solid var(--v3-line); box-shadow: none;
 }
 :root[data-theme="light"][data-variant="v3"] :is(.card.acc, .tile[style*="--acc"]) { background: var(--ink); color: #fff; }
-:root[data-theme="light"][data-variant="v3"] .card.hook { background: rgba(255, 255, 255, 0.58); border: 1.5px solid var(--ink); }
-:root[data-theme="light"][data-variant="v3"] .clip[class*="clip-t"] { background: rgba(255, 255, 255, 0.58); border: 1.5px solid var(--ink); }
-:root[data-theme="light"][data-variant="v3"] .pill { border: 1.5px solid var(--ink); background: rgba(255, 255, 255, 0.6); }
+:root[data-theme="light"][data-variant="v3"] .card.hook { background: rgba(255, 255, 255, 0.58); border: 1px solid var(--v3-line); }
+:root[data-theme="light"][data-variant="v3"] .clip[class*="clip-t"] { background: rgba(255, 255, 255, 0.58); border: 1px solid var(--v3-line); }
+:root[data-theme="light"][data-variant="v3"] .pill { border: 1px solid var(--v3-line); background: rgba(255, 255, 255, 0.6); }
 /* live use cases: flat framed screen, side card, yellow "now" step, title aligned with the frame */
 html[data-variant="v3"] .lvtitle { text-align: left; width: 1373px; }
-:root[data-theme="light"][data-variant="v3"] .lvframe { border: 1.5px solid var(--ink); box-shadow: none; }
+:root[data-theme="light"][data-variant="v3"] .lvframe { border: 1px solid var(--v3-line); box-shadow: none; }
 :root[data-theme="light"][data-variant="v3"] .lvsteps li.cur { background: #fff45c; box-shadow: none; }
 :root[data-theme="light"][data-variant="v3"] .lvsteps li.done .lvn { background: var(--ink); color: #fff; }
-:root[data-theme="light"][data-variant="v3"] .lvctl { border-top-color: var(--ink); }
-:root[data-theme="light"][data-variant="v3"] .lvctl button { border: 1.5px solid var(--ink); background: rgba(255, 255, 255, 0.7); }
+:root[data-theme="light"][data-variant="v3"] .lvctl { border-top-color: var(--v3-line); }
+:root[data-theme="light"][data-variant="v3"] .lvctl button { border: 1px solid var(--v3-line); background: rgba(255, 255, 255, 0.7); }
 :root[data-theme="light"][data-variant="v3"] .lvctl button.main { background: var(--ink); color: #fff; }
 :root[data-theme="light"][data-variant="v3"] .lvout { background: #fff45c; }
 :root[data-theme="light"][data-variant="v3"] .lvrole-h { color: var(--ink); }
