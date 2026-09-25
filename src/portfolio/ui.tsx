@@ -79,7 +79,31 @@ export function claimById(id: string): Claim | undefined {
   return undefined;
 }
 export function claimsOf(topic: string): Claim[] { return research.topics[topic]?.claims ?? []; }
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** v2/v3: one clean row of numbered source chips — organisation and month, full title on hover. */
+function SourceChips({ ids }: { ids: string[] }) {
+  const items = ids.map((id, k) => {
+    const c = claimById(id);
+    if (!c) return null;
+    const org = c.source_org.replace(/\s*\(.*$/, "").replace(/ Software Technologies$/, "").trim();
+    const m = fmtDate(c.published).match(/^(\d{4})-(\d{2})/);
+    const when = m ? `${MONTHS[Number(m[2]) - 1]} ${m[1]}` : "";
+    return { n: k + 1, org, when, title: `${c.source_org} — ${c.source_title}`, url: c.source_url };
+  }).filter(Boolean) as { n: number; org: string; when: string; title: string; url: string }[];
+  if (!items.length) return null;
+  return (
+    <div className="srcrow" aria-label="Sources">
+      <span className="srcrow-label">Sources</span>
+      {items.map((s) => (
+        <a key={s.n} className="srcchip" href={s.url} target="_blank" rel="noreferrer" title={s.title}>
+          <b>{s.n}</b>{s.org}{s.when && <span>{s.when}</span>}
+        </a>
+      ))}
+    </div>
+  );
+}
 export function Sources({ ids }: { ids: string[] }) {
+  if (typeof document !== "undefined" && document.documentElement.dataset.deck) return <SourceChips ids={ids} />;
   const org = (s: string) => (s.length > 30 ? s.slice(0, 28) + "…" : s);
   const items = ids.map((id, k) => { const c = claimById(id); return c ? { n: k + 1, label: `${org(c.source_org)} — ${c.source_title.length > 46 ? c.source_title.slice(0, 44) + "…" : c.source_title} (${fmtDate(c.published)})`, url: c.source_url } : null; }).filter(Boolean) as { n: number; label: string; url: string }[];
   if (!items.length) return null;

@@ -9,9 +9,9 @@
       // Light is the deck default; a saved dark choice is applied before first paint.
       try {
         var q = new URLSearchParams(location.search).get("theme");
-        if (q === "dark" || q === "light") localStorage.setItem("wrapbox-deck-theme", q);
+        // v2/v3 always open in the light theme; ?theme=dark opens dark. The toggle still works per visit.
         if (new URLSearchParams(location.search).has("shot")) document.documentElement.dataset.shot = "1"; // capture mode: no canvas transition
-        document.documentElement.dataset.theme = localStorage.getItem("wrapbox-deck-theme") === "dark" ? "dark" : "light"; document.documentElement.dataset.variant = "v3";
+        document.documentElement.dataset.theme = q === "dark" ? "dark" : "light"; document.documentElement.dataset.deck = "v3"; document.documentElement.dataset.variant = "v3";
       } catch (e) { document.documentElement.dataset.theme = "light"; }
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -554,3 +554,12 @@ html[data-shot] .lvbg-blob { animation: none; }
 }
 /* v3 keeps its own yellow editorial canvas */
 html[data-variant="v3"] .lvbg { display: none; }
+
+/* ---------- v2/v3 sources: one clean row of chips (v1 keeps its footnote list) ---------- */
+.srcrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: auto; padding-top: 16px; font-family: var(--sans); }
+.srcrow-label { font: 700 12px var(--sans); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-right: 6px; }
+.srcchip { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 11px 0 5px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; transition: background 0.15s, color 0.15s; }
+.srcchip b { display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: var(--surface); color: var(--ink); font: 700 11.5px var(--sans); }
+.srcchip span { color: var(--ink-3); font-weight: 400; }
+.srcchip:hover { background: var(--acc-soft); color: var(--ink); }
+:root[data-theme="light"][data-variant="v3"] .srcchip { background: rgba(255, 255, 255, 0.6); border: 1px solid var(--v3-line); }
