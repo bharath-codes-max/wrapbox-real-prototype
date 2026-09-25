@@ -9,8 +9,10 @@ import {
   useAppState, metrics, switchWorkspace, startFreshWorkspace,
   type AppState, type Region,
 } from "../state/store";
-import { AGENTS, agentById, userById } from "../model/org";
+import { AGENTS, DEVICES, agentById, userById } from "../model/org";
+import { CAPABILITIES } from "../model/registries";
 import { ROLLOUT } from "../model/rollout";
+import { Laptop, Network, ShieldCheck } from "lucide-react";
 import { pendingRelease } from "../engine/kernel";
 import type { DecidedBy, Plane, SimulationEvent } from "../model/types";
 import { AgentMark, Avatar, Chip, DecisionChip, timeAgo, Progress } from "../ui/kit";
@@ -141,6 +143,84 @@ function checklist(s: AppState): ChecklistItem[] {
 }
 
 // ---------------------------------------------------------------------------
+// Light-theme hero — the "enforcement fabric" banner. Every number is derived
+// from the workspace: agents, devices, gateway capabilities, contract rules,
+// recorded decisions. The prism keeps a fixed ink palette (bright in both themes).
+// ---------------------------------------------------------------------------
+
+const PRISM_INK: CSSProperties = {
+  "--fg": "#1b0f33", "--fg-2": "rgba(27,15,51,0.82)", "--fg-3": "rgba(27,15,51,0.62)", "--fg-4": "rgba(27,15,51,0.4)",
+  "--surface": "#ffffff", "--line": "rgba(27,15,51,0.14)", color: "#1b0f33",
+} as CSSProperties;
+
+const PLAT_ICON: Record<string, string> = { macOS: "", Windows: "", Linux: "" };
+
+function GovernedBanner({ s, nav }: { s: AppState; nav: (r: string) => void }) {
+  const total = AGENTS.length;
+  const discovered = AGENTS.filter((a) => a.discovered).length;
+  const governed = total - discovered;
+  const devices = DEVICES.length;
+  const gateways = CAPABILITIES.filter((c) => c.plane === "GATEWAY" && c.status === "ENFORCED").length;
+  const rules = s.contracts.filter((c) => c.status === "ACTIVE").reduce((n, c) => n + c.clauses.length, 0);
+  const decided = s.events.length;
+  const refused = s.events.filter((e) => e.decision === "BLOCK").length;
+
+  const plat: Record<string, number> = { macOS: 0, Windows: 0, Linux: 0 };
+  DEVICES.forEach((d) => { const os = d.os.split(" ")[0]; plat[os === "macOS" || os === "Windows" ? os : "Linux"] += 1; });
+  const platforms = (Object.entries(plat) as [string, number][]).filter(([, n]) => n > 0);
+
+  const stats: { icon: typeof Laptop; label: string; sub: string; value: string }[] = [
+    { icon: Laptop, label: "Runtime", sub: "installed once per machine", value: `${devices} device${devices === 1 ? "" : "s"}` },
+    { icon: Network, label: "Gateway", sub: "in front of each system", value: `${gateways} gateway${gateways === 1 ? "" : "s"}` },
+    { icon: ShieldCheck, label: "Contract", sub: "one policy, both places", value: `${rules} rule${rules === 1 ? "" : "s"}` },
+  ];
+
+  return (
+    <section
+      className="hero-prism govbanner"
+      onMouseMove={(e) => { if (reducedMotion()) return; const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty("--mx", (((e.clientX - r.left) / r.width) * 2 - 1).toFixed(3)); e.currentTarget.style.setProperty("--my", (((e.clientY - r.top) / r.height) * 2 - 1).toFixed(3)); }}
+      onMouseLeave={(e) => { e.currentTarget.style.setProperty("--mx", "0"); e.currentTarget.style.setProperty("--my", "0"); }}
+      style={{ ...PRISM_INK, position: "relative", overflow: "hidden", borderRadius: "var(--r-xl)", padding: "clamp(22px, 3vw, 40px)", boxShadow: "var(--shadow-md)" }}
+    >
+      <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none", background: "radial-gradient(460px circle at calc((var(--mx,0)+1)*50%) calc((var(--my,0)+1)*50%), rgba(255,255,255,0.26), transparent 70%)" }} />
+      <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "minmax(0,1.35fr) minmax(0,1fr)", gap: "32px clamp(24px,4vw,64px)", alignItems: "start" }}>
+        <div style={{ ...depth(-3) }}>
+          <span className="govbadge">
+            <span style={{ width: 7, height: 7, borderRadius: 999, background: "#1b0f33" }} /> Enforcement Fabric
+          </span>
+          <h1 style={{ fontSize: "clamp(32px, 3.8vw, 50px)", lineHeight: 1.02, letterSpacing: "-0.035em", fontWeight: 700, margin: "18px 0 0", color: "#1b0f33" }}>
+            {governed} of {total} agents governed.
+          </h1>
+          <p style={{ margin: "16px 0 0", fontSize: 16, lineHeight: 1.55, color: "var(--fg-2)", maxWidth: "58ch" }}>
+            {total} agents were discovered across {devices} devices by one Runtime per machine. {governed} are governed — wrapped or carrying a Wrapbox hook, so every tool call is decided before it runs.
+            {discovered > 0 && <> The other {discovered} {discovered === 1 ? "is" : "are"} inventory only, not covered until <code style={{ fontFamily: "var(--mono)", fontSize: 13, background: "rgba(27,15,51,0.08)", padding: "1px 5px", borderRadius: 5 }}>wrapboxd wrap</code> covers {discovered === 1 ? "it" : "them"}.</>}
+            {" "}So far {decided} action{decided === 1 ? "" : "s"} from governed agents were decided and {refused} refused.
+          </p>
+          <div className="row" style={{ gap: 8, marginTop: 20, flexWrap: "wrap" }}>
+            {platforms.map(([os, n]) => (
+              <span key={os} className="govchip">{PLAT_ICON[os]}{os} <b>{n}</b></span>
+            ))}
+            <button className="govchip govchip-btn" onClick={() => nav("agents")}>View agents <ArrowRight size={13} /></button>
+          </div>
+        </div>
+        <div className="stack" style={{ gap: 10, ...depth(3) }}>
+          {stats.map((st) => (
+            <button key={st.label} className="govstat" onClick={() => nav(st.label === "Contract" ? "intent" : st.label === "Gateway" ? "coverage" : "integrations")}>
+              <span className="govstat-ic"><st.icon size={18} /></span>
+              <span style={{ minWidth: 0, flex: 1, textAlign: "left" }}>
+                <span style={{ display: "block", fontSize: 14.5, fontWeight: 600 }}>{st.label}</span>
+                <span style={{ display: "block", fontSize: 12, color: "var(--fg-3)" }}>{st.sub}</span>
+              </span>
+              <span style={{ fontSize: 17, fontWeight: 700, whiteSpace: "nowrap" }}>{st.value}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -207,12 +287,16 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
 
   return (
     <div className="page page-wide">
-      {/* 1 · Hero — black canvas, two-line headline, two buttons, then the decision panel */}
+      {/* 1 · Hero — light theme shows the enforcement-fabric banner; dark keeps the
+             two-line headline + live decision composer. */}
       <section
         onMouseMove={onHeroMove}
         onMouseLeave={onHeroLeave}
         style={{ position: "relative", padding: "clamp(12px, 2.6vw, 36px) 0 0" }}
       >
+        {bigComposer ? (
+          <GovernedBanner s={s} nav={nav} />
+        ) : (
         <div style={{ maxWidth: 820, ...depth(-2) }}>
           <h1 style={{
             fontSize: "clamp(36px, 4.4vw, 58px)", lineHeight: 1.02, letterSpacing: "-0.04em",
@@ -224,6 +308,7 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
             Claude Code, Codex, ChatGPT, your own agents — every consequential action checked before it runs.
           </p>
         </div>
+        )}
 
         <div className="spread" style={{ marginTop: 26, alignItems: "center" }}>
           <div className="row" style={{ gap: 10 }}>
@@ -249,8 +334,8 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
           )}
         </div>
 
-        {/* The "video" panel — a black stage with the live decision composer in the middle. */}
-        <div
+        {/* The "video" panel — dark theme only; the light hero is the banner above. */}
+        {!bigComposer && <div
           style={{
             position: "relative", overflow: "hidden", marginTop: 28,
             borderRadius: "var(--r-xl)", border: "1px solid var(--line)", background: "var(--surface)",
@@ -321,7 +406,7 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
               </button>
             )}
           </div>
-        </div>
+        </div>}
       </section>
 
       {/* 2 · Paths ------------------------------------------------------ */}

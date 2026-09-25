@@ -6,7 +6,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useAppState, getState, metrics, switchWorkspace, startFreshWorkspace, type Workspace } from "./state/store";
-import { WrapboxWordmark } from "./ui/logo";
+import { WrapboxWordmark, WrapboxLogo } from "./ui/logo";
 import { Avatar } from "./ui/kit";
 import { ControlRoom } from "./pages/control-room";
 import { LiveActions } from "./pages/live-actions";
@@ -79,7 +79,57 @@ const NAV: { group?: string; items: NavItem[] }[] = [
   },
 ];
 const START_ITEM: NavItem = { route: "start", label: "Get started", icon: Rocket };
-const ALL_ITEMS: NavItem[] = [START_ITEM, ...NAV.flatMap((g) => g.items), { route: "settings", label: "Settings", icon: SettingsIcon }];
+const SETTINGS_ITEM: NavItem = { route: "settings", label: "Settings", icon: SettingsIcon };
+const ALL_ITEMS: NavItem[] = [START_ITEM, ...NAV.flatMap((g) => g.items), SETTINGS_ITEM];
+
+/** Light-theme mega-menu: top-level headers, each opening a multi-column panel with
+ *  a short description per screen. Same routes as the sidebar, grouped for discovery. */
+interface MegaItem extends NavItem { desc: string }
+const MEGA: { label: string; items: MegaItem[] }[] = [
+  { label: "Overview", items: [
+    { route: "control", label: "Control Room", icon: LayoutGrid, desc: "Every decision, at a glance" },
+    { route: "start", label: "Get started", icon: Rocket, desc: "Set up from zero or explore the demo" },
+  ] },
+  { label: "Activity", items: [
+    { route: "live", label: "Live Actions", icon: ListTree, desc: "Every action, decided the moment it runs" },
+    { route: "agents", label: "Agents", icon: Bot, desc: "Who is acting, and how far they're trusted" },
+    { route: "tasks", label: "Tasks", icon: ListChecks, desc: "Multi-step jobs under one scoped envelope" },
+  ] },
+  { label: "Policy", items: [
+    { route: "intent", label: "Intent Studio", icon: FileCheck2, desc: "Write policy in plain English" },
+    { route: "safety", label: "Safety Kernel", icon: ShieldCheck, desc: "Vendor-managed rules you can't switch off" },
+    { route: "simulator", label: "Policy Simulator", icon: FlaskConical, desc: "Test a rule before it goes live" },
+  ] },
+  { label: "Authorization", items: [
+    { route: "reviews", label: "Review Center", icon: Hand, desc: "Approve or deny a parked action" },
+    { route: "standing", label: "Standing Permissions", icon: Timer, desc: "Everyday authority and budgets" },
+    { route: "breakglass", label: "Break Glass", icon: Siren, desc: "Scoped, time-boxed emergency override" },
+  ] },
+  { label: "Visibility", items: [
+    { route: "coverage", label: "Coverage Map", icon: Table2, desc: "What is enforced, degraded or pending" },
+    { route: "trust", label: "Trust Graph", icon: Waypoints, desc: "How identity and trust connect" },
+    { route: "evidence", label: "Evidence", icon: ScrollText, desc: "The tamper-evident decision log" },
+  ] },
+  { label: "More", items: [
+    { route: "simlab", label: "Simulation Lab", icon: CirclePlay, desc: "Watch the engine decide, step by step" },
+    { route: "integrations", label: "Integrations", icon: Plug, desc: "Connect runtimes and gateways" },
+    { route: "vault", label: "Token Vault", icon: KeyRound, desc: "Reversible tokens and scoped restores" },
+    { route: "brain", label: "Core Brain", icon: BrainCircuit, desc: "How a decision is actually made" },
+    { route: "settings", label: "Settings", icon: SettingsIcon, desc: "Workspace and preferences" },
+  ] },
+];
+
+/** Watches the live theme (data-theme attribute App.tsx's toggle sets). Light theme swaps
+ *  the shell to a mega-menu header + icon rail; dark keeps the classic sidebar. */
+function useIsLight() {
+  const [light, setLight] = useState(() => document.documentElement.dataset.theme === "light");
+  useEffect(() => {
+    const obs = new MutationObserver(() => setLight(document.documentElement.dataset.theme === "light"));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => obs.disconnect();
+  }, []);
+  return light;
+}
 
 function useRoute(): [Route, (r: Route) => void] {
   const [route, setRoute] = useState<Route>(() => location.hash.slice(1) || "control");
@@ -276,9 +326,119 @@ function NavLink({ it, active, onClick, badge }: { it: NavItem; active: boolean;
   );
 }
 
+/* ── Light-theme shell: icon rail + mega-menu header (dark keeps the classic sidebar) ── */
+
+function RailBtn({ it, active, onClick, dot }: { it: NavItem; active: boolean; onClick: () => void; dot?: boolean }) {
+  return (
+    <button className={`rail-btn ${active ? "active" : ""}`} onClick={onClick} aria-label={it.label}>
+      <it.icon size={19} strokeWidth={1.9} />
+      {dot && <span className="rail-dot" />}
+      <span className="rail-tip">{it.label}</span>
+    </button>
+  );
+}
+
+function IconRail({ nav, base, pendingReviews, demoOn }: { nav: (r: string) => void; base: string; pendingReviews: number; demoOn: boolean }) {
+  const [theme, toggleTheme] = useTheme();
+  return (
+    <aside className="rail">
+      <button className="rail-brand" onClick={() => nav("control")} aria-label="Wrapbox home">
+        <WrapboxLogo size={26} tone="light" />
+      </button>
+      <nav className="rail-nav">
+        <RailBtn it={START_ITEM} active={base === "start"} onClick={() => nav("start")} />
+        <div className="rail-div" />
+        {NAV.map((g, gi) => (
+          <div key={gi} className="rail-grp">
+            {g.items.map((it) => (
+              <RailBtn key={it.route} it={it} active={base === it.route} onClick={() => nav(it.route)} dot={it.route === "reviews" && pendingReviews > 0} />
+            ))}
+          </div>
+        ))}
+      </nav>
+      <div className="rail-bottom">
+        <RailBtn it={SETTINGS_ITEM} active={base === "settings"} onClick={() => nav("settings")} />
+        <button className="rail-btn" onClick={toggleTheme} aria-label="Toggle theme">
+          {theme === "dark" ? <Sun size={19} strokeWidth={1.9} /> : <Moon size={19} strokeWidth={1.9} />}
+          <span className="rail-tip">{theme === "dark" ? "Light theme" : "Dark theme"}</span>
+        </button>
+        {!demoOn && (
+          <button className="rail-btn rail-demo" onClick={() => DEMO_SCRIPT.start(nav)} aria-label="Demo Mode">
+            <Play size={18} strokeWidth={2} />
+            <span className="rail-tip">Demo Mode</span>
+          </button>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function MegaTopbar({ nav, base, onPalette, pendingReviews, activeRules }: { nav: (r: string) => void; base: string; onPalette: () => void; pendingReviews: number; activeRules: number }) {
+  const [open, setOpen] = useState<number | null>(null);
+  return (
+    <header className="megatop" onMouseLeave={() => setOpen(null)}>
+      <div className="megatop-row">
+        <button className="sidebar-brand" onClick={() => nav("control")} aria-label="Wrapbox home">
+          <WrapboxWordmark tone="light" />
+        </button>
+        <span className="topbar-div" />
+        <WorkspaceMenu nav={nav} />
+        <nav className="megatop-nav" aria-label="Primary">
+          {MEGA.map((g, i) => (
+            <div key={g.label} className="megatop-item" onMouseEnter={() => setOpen(i)}>
+              <button
+                className={`megatop-link ${open === i ? "open" : ""} ${g.items.some((it) => it.route === base) ? "active" : ""}`}
+                onClick={() => { const first = g.items[0]; if (first) nav(first.route); }}
+              >
+                {g.label}
+                <ChevronDown size={14} className="megatop-caret" />
+              </button>
+            </div>
+          ))}
+        </nav>
+        <div className="megatop-right">
+          <button className="topbar-search megatop-search" onClick={onPalette} aria-label="Search">
+            <Search size={15} />
+            <span className="megatop-search-txt">Search…</span>
+            <span style={{ display: "flex", gap: 4 }}><kbd className="kbd">⌘</kbd><kbd className="kbd">K</kbd></span>
+          </button>
+          {pendingReviews > 0 && (
+            <button className="pill pill-review" onClick={() => nav("reviews")}>
+              <span className="pill-dot" style={{ background: "var(--review)" }} />
+              {pendingReviews} pending
+            </button>
+          )}
+          <span className="pill pill-ok">
+            <span className="pill-dot live-dot" style={{ background: "var(--allow)" }} />
+            Enforcing {activeRules} rules
+          </span>
+          <Avatar userId="u-priya" size={28} />
+        </div>
+      </div>
+      {open !== null && (
+        <div className="mega-panel" onMouseEnter={() => setOpen(open)}>
+          <div className="mega-inner">
+            <div className="mega-head">{MEGA[open].label}</div>
+            <div className="mega-cols">
+              {MEGA[open].items.map((it) => (
+                <button key={it.route} className={`mega-cell ${it.route === base ? "active" : ""}`} onClick={() => { nav(it.route); setOpen(null); }}>
+                  <span className="mega-ic"><it.icon size={18} strokeWidth={1.8} /></span>
+                  <span className="mega-txt"><b>{it.label}</b><small>{it.desc}</small></span>
+                  {it.route === "reviews" && pendingReviews > 0 && <span className="badge-count" style={{ marginLeft: "auto" }}>{pendingReviews}</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </header>
+  );
+}
+
 export function App() {
   const state = useAppState();
   const [route, nav] = useRoute();
+  const light = useIsLight();
   const [palette, setPalette] = useState(false);
   const m = metrics(state);
   const base = route.split("/")[0];
@@ -339,6 +499,26 @@ export function App() {
       default: return <ControlRoom nav={nav} />;
     }
   })();
+
+  const activeRules = state.contracts.filter((c) => c.status === "ACTIVE").reduce((n, c) => n + c.clauses.length, 0);
+
+  // Light theme swaps to the mega-menu header + icon rail; dark keeps the classic sidebar.
+  if (light) {
+    return (
+      <div className="shell-col light-shell">
+        <MegaTopbar nav={nav} base={base} onPalette={() => setPalette(true)} pendingReviews={m.pendingReviews} activeRules={activeRules} />
+        <div className="shell">
+          {!focus && <IconRail nav={nav} base={base} pendingReviews={m.pendingReviews} demoOn={demoOn} />}
+          <main className="main" ref={mainRef} style={demoOn ? { paddingBottom: 90 } : undefined}>
+            <div className="parallax-bg" aria-hidden="true" />
+            <div key={base} className="route-anim">{page}</div>
+          </main>
+        </div>
+        {demoOn && <DemoBar nav={nav} />}
+        <Palette open={palette} onClose={() => setPalette(false)} nav={nav} />
+      </div>
+    );
+  }
 
   return (
     <div className="shell-col">

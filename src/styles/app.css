@@ -1146,3 +1146,74 @@ textarea.input { resize: vertical; line-height: 1.6; }
   background: linear-gradient(90deg, rgba(150, 24, 40, 0.16) 0%, rgba(150, 24, 40, 0.06) 36%, transparent 55%);
 }
 :root[data-theme="light"] .aterm-line .head, :root[data-theme="light"] .aterm-prompt { color: #f2f2f2; }
+
+/* ==========================================================================
+   Light-theme shell — mega-menu header + icon rail (dark keeps the sidebar).
+   These components only mount in light theme, so they use the light tokens.
+   ========================================================================== */
+
+/* Mega-menu header */
+.megatop { position: sticky; top: 0; z-index: 45; flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--line); }
+.megatop-row { display: flex; align-items: center; gap: 16px; height: 60px; padding: 0 24px; }
+.megatop .topbar-div { background: var(--line-strong); }
+.megatop .workspace-menu { color: var(--fg); }
+.megatop .workspace-menu:hover { background: color-mix(in oklab, var(--fg) 6%, transparent); }
+.megatop .workspace-menu .faint { color: var(--fg-3); }
+.megatop-nav { display: flex; align-items: center; gap: 2px; margin-left: 6px; }
+.megatop-item { position: static; }
+.megatop-link { display: inline-flex; align-items: center; gap: 5px; height: 38px; padding: 0 13px; border: none; background: none; border-radius: 9px; cursor: pointer; font: 600 14.5px var(--sans); color: var(--fg-2); }
+.megatop-link:hover, .megatop-link.open { background: color-mix(in oklab, var(--fg) 6%, transparent); color: var(--fg); }
+.megatop-link.active { color: var(--accent); }
+.megatop-caret { color: var(--fg-4); transition: transform 0.15s; }
+.megatop-link.open .megatop-caret { transform: rotate(180deg); }
+.megatop-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.megatop-search { width: auto; height: 36px; background: var(--surface-2); border: 1px solid var(--line-strong); color: var(--fg-3); }
+.megatop-search:hover { background: var(--surface-2); color: var(--fg); border-color: var(--line-strong); }
+.megatop .kbd { background: color-mix(in oklab, var(--fg) 8%, transparent); color: var(--fg-3); }
+.megatop .pill-ok { color: var(--allow); background: color-mix(in oklab, var(--allow) 9%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--allow) 26%, transparent); }
+.megatop .pill-review { color: var(--review); background: color-mix(in oklab, var(--review) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--review) 30%, transparent); }
+
+/* Mega panel */
+.mega-panel { position: absolute; left: 0; right: 0; top: 60px; background: var(--surface); border-bottom: 1px solid var(--line); box-shadow: 0 26px 44px -26px rgba(20, 20, 25, 0.28); animation: megaIn 0.16s ease-out; }
+@keyframes megaIn { from { opacity: 0; transform: translateY(-6px); } }
+.mega-inner { max-width: 1400px; margin: 0 auto; padding: 20px 24px 24px; }
+.mega-head { font: 700 12px var(--sans); letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-3); margin: 0 0 12px 6px; }
+.mega-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 4px; }
+.mega-cell { display: flex; align-items: center; gap: 14px; padding: 11px 14px; border-radius: 12px; border: none; background: none; cursor: pointer; text-align: left; transition: background 0.12s; }
+.mega-cell:hover { background: color-mix(in oklab, var(--accent) 8%, transparent); }
+.mega-cell.active { background: var(--accent-soft); }
+.mega-ic { width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0; display: grid; place-items: center; background: var(--surface-2); color: var(--accent); transition: background 0.12s, color 0.12s; }
+.mega-cell:hover .mega-ic { background: var(--accent); color: var(--accent-fg); }
+.mega-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mega-txt b { font: 600 15px var(--sans); color: var(--fg); }
+.mega-txt small { font-size: 13px; color: var(--fg-3); line-height: 1.35; }
+
+/* Icon rail */
+.rail { width: 68px; flex-shrink: 0; background: var(--sidebar); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 14px 0 16px; gap: 6px; }
+.rail-brand { width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; border: none; background: none; cursor: pointer; margin-bottom: 6px; }
+.rail-brand:hover { background: color-mix(in oklab, var(--fg) 5%, transparent); }
+.rail-nav { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; overflow-y: auto; width: 100%; scrollbar-width: none; }
+.rail-nav::-webkit-scrollbar { width: 0; }
+.rail-grp { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 44px; }
+.rail-grp + .rail-grp { border-top: 1px solid var(--line); margin-top: 5px; padding-top: 9px; }
+.rail-div { width: 28px; height: 1px; background: var(--line); margin: 3px 0; }
+.rail-btn { position: relative; width: 44px; height: 44px; border-radius: 13px; border: none; background: none; cursor: pointer; display: grid; place-items: center; color: var(--fg-3); transition: background 0.12s, color 0.12s; }
+.rail-btn:hover { background: color-mix(in oklab, var(--fg) 6%, transparent); color: var(--fg); }
+.rail-btn.active { background: var(--accent); color: var(--accent-fg); box-shadow: 0 6px 16px -8px color-mix(in oklab, var(--accent) 85%, transparent); }
+.rail-btn .rail-dot { position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--review); box-shadow: 0 0 0 2px var(--sidebar); }
+.rail-tip { position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%); white-space: nowrap; background: var(--fg); color: var(--bg); font: 500 12.5px var(--sans); padding: 5px 10px; border-radius: 7px; opacity: 0; pointer-events: none; transition: opacity 0.12s; z-index: 60; box-shadow: 0 8px 18px -8px rgba(0,0,0,0.3); }
+.rail-btn:hover .rail-tip { opacity: 1; }
+.rail-bottom { display: flex; flex-direction: column; align-items: center; gap: 5px; padding-top: 8px; }
+.rail-demo { color: var(--accent); }
+
+/* Get-started enforcement-fabric banner (light-theme hero) — on the prism, fixed ink. */
+.govbanner code { color: #1b0f33; }
+.govbadge { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 11px; border-radius: 999px; font: 600 12px var(--sans); color: #1b0f33; background: rgba(255, 255, 255, 0.74); border: 1px solid rgba(27, 15, 51, 0.16); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.govchip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px; border-radius: 999px; font: 500 13px var(--sans); color: #1b0f33; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(27, 15, 51, 0.14); }
+.govchip b { font-weight: 700; }
+.govchip-btn { cursor: pointer; transition: background 0.13s; }
+.govchip-btn:hover { background: rgba(255, 255, 255, 0.9); }
+.govstat { display: flex; align-items: center; gap: 14px; padding: 15px 18px; border-radius: 15px; background: rgba(255, 255, 255, 0.52); border: 1px solid rgba(27, 15, 51, 0.12); cursor: pointer; transition: background 0.14s, transform 0.14s; color: #1b0f33; width: 100%; backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
+.govstat:hover { background: rgba(255, 255, 255, 0.78); transform: translateY(-1px); }
+.govstat-ic { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; display: grid; place-items: center; background: rgba(27, 15, 51, 0.08); color: #1b0f33; }
+@media (max-width: 900px) { .govbanner > div > div:first-child { grid-column: 1 / -1; } }
