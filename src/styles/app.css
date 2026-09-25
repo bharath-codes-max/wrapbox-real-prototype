@@ -274,9 +274,13 @@ button { font-family: var(--sans); }
 .topbar .pill-review { background: rgba(255, 255, 255, 0.14); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); color: #fff; }
 
 /* Light theme: a clean white top nav (ElevenLabs-style) instead of dark matte. */
-:root[data-theme="light"] .topbar { background: var(--surface); border-bottom: 1px solid var(--line); height: 48px; }
-:root[data-theme="light"] .topbar-search { height: 30px; }
-:root[data-theme="light"] .theme-toggle { width: 30px; height: 30px; }
+:root[data-theme="light"] .topbar { background: var(--surface); border-bottom: 1px solid var(--line); height: 64px; padding: 0 24px; gap: 16px; }
+:root[data-theme="light"] .topbar-search { height: 38px; border-radius: 10px; }
+:root[data-theme="light"] .theme-toggle { width: 36px; height: 36px; border-radius: 10px; }
+:root[data-theme="light"] .topbar .pill { height: 34px; padding: 0 14px; }
+/* One line per control — nothing in the top nav wraps. */
+:root[data-theme="light"] .topbar .workspace-menu, :root[data-theme="light"] .topbar .pill { white-space: nowrap; flex-shrink: 0; }
+:root[data-theme="light"] .topbar-search { white-space: nowrap; flex-shrink: 1; min-width: 0; overflow: hidden; }
 
 /* Second nav bar (light shell) — the Safety Kernel release channel. */
 .subbar {
