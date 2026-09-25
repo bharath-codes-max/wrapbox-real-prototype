@@ -2,10 +2,10 @@
 // resources/destinations, with new/risky edges highlighted. Pure SVG.
 import { useMemo, useState } from "react";
 import { useAppState } from "../state/store";
-import { PageHead, Chip, SimNote, Stat, SectionHead } from "../ui/kit";
+import { PageHead, SectionHead, Chip, SimNote, MetricBar, AgentMark, DestMark } from "../ui/kit";
 import { AGENTS, USERS, resourceById, userById } from "../model/org";
 import { destById } from "../model/registries";
-import { Users, Bot, Boxes, ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 
 interface Node { id: string; label: string; kind: "user" | "agent" | "resource" | "dest"; x: number; y: number; risky?: boolean }
 interface Edge { from: string; to: string; label?: string; risky?: boolean; count: number }
@@ -63,6 +63,7 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
   const targetCount = nodes.filter((n) => n.kind === "resource" || n.kind === "dest").length;
   const riskyEdges = edges.filter((e) => e.risky).length;
   const riskyAgents = nodes.filter((n) => n.kind === "agent" && n.risky).length;
+  const agentNodes = nodes.filter((n) => n.kind === "agent");
 
   return (
     <div className="page page-wide">
@@ -73,26 +74,12 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
         right={<SimNote />}
       />
 
-      <div className="grid g4">
-        <Stat icon={<Users size={17} />} label="Identities" value={userCount} note="human principals observed" />
-        <Stat icon={<Bot size={17} />} label="Agents" value={agentCount} tone={riskyAgents > 0 ? "warn" : undefined} note={riskyAgents > 0 ? `${riskyAgents} unregistered (stranger)` : "all registered"} onClick={() => nav("agents")} />
-        <Stat icon={<Boxes size={17} />} label="Resources & destinations" value={targetCount} note="tools, files and endpoints reached" />
-        <Stat icon={<ShieldAlert size={17} />} label="High-risk edges" value={riskyEdges} tone={riskyEdges > 0 ? "bad" : "good"} note="relationships carrying high/critical activity" onClick={() => nav("evidence")} />
-      </div>
-
-      <div className="section">
+      {/* Hero — the relationship map is the point of this page. */}
+      <div className="section" style={{ marginTop: 4 }}>
         <SectionHead
           title="Relationship map"
           sub="Every edge is an observed event; thicker lines carry more traffic. Click any node to focus its neighbourhood."
-          right={
-            <div className="row">
-              {([["users", colors.user], ["agents", colors.agent], ["resources", colors.resource], ["destinations", colors.dest], ["stranger", "#ef5f74"]] as const).map(([label, c]) => (
-                <span key={label} className="legend-item"><span className="legend-dot" style={{ background: c }} />{label}</span>
-              ))}
-              <span className="legend-item"><span className="legend-line" />high-risk line</span>
-              {selected && <button className="btn btn-sm btn-ghost" onClick={() => setSelected(null)}>clear focus</button>}
-            </div>
-          }
+          right={selected ? <button className="btn btn-sm btn-ghost" onClick={() => setSelected(null)}>Clear focus</button> : undefined}
         />
         <div className="card">
           <svg className="tg-svg" viewBox={`0 0 860 ${height}`}>
@@ -126,6 +113,41 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
               </g>
             ))}
           </svg>
+
+          {/* Legend + observed-agent marks, sitting on the hero card. */}
+          <div className="spread" style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--line)", gap: 12 }}>
+            <div className="row" style={{ gap: 4 }}>
+              {([["users", colors.user], ["agents", colors.agent], ["resources", colors.resource], ["destinations", colors.dest], ["stranger", "#ef5f74"]] as const).map(([label, c]) => (
+                <span key={label} className="legend-item"><span className="legend-dot" style={{ background: c }} />{label}</span>
+              ))}
+              <span className="legend-item"><span className="legend-line" />high-risk line</span>
+            </div>
+            <div className="row" style={{ gap: 8 }}>
+              <span className="faint small">Agents in scope</span>
+              <div className="row" style={{ gap: 5 }}>
+                {agentNodes.map((n) => (
+                  <span key={n.id} title={n.label} style={{ display: "inline-flex", opacity: n.risky ? 1 : 0.9 }}>
+                    <AgentMark agentId={n.id} size={18} />
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* At-a-glance strip — small, refined numbers, not big boxes. */}
+      <div className="section">
+        <div className="card">
+          <MetricBar
+            band
+            items={[
+              { label: "Identities", value: userCount, note: "human principals observed" },
+              { label: "Agents", value: agentCount, tone: riskyAgents > 0 ? "warn" : undefined, note: riskyAgents > 0 ? `${riskyAgents} unregistered (stranger)` : "all registered", onClick: () => nav("agents") },
+              { label: "Resources & destinations", value: targetCount, note: "tools, files and endpoints reached" },
+              { label: "High-risk edges", value: riskyEdges, tone: riskyEdges > 0 ? "bad" : "good", note: "relationships carrying high/critical activity", onClick: () => nav("evidence") },
+            ]}
+          />
         </div>
       </div>
 
@@ -134,12 +156,23 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
           <SectionHead title="Flagged relationship" sub="Edges the Safety Kernel is watching" />
           <div className="card" style={{ borderColor: "var(--bad)" }}>
             <div className="row" style={{ alignItems: "flex-start", gap: 12 }}>
-              <div className="stat-icon" style={{ color: "var(--bad)", background: "var(--bad-soft)" }}><ShieldAlert size={17} /></div>
-              <div style={{ minWidth: 0 }}>
-                <b className="small">Risky relationship detected</b>
-                <div className="small dim" style={{ marginTop: 4, lineHeight: 1.5 }}>
+              <div className="stat-icon" style={{ color: "var(--bad)", background: "var(--bad-soft)", flexShrink: 0 }}><ShieldAlert size={17} /></div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div className="spread" style={{ gap: 8 }}>
+                  <b className="small">Risky relationship detected</b>
+                  <div className="row" style={{ gap: 6 }}>
+                    {riskyAgents > 0 && <Chip tone="critical">{riskyAgents} stranger agent{riskyAgents === 1 ? "" : "s"}</Chip>}
+                    {riskyEdges > 0 && <Chip tone="block">{riskyEdges} high-risk edge{riskyEdges === 1 ? "" : "s"}</Chip>}
+                  </div>
+                </div>
+                <div className="small dim" style={{ marginTop: 6, lineHeight: 1.5 }}>
                   An unregistered MCP agent on Finance-Laptop-07 holds edges to an unknown external endpoint. Its transfers were
                   blocked by the Safety Kernel — inspect it in <a onClick={() => nav("agents")}>Agent Inventory</a>.
+                </div>
+                <div className="row" style={{ gap: 10, marginTop: 12 }}>
+                  <span className="row" style={{ gap: 6 }}><AgentMark agentId="a-unknown-mcp" size={16} /><span className="mono small faint">a-unknown-mcp</span></span>
+                  <span className="faint">→</span>
+                  <span className="row" style={{ gap: 6 }}><DestMark destId="dest-unknown" size={16} /><span className="mono small faint">unknown endpoint</span></span>
                 </div>
               </div>
             </div>

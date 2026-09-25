@@ -3,9 +3,9 @@
 // history (and the scenario library) through the real Core Brain under the
 // current rules and under a proposed set. A preview only: nothing is enforced
 // or recorded from this page — changes become real in Intent Studio.
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useAppState, shadowEvaluate } from "../state/store";
-import { PageHead, SectionHead, Stat, DecisionChip, Chip, SimNote, Avatar, timeAgo } from "../ui/kit";
+import { PageHead, DecisionChip, Chip, SimNote, Avatar, timeAgo } from "../ui/kit";
 import { SCENARIOS, scenarioById, type Scenario } from "../engine/scenarios";
 import { canActivate } from "../engine/coverage";
 import { describe } from "../ui/describe";
@@ -23,6 +23,9 @@ interface Row {
   current: Decision;
   prop: Decision;
 }
+
+const DECS = ["ALLOW", "CONSTRAIN", "REVIEW", "BLOCK"] as Decision[];
+const DTONE: Record<string, string> = { ALLOW: "allow", CONSTRAIN: "constrain", REVIEW: "review", BLOCK: "block" };
 
 export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
   const s = useAppState();
@@ -84,6 +87,61 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
   const weakened = changed.filter((r) => r.prop === "ALLOW" && r.current !== "ALLOW");
   const edits = removed.size + added.size;
 
+  const orderedRows = [...changed, ...rows.filter((r) => r.current === r.prop)];
+
+  // Numbered "act" section heading — signals the guided two-act flow.
+  const actHead = (n: number, title: string, sub: string, right?: ReactNode) => (
+    <div className="section-head">
+      <div className="row" style={{ gap: 12, alignItems: "flex-start", flexWrap: "nowrap" }}>
+        <span
+          style={{
+            width: 26, height: 26, borderRadius: 8, display: "grid", placeItems: "center",
+            background: "var(--accent-soft)", color: "var(--accent)", fontWeight: 700, fontSize: 13, flexShrink: 0,
+          }}
+        >
+          {n}
+        </span>
+        <div>
+          <div className="section-title">{title}</div>
+          <div className="section-sub">{sub}</div>
+        </div>
+      </div>
+      {right && <div className="row" style={{ flexShrink: 0 }}>{right}</div>}
+    </div>
+  );
+
+  // Proportional decision-mix bar + legend — the visual before/after contrast.
+  const renderDist = (which: "current" | "prop") => (
+    <>
+      <div className="decision-track" style={{ height: 34, borderRadius: 9 }}>
+        {rows.length === 0 ? (
+          <div className="decision-seg" style={{ flex: 1, background: "var(--surface-3)" }} />
+        ) : (
+          DECS.map((d) => {
+            const n = count(which, d);
+            return n ? (
+              <div
+                key={d}
+                className="decision-seg"
+                title={`${d} · ${n}`}
+                style={{ flex: `${n} 0 0`, background: `var(--${DTONE[d]})` }}
+              />
+            ) : null;
+          })
+        )}
+      </div>
+      <div className="decision-legend" style={{ gap: "8px 22px", marginTop: 12 }}>
+        {DECS.map((d) => (
+          <div key={d} className="decision-leg" style={{ cursor: "default" }}>
+            <span className="dot" style={{ background: `var(--${DTONE[d]})` }} />
+            <span className="n tnum">{count(which, d)}</span>
+            <span className="lbl">{d}</span>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+
   return (
     <div className="page page-wide">
       <PageHead
@@ -93,54 +151,96 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
         right={<SimNote>Replays run through the live Core Brain — nothing is recorded</SimNote>}
       />
 
-      <div className="grid g3">
-        <Stat icon={<History size={17} />} label={source === "history" ? "Actions replayed" : "Scenarios replayed"} value={rows.length} note={source === "history" ? "your recorded history" : "scenario library"} />
-        <Stat icon={<Info size={17} />} label="Rule changes" value={edits} tone={edits ? "info" : undefined} note={edits ? `${removed.size} switched off · ${added.size} switched on` : "no change proposed yet"} />
-        <Stat icon={<GitCompare size={17} />} label="Outcomes that would change" value={changed.length} tone={changed.length ? "warn" : "good"} note={changed.length ? "compared with your rules today" : "same as today"} />
-      </div>
-
-      <div className="section">
-        <SectionHead
-          title="1 · Propose a change"
-          sub="Untick a rule to try switching it off. Tick a switched-off contract to try switching it on."
-        />
-        {active.length === 0 && inactive.length === 0 && (
-          <div className="card empty">No contracts to compare yet. Write one in Intent Studio, then return here to test changes against your history.</div>
+      {/* ── Act 1 · Propose a change ─────────────────────────────────────── */}
+      <div className="section" style={{ marginTop: 8 }}>
+        {actHead(
+          1,
+          "Propose a change",
+          "Untick a rule to try switching it off. Tick a switched-off contract to try switching it on.",
+          edits ? (
+            <Chip tone="review">
+              {edits} change{edits === 1 ? "" : "s"} staged
+            </Chip>
+          ) : (
+            <span className="faint small">No changes staged</span>
+          )
         )}
+
+        {active.length === 0 && inactive.length === 0 && (
+          <div className="card empty">
+            No contracts to compare yet. Write one in Intent Studio, then return here to test changes against your history.
+          </div>
+        )}
+
         <div className="grid g2">
           {active.map((c) => (
             <div className="card" key={c.id}>
-              <div className="spread" style={{ marginBottom: 8 }}>
+              <div className="spread" style={{ marginBottom: 14 }}>
                 <b className="small">{c.name}</b>
-                <Chip tone="allow">ACTIVE</Chip>
-              </div>
-              {c.clauses.map((cl) => (
-                <label key={cl.id} className="row small" style={{ padding: "4px 0", cursor: "pointer", flexWrap: "nowrap", alignItems: "flex-start" }}>
-                  <input type="checkbox" checked={!removed.has(cl.id)} onChange={() => flip(removed, cl.id, setRemoved)} style={{ marginTop: 2 }} />
-                  <span className={removed.has(cl.id) ? "faint" : "dim"} style={removed.has(cl.id) ? { textDecoration: "line-through" } : undefined}>
-                    {cl.text} <DecisionChip d={cl.effect} small />
+                <div className="row" style={{ gap: 8 }}>
+                  <span className="faint small">
+                    {c.clauses.length} rule{c.clauses.length === 1 ? "" : "s"}
                   </span>
-                </label>
-              ))}
+                  <Chip tone="allow">ACTIVE</Chip>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {c.clauses.map((cl) => {
+                  const off = removed.has(cl.id);
+                  return (
+                    <label
+                      key={cl.id}
+                      className="rule-item"
+                      style={{ cursor: "pointer", gap: 10, opacity: off ? 0.6 : 1, flexWrap: "nowrap", alignItems: "flex-start" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!off}
+                        onChange={() => flip(removed, cl.id, setRemoved)}
+                        style={{ marginTop: 2, flexShrink: 0 }}
+                      />
+                      <span
+                        className="rule-text"
+                        style={off ? { flex: 1, textDecoration: "line-through", color: "var(--fg-3)" } : { flex: 1 }}
+                      >
+                        {cl.text}
+                      </span>
+                      <DecisionChip d={cl.effect} small />
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           ))}
+
           {inactive.map((c) => (
             <div className="card" key={c.id} style={added.has(c.id) ? { borderColor: "var(--accent)" } : undefined}>
-              <label className="spread" style={{ cursor: "pointer", marginBottom: 8, flexWrap: "nowrap" }}>
-                <span className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
-                  <input type="checkbox" checked={added.has(c.id)} onChange={() => flip(added, c.id, setAdded)} />
+              <label className="spread" style={{ cursor: "pointer", marginBottom: 12, flexWrap: "nowrap" }}>
+                <span className="row" style={{ gap: 9, flexWrap: "nowrap" }}>
+                  <input type="checkbox" checked={added.has(c.id)} onChange={() => flip(added, c.id, setAdded)} style={{ flexShrink: 0 }} />
                   <b className="small">{c.name}</b>
                 </span>
                 <Chip tone={added.has(c.id) ? "constrain" : "neutral"}>{added.has(c.id) ? "ON IN PREVIEW" : c.status}</Chip>
               </label>
-              {c.clauses.map((cl) => (
-                <div key={cl.id} className="small faint" style={{ padding: "3px 0 3px 24px" }}>
-                  {cl.text} <DecisionChip d={cl.effect} small />
-                </div>
-              ))}
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                {c.clauses.map((cl) => (
+                  <div
+                    key={cl.id}
+                    className="row small faint"
+                    style={{ gap: 8, paddingLeft: 24, alignItems: "flex-start", flexWrap: "nowrap" }}
+                  >
+                    <span style={{ flex: 1 }}>{cl.text}</span>
+                    <DecisionChip d={cl.effect} small />
+                  </div>
+                ))}
+              </div>
               {!canActivate(c) && (
-                <div className="small" style={{ color: "var(--warn)", marginTop: 8 }}>
-                  Preview only — this contract can't really be switched on yet (a skill it needs is missing).
+                <div
+                  className="row small"
+                  style={{ gap: 7, marginTop: 12, color: "var(--warn)", alignItems: "flex-start", flexWrap: "nowrap" }}
+                >
+                  <Info size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <span>Preview only — this contract can't really be switched on yet (a skill it needs is missing).</span>
                 </div>
               )}
             </div>
@@ -148,44 +248,47 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
         </div>
       </div>
 
+      {/* ── Act 2 · See what would happen ────────────────────────────────── */}
       <div className="section">
-        <SectionHead
-          title="2 · See what would happen"
-          sub="Every action replayed under your rules today and under your proposal"
-          right={
-            <div className="row" style={{ gap: 0 }}>
-              <button className={`btn btn-sm ${source === "history" ? "btn-primary" : ""}`} style={{ borderRadius: "8px 0 0 8px" }} onClick={() => setSource("history")}>
-                <History size={13} /> Your history ({history.length})
-              </button>
-              <button className={`btn btn-sm ${source === "library" ? "btn-primary" : ""}`} style={{ borderRadius: "0 8px 8px 0" }} onClick={() => setSource("library")}>
-                <Library size={13} /> Scenario library ({SCENARIOS.length})
-              </button>
+        {actHead(2, "See what would happen", "Every action replayed under your rules today and under your proposal.")}
+
+        <div className="tabs">
+          <button className={`tab ${source === "history" ? "active" : ""}`} onClick={() => setSource("history")}>
+            <History size={14} /> Your history <span className="tab-count tnum">{history.length}</span>
+          </button>
+          <button className={`tab ${source === "library" ? "active" : ""}`} onClick={() => setSource("library")}>
+            <Library size={14} /> Scenario library <span className="tab-count tnum">{SCENARIOS.length}</span>
+          </button>
+        </div>
+
+        {/* Before / after decision-mix — same width, stacked, for a clean diff */}
+        <div className="card">
+          <div className="spread" style={{ marginBottom: 20 }}>
+            <div className="row" style={{ gap: 9 }}>
+              <GitCompare size={16} style={{ color: "var(--accent)" }} />
+              <b>Impact preview</b>
+              <span className="faint small">
+                {source === "history" ? "across your recorded history" : "across the scenario library"}
+              </span>
             </div>
-          }
-        />
-        <div className="grid g2">
-          <div className="card">
-            <div className="spread" style={{ marginBottom: 12 }}>
-              <b className="small">Your rules today</b>
-              <span className="faint small">what Wrapbox enforces now</span>
-            </div>
-            <div className="row">
-              {(["ALLOW", "CONSTRAIN", "REVIEW", "BLOCK"] as Decision[]).map((d) => (
-                <div key={d} className="row" style={{ gap: 5 }}><DecisionChip d={d} small /><b className="mono">{count("current", d)}</b></div>
-              ))}
-            </div>
+            <span className={`chip ${changed.length ? "c-review" : "c-allow"}`} style={{ fontSize: 11 }}>
+              {changed.length} of {rows.length} outcomes change
+            </span>
           </div>
-          <div className="card" style={{ borderColor: changed.length ? "var(--warn)" : "var(--border)" }}>
-            <div className="spread" style={{ marginBottom: 12 }}>
-              <b className="small">With your proposal</b>
-              <Chip tone={changed.length ? "review" : "allow"}>{changed.length} would change</Chip>
-            </div>
-            <div className="row">
-              {(["ALLOW", "CONSTRAIN", "REVIEW", "BLOCK"] as Decision[]).map((d) => (
-                <div key={d} className="row" style={{ gap: 5 }}><DecisionChip d={d} small /><b className="mono">{count("prop", d)}</b></div>
-              ))}
-            </div>
+
+          <div className="spread" style={{ marginBottom: 10 }}>
+            <b className="small">Your rules today</b>
+            <span className="faint small">what Wrapbox enforces now</span>
           </div>
+          {renderDist("current")}
+
+          <div style={{ height: 1, background: "var(--line)", margin: "22px 0" }} />
+
+          <div className="spread" style={{ marginBottom: 10 }}>
+            <b className="small">With your proposal</b>
+            <Chip tone={changed.length ? "review" : "allow"}>{changed.length} would change</Chip>
+          </div>
+          {renderDist("prop")}
         </div>
 
         {weakened.length > 0 && (
@@ -204,34 +307,67 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
 
         <div className="card card-pad-0" style={{ marginTop: 16 }}>
           <table className="tbl">
-            <thead><tr><th>{source === "history" ? "What happened" : "Scenario"}</th><th>Today</th><th></th><th>Proposal</th></tr></thead>
+            <thead>
+              <tr>
+                <th>{source === "history" ? "What happened" : "Scenario"}</th>
+                <th>Today</th>
+                <th></th>
+                <th>Proposal</th>
+              </tr>
+            </thead>
             <tbody>
-              {[...changed, ...rows.filter((r) => r.current === r.prop)].map((r) => (
+              {orderedRows.map((r) => (
                 <tr key={r.key} style={r.current !== r.prop ? { background: "var(--warn-soft)" } : undefined}>
                   <td>
-                    <div className="row" style={{ gap: 8, flexWrap: "nowrap", alignItems: "flex-start" }}>
-                      {r.user && <Avatar userId={r.user} size={18} />}
-                      <div>
+                    <div className="row" style={{ gap: 9, flexWrap: "nowrap", alignItems: "flex-start" }}>
+                      {r.user && <Avatar userId={r.user} size={20} />}
+                      <div style={{ minWidth: 0 }}>
                         <div className="small" style={{ fontWeight: 550 }}>{r.title}</div>
                         <div className="small faint">{r.sub}</div>
                       </div>
                     </div>
                   </td>
                   <td><DecisionChip d={r.current} small /></td>
-                  <td className="faint">{r.current !== r.prop ? "→" : "="}</td>
+                  <td style={{ textAlign: "center", width: 40 }}>
+                    {r.current !== r.prop ? (
+                      <ArrowRight size={14} style={{ color: "var(--review)" }} />
+                    ) : (
+                      <span className="faint">=</span>
+                    )}
+                  </td>
                   <td><DecisionChip d={r.prop} small /></td>
                 </tr>
               ))}
-              {rows.length === 0 && <tr><td colSpan={4}><div className="empty">No recorded actions to replay yet — run something in the Simulation Lab.</div></td></tr>}
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={4}>
+                    <div className="empty">No recorded actions to replay yet — run something in the Simulation Lab.</div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
         <div className="small faint" style={{ marginTop: 8 }}>Rows that would change are listed first.</div>
       </div>
 
+      {/* ── Act 3 · Make it real ─────────────────────────────────────────── */}
       <div className="section">
-        <SectionHead title="3 · Make it real" sub="This page never changes enforcement. When you're happy with the result, switch the rules on or off in Intent Studio." />
-        <button className="btn btn-primary btn-sm" onClick={() => nav("intent")}>Open Intent Studio <ArrowRight size={13} /></button>
+        {actHead(
+          3,
+          "Make it real",
+          "This page never changes enforcement. When you're happy with the result, switch the rules on or off in Intent Studio."
+        )}
+        <div className="card">
+          <div className="spread" style={{ gap: 16 }}>
+            <div className="small dim" style={{ lineHeight: 1.55, maxWidth: 620 }}>
+              Nothing here is enforced or recorded. Intent Studio is where a proposed change becomes a real rule.
+            </div>
+            <button className="btn btn-primary" onClick={() => nav("intent")}>
+              Open Intent Studio <ArrowRight size={14} />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

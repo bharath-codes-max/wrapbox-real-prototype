@@ -2,12 +2,12 @@
 // risk and per-agent activity derived from the shared event store.
 import { useState } from "react";
 import { useAppState } from "../state/store";
-import { PageHead, SectionHead, Stat, Chip, RiskChip, SimNote, Drawer, DecisionChip, timeAgo, AgentMark, Avatar } from "../ui/kit";
+import { PageHead, SectionHead, MetricBar, Chip, RiskChip, SimNote, Drawer, DecisionChip, timeAgo, AgentMark, DestMark, Avatar } from "../ui/kit";
 import { EventStream } from "../ui/event-stream";
 import { describe } from "../ui/describe";
 import { AGENTS, deviceById, userById, type OrgAgent } from "../model/org";
 import { destById } from "../model/registries";
-import { Bot, ShieldAlert, ShieldCheck, Activity, ArrowRight } from "lucide-react";
+import { ShieldAlert, ShieldCheck, Activity, ArrowRight } from "lucide-react";
 
 export function AgentsPage({ nav }: { nav: (r: string) => void; route: string }) {
   const s = useAppState();
@@ -38,6 +38,10 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
   const trusted = AGENTS.filter((a) => a.trust === "trusted").length;
   const totalEvents = s.events.length;
 
+  const shadow = AGENTS.filter((a) => a.discovered);
+  const trustTone = (t: OrgAgent["trust"]) =>
+    t === "trusted" ? "allow" : t === "conditional" ? "constrain" : t === "unknown" ? "critical" : "block";
+
   return (
     <div className="page page-wide">
       <PageHead
@@ -47,69 +51,153 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
         right={<SimNote>Discovery simulated · inventory model real</SimNote>}
       />
 
-      <div className="grid g4">
-        <Stat icon={<Bot size={17} />} label="Agents detected" value={AGENTS.length} note={`${registered} registered`} />
-        <Stat icon={<ShieldAlert size={17} />} label="Shadow agents" value={discovered} tone={discovered > 0 ? "bad" : "good"} note={discovered > 0 ? "discovered, unregistered" : "none observed"} />
-        <Stat icon={<ShieldCheck size={17} />} label="Trusted" value={trusted} tone="good" note="full trust posture" />
-        <Stat icon={<Activity size={17} />} label="Decisions evaluated" value={totalEvents} note="across every plane" onClick={() => nav("live")} />
+      {/* Lead with the alarming thing: agents observed but never registered. */}
+      {shadow.map((a) => (
+        <div
+          key={a.id}
+          className="card clickable-card"
+          onClick={() => setOpen(a)}
+          style={{ borderColor: "var(--bad)", background: "linear-gradient(180deg, var(--surface) 0%, color-mix(in oklab, var(--bad-soft) 55%, var(--surface)) 100%)" }}
+        >
+          <div className="spread" style={{ alignItems: "flex-start", gap: 14 }}>
+            <div className="row" style={{ gap: 12, alignItems: "flex-start", minWidth: 0 }}>
+              <span className="plane-icon" style={{ background: "var(--bad-soft)", color: "var(--bad)", width: 38, height: 38, borderRadius: 10 }}>
+                <ShieldAlert size={19} strokeWidth={1.9} />
+              </span>
+              <div style={{ minWidth: 0 }}>
+                <div className="eyebrow" style={{ color: "var(--bad)" }}>Shadow agent discovered</div>
+                <div className="row" style={{ gap: 8, marginTop: 5 }}>
+                  <AgentMark agentId={a.id} size={18} />
+                  <b style={{ fontSize: 16, letterSpacing: "-0.01em" }}>{a.name}</b>
+                  <span className="small faint">{a.provider}</span>
+                </div>
+                <div className="small dim" style={{ marginTop: 8, maxWidth: 640, lineHeight: 1.55 }}>
+                  Observed on {a.device ? deviceById(a.device)?.name : "an unmanaged device"} initiating external transfers via {a.tools.join(", ")}. No registered owner and no granted permissions —
+                  its destinations resolve to <span className="mono">UNKNOWN_EXTERNAL</span> and fail safe.
+                </div>
+              </div>
+            </div>
+            <div className="row" style={{ gap: 6, flexShrink: 0 }}>
+              <Chip tone={trustTone(a.trust)}>{a.trust}</Chip>
+              <RiskChip r={a.risk} />
+            </div>
+          </div>
+          <div className="spread" style={{ marginTop: 14, gap: 10 }}>
+            <div className="row" style={{ gap: 7 }}>
+              {a.destinations.map((x) => (
+                <span key={x} className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                  <DestMark destId={x} size={14} /><span className="small dim">{destById(x)?.label ?? x}</span>
+                </span>
+              ))}
+            </div>
+            <span className="row small" style={{ gap: 5, color: "var(--accent)", fontWeight: 600 }}>Inspect agent <ArrowRight size={13} /></span>
+          </div>
+        </div>
+      ))}
+
+      {/* Refined KPI strip — small numbers in one carded band, not big boxes. */}
+      <div className="card" style={{ marginTop: shadow.length ? 16 : 0 }}>
+        <MetricBar band items={[
+          { label: "Agents detected", value: AGENTS.length, note: `${registered} registered` },
+          { label: "Shadow agents", value: discovered, tone: discovered > 0 ? "bad" : "good", note: discovered > 0 ? "discovered, unregistered" : "none observed" },
+          { label: "Trusted", value: trusted, tone: "good", note: "full trust posture" },
+          { label: "Decisions evaluated", value: totalEvents, note: "across every plane", onClick: () => nav("live") },
+        ]} />
       </div>
 
       <div className="section">
         <SectionHead title="Inventory" sub="Every agent Wrapbox has identified, with owner, reach and current risk posture" />
-        <div className="card card-pad-0">
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>Agent</th><th>Provider</th><th>Owner</th><th>Used by</th><th>Tools</th>
-                <th>Destinations</th><th>Activity</th><th>Trust</th><th>Risk</th>
-              </tr>
-            </thead>
-            <tbody>
-              {AGENTS.map((a) => {
-                const d = decisionsFor(a.id);
-                const last = lastActivity(a.id);
-                return (
-                  <tr key={a.id} className="rowlink" onClick={() => setOpen(a)}>
-                    <td>
-                      <span className="row" style={{ gap: 7, flexWrap: "nowrap" }}>
-                        <AgentMark agentId={a.id} size={18} /><b>{a.name}</b>
+        <div className="grid g2">
+          {AGENTS.map((a) => {
+            const d = decisionsFor(a.id);
+            const last = lastActivity(a.id);
+            const seen = usersOf(a.id);
+            const TrustIcon = a.trust === "trusted" ? ShieldCheck : ShieldAlert;
+            const trustColor = a.trust === "trusted" ? "var(--allow)" : a.trust === "conditional" ? "var(--constrain)" : "var(--bad)";
+            return (
+              <div
+                key={a.id}
+                className="card clickable-card"
+                onClick={() => setOpen(a)}
+                style={a.discovered ? { borderColor: "var(--bad)" } : undefined}
+              >
+                <div className="spread" style={{ alignItems: "flex-start", gap: 12 }}>
+                  <div className="row" style={{ gap: 11, alignItems: "center", minWidth: 0 }}>
+                    <span className="plane-icon" style={a.discovered ? { background: "var(--bad-soft)" } : undefined}>
+                      <AgentMark agentId={a.id} size={18} />
+                    </span>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14.5, letterSpacing: "-0.01em" }}>{a.name}</div>
+                      <div className="small faint">{a.provider} · {a.kind}</div>
+                    </div>
+                  </div>
+                  <RiskChip r={a.risk} />
+                </div>
+
+                {a.discovered && (
+                  <div style={{ marginTop: 10 }}><Chip tone="critical">DISCOVERED · UNREGISTERED</Chip></div>
+                )}
+
+                <div className="row" style={{ gap: 8, marginTop: 12 }}>
+                  <TrustIcon size={14} strokeWidth={1.9} style={{ color: trustColor }} />
+                  <Chip tone={trustTone(a.trust)}>{a.trust}</Chip>
+                </div>
+
+                <dl className="clause-facts" style={{ gridTemplateColumns: "82px 1fr", marginTop: 14, rowGap: 10 }}>
+                  <dt>Owner</dt>
+                  <dd>
+                    {a.owner ? (
+                      <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                        <Avatar userId={a.owner} size={18} />{userById(a.owner)?.name}
                       </span>
-                      {a.discovered && <div style={{ marginTop: 3 }}><Chip tone="critical">DISCOVERED · UNREGISTERED</Chip></div>}
-                    </td>
-                    <td className="dim">{a.provider}</td>
-                    <td className="small">
-                      {a.owner ? (
-                        <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
-                          <Avatar userId={a.owner} size={18} />{userById(a.owner)?.name}
+                    ) : <span className="faint">unknown</span>}
+                    <div className="faint small" style={{ marginTop: 2 }}>{a.device ? deviceById(a.device)?.name : "—"}</div>
+                  </dd>
+
+                  <dt>Used by</dt>
+                  <dd>
+                    {seen.length === 0 ? <span className="faint">nobody yet</span> : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                        {seen.map((u) => (
+                          <span key={u.user} className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                            <Avatar userId={u.user} size={18} />{userById(u.user)?.name ?? u.user}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </dd>
+
+                  <dt>Tools</dt>
+                  <dd>
+                    <div className="row" style={{ gap: 5 }}>
+                      {a.tools.map((t) => <Chip key={t} tone="neutral">{t}</Chip>)}
+                    </div>
+                  </dd>
+
+                  <dt>Reach</dt>
+                  <dd>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                      {a.destinations.map((x) => (
+                        <span key={x} className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                          <DestMark destId={x} size={14} /><span>{destById(x)?.label ?? x}</span>
                         </span>
-                      ) : <span className="faint">unknown</span>}
-                      <div className="faint">{a.device ? deviceById(a.device)?.name : "—"}</div>
-                    </td>
-                    <td className="small">
-                      {usersOf(a.id).length === 0 ? <span className="faint">nobody yet</span> : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                          {usersOf(a.id).map((u) => (
-                            <span key={u.user} className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
-                              <Avatar userId={u.user} size={18} />{userById(u.user)?.name ?? u.user}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                    <td className="small dim">{a.tools.join(", ")}</td>
-                    <td className="small dim">{a.destinations.map((x) => destById(x)?.label ?? x).join(", ")}</td>
-                    <td className="small">
-                      {d.total} events
-                      {d.blocked > 0 && <span style={{ color: "var(--bad)" }}> · {d.blocked} blocked</span>}
-                      <div className="faint">{last ? timeAgo(last) : "no activity"}</div>
-                    </td>
-                    <td><Chip tone={a.trust === "trusted" ? "allow" : a.trust === "conditional" ? "constrain" : a.trust === "unknown" ? "critical" : "block"}>{a.trust}</Chip></td>
-                    <td><RiskChip r={a.risk} /></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      ))}
+                    </div>
+                  </dd>
+                </dl>
+
+                <hr className="divider" style={{ margin: "14px 0 12px" }} />
+                <div className="spread small faint">
+                  <span className="row" style={{ gap: 5 }}>
+                    <Activity size={12} strokeWidth={1.9} />
+                    <span className="tnum">{d.total} events</span>
+                    {d.blocked > 0 && <span style={{ color: "var(--bad)" }} className="tnum">· {d.blocked} blocked</span>}
+                  </span>
+                  <span>{last ? timeAgo(last) : "no activity"}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

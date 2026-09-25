@@ -3,13 +3,13 @@
 // (recommend only — never silently activates wider authority).
 import { useState } from "react";
 import { useAppState, upsertContract, setContractStatus, setAutopilotStatus, acceptAutopilot, markAutopilotModified } from "../state/store";
-import { PageHead, SectionHead, Stat, Chip, StatusChip, SimNote, Drawer, DecisionChip } from "../ui/kit";
+import { PageHead, SectionHead, Chip, StatusChip, SimNote, Drawer, DecisionChip, MetricBar, Avatar } from "../ui/kit";
 import { CAPABILITIES } from "../model/registries";
 import { userById } from "../model/org";
 import type { ContractClause } from "../model/types";
 import { draftClauses, coverageRollup } from "../engine/drafter";
 import { contractCoverage, destinationText } from "../engine/coverage";
-import { FileText, FileCheck2, ShieldCheck, Sparkles, Wand2, ArrowRight } from "lucide-react";
+import { FileText, Sparkles, Wand2, ArrowRight } from "lucide-react";
 
 
 /** A rule's conditions in plain words: what, where to, and only-in (context). */
@@ -66,32 +66,96 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
         right={<button className="btn btn-primary" onClick={() => { setModifyFrom(null); setDrafting(true); setPreview(null); }}>+ Draft contract</button>}
       />
 
-      <div className="grid g4">
-        <Stat icon={<FileText size={17} />} label="Contracts" value={s.contracts.length} note="natural-language intent, compiled" />
-        <Stat icon={<FileCheck2 size={17} />} label="Active" value={activeCount} tone="good" note={draftCount > 0 ? `${draftCount} draft(s) pending` : "no drafts pending"} />
-        <Stat icon={<ShieldCheck size={17} />} label="Fully enforced" value={enforcedCount} tone={enforcedCount === s.contracts.length ? "good" : "info"} note="coverage backed by live capabilities" />
-        <Stat icon={<Sparkles size={17} />} label="Open recommendations" value={openRecs.length} tone={openRecs.length > 0 ? "warn" : "good"} note="from Policy Autopilot" />
+      {/* Hero — the natural-language drafter is the lead of the page */}
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="grid g2" style={{ gap: 0 }}>
+          <div style={{ padding: "28px 30px" }}>
+            <div className="row" style={{ gap: 9, marginBottom: 14 }}>
+              <span className="plane-icon" style={{ color: "var(--accent)", background: "var(--accent-soft)" }}><Wand2 size={16} strokeWidth={1.9} /></span>
+              <span className="eyebrow">Compose</span>
+            </div>
+            <h2 style={{ fontSize: 21, letterSpacing: "-0.02em", lineHeight: 1.22 }}>
+              Describe intent in plain English. Wrapbox compiles it to enforceable policy.
+            </h2>
+            <p className="dim" style={{ marginTop: 11, fontSize: 14, lineHeight: 1.62, maxWidth: 470 }}>
+              Write a rule the way you'd explain it to a colleague. The drafter extracts the data
+              classes, destinations and required action, then shows the exact machine clauses — and
+              only claims the coverage your live capabilities can truthfully deliver.
+            </p>
+            <div className="row" style={{ marginTop: 20 }}>
+              <button className="btn btn-primary" onClick={() => { setModifyFrom(null); setDrafting(true); setPreview(null); }}>
+                Open drafter <ArrowRight size={14} />
+              </button>
+              <SimNote>Deterministic pattern compiler — the product compiles via Policy IR</SimNote>
+            </div>
+          </div>
+          <div style={{ padding: "28px 30px", background: "var(--surface-2)", borderLeft: "1px solid var(--line)", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="payload-title dim">Draft intent</div>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r)", padding: "15px 17px", fontSize: 13.5, lineHeight: 1.62, color: "var(--fg-2)", fontStyle: "italic" }}>
+              “{draftText}”
+            </div>
+            <div className="row faint small" style={{ gap: 6, marginTop: "auto" }}>
+              <ArrowRight size={13} /> compiles to clauses with effect, transform and required skills
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI strip — refined, not a row of number boxes */}
+      <div className="card">
+        <MetricBar band items={[
+          { label: "Contracts", value: s.contracts.length, note: "natural-language intent, compiled" },
+          { label: "Active", value: activeCount, tone: "good", note: draftCount > 0 ? `${draftCount} draft(s) pending` : "no drafts pending" },
+          { label: "Fully enforced", value: enforcedCount, tone: enforcedCount === s.contracts.length ? "good" : "info", note: "coverage backed by live capabilities" },
+          { label: "Open recommendations", value: openRecs.length, tone: openRecs.length > 0 ? "warn" : "good", note: "from Policy Autopilot" },
+        ]} />
       </div>
 
       <div className="section">
-        <SectionHead title="Intent Contracts" sub="Each row is authored intent compiled to enforceable clauses — open one to inspect its machine representation" />
+        <SectionHead
+          title="Intent Contracts"
+          sub="Each row is authored intent compiled to enforceable clauses — open one to inspect its machine representation"
+          right={<span className="small faint tnum">{s.contracts.length} total · {activeCount} active</span>}
+        />
         {s.contracts.length === 0 ? (
           <div className="card empty"><FileText size={18} className="dim" /><div>No contracts yet. Describe a rule in plain English above, then <b>Use this draft</b> to compile your first one.</div></div>
         ) : (
         <div className="card card-pad-0">
-          <table className="tbl">
-            <thead><tr><th>Contract</th><th>Author</th><th>Clauses</th><th>Coverage</th><th>Status</th><th>Version</th></tr></thead>
+          <table className="tbl tbl-wide">
+            <thead><tr><th style={{ minWidth: 300 }}>Contract</th><th>Author</th><th>Clauses</th><th>Coverage</th><th>Status</th><th>Version</th></tr></thead>
             <tbody>
-              {s.contracts.map((c) => (
+              {s.contracts.map((c) => {
+                const effects = [...new Set(c.clauses.map((cl) => cl.effect))];
+                return (
                 <tr key={c.id} className="rowlink" onClick={() => setOpen(c.id)}>
-                  <td><b>{c.name}</b><div className="small faint" style={{ maxWidth: 420, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.sourceText}</div></td>
-                  <td className="small">{userById(c.author)?.name}</td>
-                  <td className="mono">{c.clauses.length}</td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{c.name}</div>
+                    <div className="small faint" style={{ maxWidth: 460, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>{c.sourceText}</div>
+                  </td>
+                  <td>
+                    <div className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
+                      <Avatar userId={c.author} size={24} />
+                      <div style={{ minWidth: 0 }}>
+                        <div className="small" style={{ fontWeight: 550 }}>{userById(c.author)?.name}</div>
+                        <div className="small faint">{userById(c.author)?.role}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="row" style={{ gap: 6, alignItems: "baseline" }}>
+                      <span className="mono tnum" style={{ fontSize: 13, fontWeight: 600 }}>{c.clauses.length}</span>
+                      <span className="small faint">clause{c.clauses.length === 1 ? "" : "s"}</span>
+                    </div>
+                    <div className="row" style={{ gap: 4, marginTop: 5 }}>
+                      {effects.map((eff) => <DecisionChip key={eff} d={eff} small />)}
+                    </div>
+                  </td>
                   <td><StatusChip s={contractCoverage(c)} /></td>
                   <td><Chip tone={c.status === "ACTIVE" ? "allow" : c.status === "DRAFT" ? "neutral" : "block"}>{c.status}</Chip></td>
-                  <td className="mono small">v{c.version}</td>
+                  <td className="mono small tnum">v{c.version}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -100,23 +164,39 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
 
       {/* Policy Autopilot */}
       <div className="section">
-        <SectionHead title="Policy Autopilot" sub="Suggestions based on what Wrapbox has seen. Accepting creates a draft rule (switched off) or narrows a permission — never switches anything on by itself." />
+        <SectionHead
+          title="Policy Autopilot"
+          sub="Suggestions based on what Wrapbox has seen. Accepting creates a draft rule (switched off) or narrows a permission — never switches anything on by itself."
+          right={openRecs.length > 0 ? <Chip tone="review">{openRecs.length} open</Chip> : <Chip tone="allow">all handled</Chip>}
+        />
         {openRecs.length === 0 && (
           <div className="card empty"><Wand2 size={18} className="dim" /><div>No open recommendations.</div></div>
         )}
         {openRecs.length > 0 && (
           <div className="grid g2">
             {openRecs.map((a) => (
-              <div className="card" key={a.id}>
-                <div className="row"><Sparkles size={16} className="dim" /><span className="small dim">Observed across {a.basedOnEvents.toLocaleString()} events</span></div>
-                <div style={{ margin: "10px 0" }}>{a.observation}</div>
-                <div className="small"><b>Recommendation:</b> {a.recommendation}</div>
-                <div className="small faint" style={{ marginTop: 6 }}>
-                  If you accept: {a.proposes?.kind === "draft"
-                    ? <>a new <b>draft</b> rule is created — switched off until you activate it.</>
-                    : a.proposes?.kind === "narrow-standing"
-                      ? <>a standing permission is <b>narrowed</b> ("{a.proposes.from}" → "{a.proposes.to}").</>
-                      : "nothing is created."}
+              <div className="card" key={a.id} style={{ display: "flex", flexDirection: "column" }}>
+                <div className="spread" style={{ alignItems: "flex-start", gap: 10 }}>
+                  <span className="row" style={{ gap: 9 }}>
+                    <span className="plane-icon" style={{ color: "var(--accent)", background: "var(--accent-soft)" }}><Sparkles size={15} strokeWidth={1.9} /></span>
+                    <span className="eyebrow">Observed pattern</span>
+                  </span>
+                  <Chip tone={a.proposes?.kind === "draft" ? "review" : a.proposes?.kind === "narrow-standing" ? "constrain" : "neutral"}>
+                    {a.proposes?.kind === "draft" ? "new draft rule" : a.proposes?.kind === "narrow-standing" ? "narrow permission" : "no change"}
+                  </Chip>
+                </div>
+                <div style={{ margin: "13px 0 6px", fontSize: 14, lineHeight: 1.55 }}>{a.observation}</div>
+                <div className="small faint tnum" style={{ marginBottom: 14 }}>Observed across {a.basedOnEvents.toLocaleString()} events</div>
+                <div className="card" style={{ padding: "11px 13px", marginTop: "auto" }}>
+                  <div className="small" style={{ fontWeight: 600 }}>Recommendation</div>
+                  <div className="small dim" style={{ marginTop: 3 }}>{a.recommendation}</div>
+                  <div className="small faint" style={{ marginTop: 8, lineHeight: 1.5 }}>
+                    If you accept: {a.proposes?.kind === "draft"
+                      ? <>a new <b>draft</b> rule is created — switched off until you activate it.</>
+                      : a.proposes?.kind === "narrow-standing"
+                        ? <>a standing permission is <b>narrowed</b> ("{a.proposes.from}" → "{a.proposes.to}").</>
+                        : "nothing is created."}
+                  </div>
                 </div>
                 <div className="row" style={{ marginTop: 14 }}>
                   <button className="btn btn-sm btn-good" onClick={() => acceptAutopilot(a.id)}>Accept</button>
@@ -135,11 +215,11 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
         )}
         {s.autopilot.some((a) => a.status !== "open") && (
           <div className="card" style={{ marginTop: 16 }}>
-            <div className="small" style={{ fontWeight: 600, marginBottom: 8 }}>
+            <div className="small" style={{ fontWeight: 600, marginBottom: 10 }}>
               Handled · {acceptedRecs} accepted · {s.autopilot.filter((a) => a.status === "modified").length} modified · {dismissedRecs} dismissed
             </div>
             {s.autopilot.filter((a) => a.status !== "open").map((a) => (
-              <div key={a.id} className="row small" style={{ gap: 8, padding: "5px 0", flexWrap: "nowrap", alignItems: "flex-start" }}>
+              <div key={a.id} className="row small" style={{ gap: 8, padding: "7px 0", flexWrap: "nowrap", alignItems: "flex-start", borderTop: "1px solid var(--line)" }}>
                 <Chip tone={a.status === "dismissed" ? "neutral" : "allow"}>{a.status.toUpperCase()}</Chip>
                 <span className="dim">
                   {a.status === "dismissed" ? `Dismissed: ${a.recommendation}` : a.result ?? a.recommendation}
@@ -149,7 +229,7 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
                 </span>
               </div>
             ))}
-            <div className="small faint" style={{ marginTop: 8 }}>Autopilot never switches a rule on or widens anyone's authority by itself.</div>
+            <div className="small faint" style={{ marginTop: 10 }}>Autopilot never switches a rule on or widens anyone's authority by itself.</div>
           </div>
         )}
       </div>
@@ -164,13 +244,14 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
               <Chip tone={contract.status === "ACTIVE" ? "allow" : "neutral"}>{contract.status}</Chip>
             </div>
           </div>
-          <div className="small dim" style={{ margin: "6px 0 12px" }}>
-            v{contract.version} · {userById(contract.author)?.name} · {new Date(contract.createdAt).toLocaleDateString()}
+          <div className="row small dim" style={{ gap: 8, margin: "10px 0 14px" }}>
+            <Avatar userId={contract.author} size={20} />
+            <span>v{contract.version} · {userById(contract.author)?.name} · {new Date(contract.createdAt).toLocaleDateString()}</span>
           </div>
           <div className="card" style={{ background: "var(--bg-inset)", fontStyle: "italic" }}>
             “{contract.sourceText}”
           </div>
-          <h3 style={{ fontSize: 13, margin: "14px 0 8px" }}>Compiled clauses</h3>
+          <h3 style={{ fontSize: 13, margin: "18px 0 8px" }}>Compiled clauses</h3>
           {contract.clauses.map((cl) => (
             <div className="card" key={cl.id} style={{ marginBottom: 8, padding: "10px 12px" }}>
               <div className="spread">
@@ -178,16 +259,16 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
                 <DecisionChip d={cl.effect} small />
               </div>
               <ClauseFacts cl={cl} />
-              <div className="row small faint" style={{ marginTop: 6 }}>
+              <div className="row small faint" style={{ marginTop: 8, gap: 8 }}>
                 requires:{" "}
                 {cl.requiredCapabilities.map((cap) => {
                   const c = CAPABILITIES.find((x) => x.id === cap);
-                  return <span key={cap}>{c?.label ?? cap} <StatusChip s={c?.status ?? "PENDING"} /></span>;
+                  return <span key={cap} className="row" style={{ gap: 5 }}>{c?.label ?? cap} <StatusChip s={c?.status ?? "PENDING"} /></span>;
                 })}
               </div>
             </div>
           ))}
-          <div className="row" style={{ marginTop: 12 }}>
+          <div className="row" style={{ marginTop: 14 }}>
             {contract.status !== "ACTIVE" && (
               <button
                 className="btn btn-good btn-sm"
@@ -211,7 +292,7 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
               .filter((c) => c && c.status !== "ENFORCED")
               .map((c) => `${c!.label} (${c!.status.replaceAll("_", " ").toLowerCase()})`);
             return (
-              <div className="small" style={{ color: "var(--warn)", marginTop: 8 }}>
+              <div className="small" style={{ color: "var(--warn)", marginTop: 10 }}>
                 {cov === "PENDING"
                   ? contract.status === "ACTIVE"
                     ? "A required skill is missing — this contract cannot be fully kept."
@@ -227,8 +308,8 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
       {/* Drafting */}
       {drafting && (
         <Drawer onClose={() => setDrafting(false)}>
-          <h2 style={{ fontSize: 16, marginBottom: 10 }}>Draft Intent Contract</h2>
-          <div className="field" style={{ marginBottom: 10 }}>
+          <h2 style={{ fontSize: 16, marginBottom: 12 }}>Draft Intent Contract</h2>
+          <div className="field" style={{ marginBottom: 12 }}>
             <label className="field-label">Name</label>
             <input className="input" value={draftName} onChange={(e) => setDraftName(e.target.value)} />
           </div>
@@ -236,27 +317,27 @@ export function IntentStudio({ nav }: { nav: (r: string) => void; route: string 
             <label className="field-label">Intent (natural language)</label>
             <textarea className="input" rows={5} value={draftText} onChange={(e) => setDraftText(e.target.value)} />
           </div>
-          <div className="row" style={{ marginTop: 10 }}>
+          <div className="row" style={{ marginTop: 12 }}>
             <button className="btn btn-primary btn-sm" onClick={() => setPreview(draftClauses(draftText))}>Compile</button>
             <SimNote>Deterministic pattern compiler — the product compiles via Policy IR</SimNote>
           </div>
           {preview && (
             <>
-              <h3 style={{ fontSize: 13, margin: "14px 0 8px" }}>Compiled preview</h3>
+              <h3 style={{ fontSize: 13, margin: "18px 0 8px" }}>Compiled preview</h3>
               {preview.map((cl) => (
                 <div className="card" key={cl.id} style={{ marginBottom: 8, padding: "10px 12px" }}>
                   <div className="spread">
                     <span className="small">“{cl.text}”</span>
                     <DecisionChip d={cl.effect} small />
                   </div>
-                  <div className="row small" style={{ marginTop: 6 }}>
+                  <div className="row small" style={{ marginTop: 8, gap: 4 }}>
                     {cl.dataClasses.map((d) => <Chip key={d} tone="violet">{d}</Chip>)}
                     {cl.transform && <Chip tone="constrain">{cl.transform}</Chip>}
                     {cl.failClosed && <Chip tone="critical">fail closed</Chip>}
                   </div>
                 </div>
               ))}
-              <div className="small dim" style={{ margin: "8px 0" }}>
+              <div className="row small dim" style={{ margin: "12px 0", gap: 8 }}>
                 Coverage rollup: <StatusChip s={coverageRollup(preview)} />
               </div>
               <button

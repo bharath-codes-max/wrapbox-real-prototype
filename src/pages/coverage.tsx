@@ -4,12 +4,13 @@
 // Deliberately not all-green: gaps are the product being honest.
 import { useMemo, useState } from "react";
 import { useAppState } from "../state/store";
-import { PageHead, StatusChip, SimNote, Chip, Stat } from "../ui/kit";
+import { PageHead, StatusChip, SimNote, Chip, MetricBar } from "../ui/kit";
+import { logoUrl, INTEGRATION_LOGOS } from "../ui/logos";
 import { CAPABILITIES, DATA_TYPES } from "../model/registries";
 import { buildCoverageMatrix, type CoverageRow } from "../engine/coverage";
 import type { CoverageStatus } from "../model/types";
 import type { ReactNode } from "react";
-import { ShieldCheck, ShieldAlert, Eye, Clock, Lock, ArrowRight, X } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Eye, Clock, Lock, ArrowRight, X, Laptop, Network, DoorOpen, Cpu } from "lucide-react";
 
 const STATUS_META: Record<CoverageStatus, { icon: ReactNode; tone?: string; note: string }> = {
   ENFORCED: { icon: <ShieldCheck size={17} />, tone: "good", note: "can see it and stop it" },
@@ -17,6 +18,31 @@ const STATUS_META: Record<CoverageStatus, { icon: ReactNode; tone?: string; note
   UNDERSTOOD_ONLY: { icon: <Eye size={17} />, tone: "info", note: "can see it, can't stop it yet" },
   PENDING: { icon: <Clock size={17} />, tone: undefined, note: "skill not built yet" },
   UNINSPECTABLE: { icon: <Lock size={17} />, tone: "bad", note: "locked content — blocked to be safe" },
+};
+
+// One tone per status, aligned to the StatusChip colours so the posture bar,
+// the metric dots and every chip in the tables read as one language.
+const STATUS_TONE: Record<CoverageStatus, string> = {
+  ENFORCED: "allow",
+  DEGRADED: "review",
+  UNDERSTOOD_ONLY: "accent",
+  PENDING: "fg-4",
+  UNINSPECTABLE: "block",
+};
+
+// A crisp glyph per plane, with a real vendor mark where a skill governs a
+// specific integration (GitHub / AWS / SQL / MCP gateways).
+const PLANE_ICON: Record<string, ReactNode> = {
+  ENDPOINT: <Laptop size={15} />,
+  NETWORK: <Network size={15} />,
+  GATEWAY: <DoorOpen size={15} />,
+  BRAIN: <Cpu size={15} />,
+};
+const CAP_LOGO: Record<string, string> = {
+  "cap-gw-github": INTEGRATION_LOGOS.GitHub,
+  "cap-gw-cloud": INTEGRATION_LOGOS.AWS,
+  "cap-gw-sql": INTEGRATION_LOGOS.PostgreSQL,
+  "cap-gw-mcp": INTEGRATION_LOGOS.MCP,
 };
 
 type Tab = "rules" | "safety" | "gaps" | "inactive" | "skills" | "data";
@@ -30,13 +56,17 @@ const TAB_HINT: Record<Tab, string> = {
   data: "Every kind of sensitive data Wrapbox recognizes, and how dangerous it is if it leaks.",
 };
 
+function StatusDot({ s }: { s: CoverageStatus }) {
+  return <span style={{ width: 7, height: 7, borderRadius: 999, flexShrink: 0, background: `var(--${STATUS_TONE[s]})` }} />;
+}
+
 function RuleTable({ rows, showReason }: { rows: CoverageRow[]; showReason?: boolean }) {
   return (
     <div className="card card-pad-0">
       <table className="tbl tbl-wide">
         <thead>
           <tr>
-            <th style={{ minWidth: 240 }}>Promise</th><th>Data</th><th>Where to</th><th>Plane</th><th>Needs these skills</th>
+            <th style={{ minWidth: 260 }}>Promise</th><th>Data</th><th>Where to</th><th>Plane</th><th>Needs these skills</th>
             <th>{showReason ? "Would be" : "Status"}</th>
           </tr>
         </thead>
@@ -44,9 +74,14 @@ function RuleTable({ rows, showReason }: { rows: CoverageRow[]; showReason?: boo
           {rows.map((r) => (
             <tr key={r.id}>
               <td>
-                <div className="small" style={{ fontWeight: 550 }}>{r.title}</div>
-                <div className="small faint" style={{ marginTop: 2 }}>
-                  {r.source}{showReason && r.inactiveReason ? ` · ${r.inactiveReason}` : ""}
+                <div className="row" style={{ gap: 9, flexWrap: "nowrap", alignItems: "flex-start" }}>
+                  <span style={{ marginTop: 6 }}><StatusDot s={r.status} /></span>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="small" style={{ fontWeight: 600, lineHeight: 1.45 }}>{r.title}</div>
+                    <div className="small faint" style={{ marginTop: 2 }}>
+                      {r.source}{showReason && r.inactiveReason ? ` · ${r.inactiveReason}` : ""}
+                    </div>
+                  </div>
                 </div>
               </td>
               <td>
@@ -57,10 +92,10 @@ function RuleTable({ rows, showReason }: { rows: CoverageRow[]; showReason?: boo
               <td className="small dim">{r.destination}</td>
               <td><div className="row" style={{ gap: 4 }}>{r.planes.map((p) => <Chip key={p} tone="neutral">{p}</Chip>)}</div></td>
               <td>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 5, minWidth: 170 }}>
                   {r.needs.map((n) => (
-                    <div key={n.id} className="row small" style={{ gap: 6, flexWrap: "nowrap" }}>
-                      <span className="dim" style={{ whiteSpace: "nowrap" }}>{n.label}</span>
+                    <div key={n.id} className="spread small" style={{ gap: 12, flexWrap: "nowrap" }}>
+                      <span className="dim" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{n.label}</span>
                       <StatusChip s={n.status} />
                     </div>
                   ))}
@@ -96,6 +131,15 @@ export function CoverageMap({ nav }: { nav: (r: string) => void }) {
     { id: "data", label: "Data types", count: DATA_TYPES.length },
   ];
 
+  // Presentation-only aggregates over the same live counts (no new state).
+  const total = order.reduce((sum, st) => sum + m.counts[st], 0);
+  const kpi = order.map((st) => ({
+    label: st.replaceAll("_", " "),
+    value: m.counts[st],
+    note: STATUS_META[st].note,
+    tone: STATUS_TONE[st],
+  }));
+
   return (
     <div className="page page-wide">
       <PageHead
@@ -105,17 +149,35 @@ export function CoverageMap({ nav }: { nav: (r: string) => void }) {
         right={<SimNote>Skill states are demo data; the calculation is live</SimNote>}
       />
 
-      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
-        {order.map((st) => (
-          <Stat
-            key={st}
-            icon={STATUS_META[st].icon}
-            tone={STATUS_META[st].tone}
-            label={st.replaceAll("_", " ")}
-            value={m.counts[st]}
-            note={STATUS_META[st].note}
-          />
-        ))}
+      {/* Coverage posture — one proportional bar + a refined KPI legend, in a single panel. */}
+      <div className="card">
+        <div className="section-head" style={{ marginBottom: 16, alignItems: "flex-start" }}>
+          <div>
+            <div className="section-title">Coverage posture</div>
+            <div className="section-sub">
+              Every live promise — your switched-on rules, always-on safety and known skill gaps — by what Wrapbox can actually deliver.
+            </div>
+          </div>
+        </div>
+
+        <div className="decision-track" style={{ height: 30 }} role="img" aria-label="Coverage posture by status">
+          {order.map((st) => {
+            const n = m.counts[st];
+            if (!n) return null;
+            return (
+              <div
+                key={st}
+                title={`${n} ${st.replaceAll("_", " ").toLowerCase()}`}
+                style={{ flex: `${n} 0 0`, minWidth: 2, background: `var(--${STATUS_TONE[st]})` }}
+              />
+            );
+          })}
+          {total === 0 && <div style={{ flex: 1, background: "var(--surface-2)" }} />}
+        </div>
+
+        <div style={{ marginTop: 18 }}>
+          <MetricBar band items={kpi} />
+        </div>
       </div>
 
       <div className="section">
@@ -167,7 +229,12 @@ export function CoverageMap({ nav }: { nav: (r: string) => void }) {
                   const ns = g.affects?.safety.length ?? 0;
                   return (
                     <tr key={g.id}>
-                      <td><b className="small">{g.title}</b></td>
+                      <td>
+                        <div className="row" style={{ gap: 9, flexWrap: "nowrap" }}>
+                          <StatusDot s={g.status} />
+                          <b className="small">{g.title}</b>
+                        </div>
+                      </td>
                       <td><Chip tone="neutral">{g.planes[0]}</Chip></td>
                       <td><StatusChip s={g.status} /></td>
                       <td>
@@ -202,14 +269,27 @@ export function CoverageMap({ nav }: { nav: (r: string) => void }) {
             <table className="tbl">
               <thead><tr><th>Capability</th><th>Plane</th><th>Status</th><th>Note</th></tr></thead>
               <tbody>
-                {CAPABILITIES.map((c) => (
-                  <tr key={c.id}>
-                    <td><b className="small">{c.label}</b> <span className="mono faint small">{c.id}</span></td>
-                    <td><Chip tone="neutral">{c.plane}</Chip></td>
-                    <td><StatusChip s={c.status} /></td>
-                    <td className="small dim">{c.note}</td>
-                  </tr>
-                ))}
+                {CAPABILITIES.map((c) => {
+                  const lg = CAP_LOGO[c.id];
+                  return (
+                    <tr key={c.id}>
+                      <td>
+                        <div className="row" style={{ gap: 11, flexWrap: "nowrap" }}>
+                          <span className="plane-icon" style={{ width: 28, height: 28 }}>
+                            {lg ? <img src={logoUrl(lg)} alt="" className="logo-img" /> : PLANE_ICON[c.plane]}
+                          </span>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="small" style={{ fontWeight: 600 }}>{c.label}</div>
+                            <div className="mono faint small">{c.id}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td><Chip tone="neutral">{c.plane}</Chip></td>
+                      <td><StatusChip s={c.status} /></td>
+                      <td className="small dim">{c.note}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -225,7 +305,7 @@ export function CoverageMap({ nav }: { nav: (r: string) => void }) {
                 {DATA_TYPES.map((d) => (
                   <tr key={d.id}>
                     <td><Chip tone="violet">{d.id}</Chip></td>
-                    <td className="small">{d.family}</td>
+                    <td><Chip tone="neutral">{d.family}</Chip></td>
                     <td className="mono small dim">{d.example}</td>
                     <td><Chip tone={d.severity}>{d.severity}</Chip></td>
                   </tr>

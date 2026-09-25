@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import {
   useAppState, simulateById, shadowEvent, installKernelUpdate, enforceKernelRule,
 } from "../state/store";
-import { PageHead, Chip, SimNote, SectionHead, DecisionChip } from "../ui/kit";
+import { PageHead, Chip, SimNote, SectionHead, DecisionChip, MetricBar } from "../ui/kit";
 import {
   KERNEL_RELEASES, OBSERVE_WINDOW_DAYS, effectiveMode, factsFromEvent, installedRules,
   kernelRule, pendingRelease, type KernelRule,
@@ -45,6 +45,11 @@ export function SafetyKernelPage({ nav }: { nav: (r: string) => void }) {
   const rules = installedRules(k);
   const updateRules = (update?.adds ?? []).map((id) => kernelRule(id)!).filter(Boolean);
 
+  // Summary of the managed pack, derived live from kernel + event state.
+  const enforcingCount = rules.filter((r) => effectiveMode(k, r.ruleId, now) === "enforcing").length;
+  const observingCount = rules.length - enforcingCount;
+  const protectedCount = s.events.filter((e) => e.decidedBy?.layer === "safety").length;
+
   return (
     <div className="page">
       <PageHead
@@ -54,23 +59,36 @@ export function SafetyKernelPage({ nav }: { nav: (r: string) => void }) {
         right={<SimNote>Update channel simulated · rules evaluated live</SimNote>}
       />
 
-      {/* Managed-by-Wrapbox banner */}
-      <div className="card kernel-banner">
-        <div className="row" style={{ gap: 14, flexWrap: "nowrap", alignItems: "flex-start" }}>
-          <div className="stat-icon" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}><BadgeCheck size={18} /></div>
-          <div style={{ minWidth: 0 }}>
-            <div className="row" style={{ gap: 8 }}>
-              <b>Wrapbox Safety Kernel</b>
-              <Chip tone="neutral">v{k.version}</Chip>
-              {update ? <Chip tone="review">Update available</Chip> : <Chip tone="allow">Up to date</Chip>}
+      {/* Hero — the managed pack: identity, version, live summary */}
+      <div className="card kernel-banner" style={{ padding: 0, overflow: "hidden" }}>
+        <div style={{ padding: "22px 24px" }}>
+          <div className="row" style={{ gap: 15, flexWrap: "nowrap", alignItems: "flex-start" }}>
+            <div className="stat-icon" style={{ width: 42, height: 42, borderRadius: 11, background: "var(--accent-soft)", color: "var(--accent)" }}>
+              <BadgeCheck size={21} />
             </div>
-            <div className="small dim" style={{ marginTop: 6, lineHeight: 1.55 }}>
-              Managed by Wrapbox and delivered as versioned updates, like built-in detection rules in other security
-              products. New rules arrive in <b>Observe</b> mode first — they record what they <i>would</i> have blocked for{" "}
-              {OBSERVE_WINDOW_DAYS} days, then start enforcing automatically. Rules can't be switched off; a genuine emergency
-              goes through <a onClick={() => nav("breakglass")}>Break Glass</a>, which is time-limited and audited.
+            <div style={{ minWidth: 0 }}>
+              <div className="row" style={{ gap: 9 }}>
+                <b style={{ fontSize: 16.5, letterSpacing: "-0.01em" }}>Wrapbox Safety Kernel</b>
+                <Chip tone="neutral">v{k.version}</Chip>
+                {update ? <Chip tone="review">Update available</Chip> : <Chip tone="allow">Up to date</Chip>}
+              </div>
+              <div className="small dim" style={{ marginTop: 8, lineHeight: 1.6, maxWidth: 680 }}>
+                Managed by Wrapbox and delivered as versioned updates, like built-in detection rules in other security
+                products. New rules arrive in <b>Observe</b> mode first — they record what they <i>would</i> have blocked for{" "}
+                {OBSERVE_WINDOW_DAYS} days, then start enforcing automatically. Rules can't be switched off; a genuine emergency
+                goes through <a onClick={() => nav("breakglass")}>Break Glass</a>, which is time-limited and audited.
+              </div>
             </div>
           </div>
+        </div>
+        <div className="overview-sep" style={{ margin: 0 }} />
+        <div style={{ padding: "16px 24px" }}>
+          <MetricBar band items={[
+            { label: "Built-in rules", value: rules.length, note: `managed in v${k.version}` },
+            { label: "Enforcing", value: enforcingCount, tone: "good", note: "changing decisions now" },
+            { label: "Observing", value: observingCount, tone: observingCount > 0 ? "warn" : undefined, note: observingCount > 0 ? "in trial window" : "none in trial" },
+            { label: "Actions protected", value: protectedCount, tone: protectedCount > 0 ? "good" : undefined, note: "kernel made the call" },
+          ]} />
         </div>
       </div>
 
@@ -117,36 +135,58 @@ export function SafetyKernelPage({ nav }: { nav: (r: string) => void }) {
         </div>
       )}
 
+      {/* Built-in rules — a refined list, not number boxes */}
       <div className="section">
         <SectionHead
           title="Built-in rules"
-          sub={`${rules.length} rules in v${k.version}. They rank below an explicit company BLOCK and above any company permission.`}
+          sub="They rank below an explicit company BLOCK and above any company permission."
+          right={<span className="small faint">{enforcingCount} enforcing{observingCount > 0 ? ` · ${observingCount} observing` : ""}</span>}
         />
-        <div className="grid g2">
-          {rules.map((r) => {
+        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          {rules.map((r, i) => {
             const mode = effectiveMode(k, r.ruleId, now);
             const observing = mode === "observing";
             const observedCount = s.events.filter((e) => e.safetyObserved?.some((x) => x.ruleId === r.ruleId)).length;
             return (
-              <div className={`card ${observing ? "kernel-observing" : ""}`} key={r.ruleId}>
-                <div className="spread" style={{ alignItems: "flex-start" }}>
-                  <div className="row" style={{ gap: 10, flexWrap: "nowrap" }}>
-                    <div className="stat-icon">{observing ? <Eye size={17} /> : <ShieldCheck size={17} />}</div>
-                    <b>{r.name}</b>
+              <div
+                key={r.ruleId}
+                style={{
+                  padding: "16px 20px",
+                  borderTop: i > 0 ? "1px solid var(--line)" : "none",
+                  background: observing ? "color-mix(in oklab, var(--review-soft) 40%, var(--surface))" : undefined,
+                }}
+              >
+                <div className="spread" style={{ alignItems: "flex-start", gap: 14 }}>
+                  <div className="row" style={{ gap: 12, flexWrap: "nowrap", alignItems: "flex-start", minWidth: 0 }}>
+                    <div
+                      className="stat-icon"
+                      style={observing
+                        ? { color: "var(--review)", background: "var(--review-soft)" }
+                        : { color: "var(--allow)", background: "var(--allow-soft)" }}
+                    >
+                      {observing ? <Eye size={16} /> : <ShieldCheck size={16} />}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="row" style={{ gap: 8 }}>
+                        <b>{r.name}</b>
+                        <span className="small faint mono">v{r.since}</span>
+                      </div>
+                      <div className="small dim" style={{ marginTop: 3, lineHeight: 1.5 }}>{r.description}</div>
+                    </div>
                   </div>
-                  {observing ? <Chip tone="review">OBSERVING</Chip> : <Chip tone="allow">ENFORCING</Chip>}
-                </div>
-                <div className="small dim" style={{ marginTop: 10 }}>{r.description}</div>
-                <div className="row" style={{ gap: 6, marginTop: 12 }}>
-                  {observing ? (
-                    <Chip tone={observedCount > 0 ? "review" : "pending"}>would have blocked {observedCount}</Chip>
-                  ) : (
-                    <>
-                      <Chip tone={fired(r.ruleId) > 0 ? "neutral" : "pending"}>fired {fired(r.ruleId)}</Chip>
-                      <Chip tone={decided(r.ruleId) > 0 ? "block" : "pending"}>decided {decided(r.ruleId)}</Chip>
-                    </>
-                  )}
-                  <span className="small faint mono" style={{ marginLeft: "auto" }}>since v{r.since}</span>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
+                    {observing ? <Chip tone="review">OBSERVING</Chip> : <Chip tone="allow">ENFORCING</Chip>}
+                    <div className="row" style={{ gap: 6, justifyContent: "flex-end" }}>
+                      {observing ? (
+                        <Chip tone={observedCount > 0 ? "review" : "pending"}>would have blocked {observedCount}</Chip>
+                      ) : (
+                        <>
+                          <Chip tone={fired(r.ruleId) > 0 ? "neutral" : "pending"}>fired {fired(r.ruleId)}</Chip>
+                          <Chip tone={decided(r.ruleId) > 0 ? "block" : "pending"}>decided {decided(r.ruleId)}</Chip>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 {observing && (
                   <div className="kernel-observe-foot">
@@ -168,6 +208,7 @@ export function SafetyKernelPage({ nav }: { nav: (r: string) => void }) {
         </div>
       </div>
 
+      {/* Live proof — does it still protect with zero rules? */}
       <div className="section">
         <SectionHead
           title="Try it — does it still protect with zero rules?"
@@ -175,24 +216,30 @@ export function SafetyKernelPage({ nav }: { nav: (r: string) => void }) {
         />
         <div className="grid g2">
           {([
-            { key: "with", title: "With your rules switched on", icon: <FileText size={17} />, ev: trial.withRules },
-            { key: "none", title: "As if nobody wrote any rules", icon: <ShieldOff size={17} />, ev: trial.noRules },
+            { key: "with", title: "With your rules switched on", cap: "Company rules + Safety Kernel", icon: <FileText size={17} />, ev: trial.withRules },
+            { key: "none", title: "As if nobody wrote any rules", cap: "Safety Kernel alone", icon: <ShieldOff size={17} />, ev: trial.noRules },
           ] as const).map((t) => (
             <div className="card" key={t.key}>
-              <div className="spread">
+              <div className="spread" style={{ alignItems: "flex-start" }}>
                 <div className="row" style={{ gap: 10 }}>
                   <div className="stat-icon">{t.icon}</div>
-                  <b className="small">{t.title}</b>
+                  <div>
+                    <b className="small">{t.title}</b>
+                    <div className="small faint" style={{ marginTop: 2 }}>{t.cap}</div>
+                  </div>
                 </div>
                 <DecisionChip d={t.ev.decision} />
               </div>
-              <div className="small dim" style={{ marginTop: 12 }}>Decided by</div>
-              <div className="small" style={{ fontWeight: 550, marginTop: 2 }}>{t.ev.decidedBy?.label ?? "—"}</div>
-              {t.ev.safetyRules.length > 0 && (
-                <div className="small faint" style={{ marginTop: 8 }}>
-                  Safety Kernel fired: {t.ev.safetyRules.map((r) => r.name).join(", ")}
-                </div>
-              )}
+              <dl className="kv" style={{ marginTop: 14, gridTemplateColumns: "104px 1fr" }}>
+                <dt>Decided by</dt>
+                <dd style={{ fontWeight: 550 }}>{t.ev.decidedBy?.label ?? "—"}</dd>
+                {t.ev.safetyRules.length > 0 && (
+                  <>
+                    <dt>Kernel fired</dt>
+                    <dd className="dim">{t.ev.safetyRules.map((r) => r.name).join(", ")}</dd>
+                  </>
+                )}
+              </dl>
             </div>
           ))}
         </div>
@@ -210,28 +257,40 @@ export function SafetyKernelPage({ nav }: { nav: (r: string) => void }) {
         </div>
       </div>
 
+      {/* Where the kernel fired */}
       <div className="section">
         <SectionHead
           title="Where these rules fired"
           sub="Every action where a Safety Kernel rule matched — deciding, as a second lock, or observing"
-          right={<History size={16} className="faint" />}
+          right={<><History size={15} className="faint" /><span className="small faint">{kernelEvents.length} recorded</span></>}
         />
         {kernelEvents.length === 0
           ? <div className="card empty">No Safety Kernel rule has fired yet.</div>
           : <div className="card card-pad-0"><EventStream events={kernelEvents} nav={nav} compact filters={false} bare /></div>}
       </div>
 
+      {/* Release history */}
       <div className="section">
-        <SectionHead title="Release history" sub="Every Safety Kernel version Wrapbox has shipped" />
+        <SectionHead
+          title="Release history"
+          sub="Every Safety Kernel version Wrapbox has shipped"
+          right={<span className="small faint">{KERNEL_RELEASES.length} versions</span>}
+        />
         <div className="card card-pad-0">
           <table className="tbl">
             <thead><tr><th>Version</th><th>Released</th><th>What changed</th><th>Status</th></tr></thead>
             <tbody>
               {[...KERNEL_RELEASES].reverse().map((rel) => {
                 const installed = rel.adds.every((id) => k.modes[id]);
+                const current = rel.version === k.version;
                 return (
                   <tr key={rel.version}>
-                    <td className="mono small"><b>v{rel.version}</b></td>
+                    <td className="mono small">
+                      <div className="row" style={{ gap: 7 }}>
+                        <b>v{rel.version}</b>
+                        {current && <Chip tone="neutral">current</Chip>}
+                      </div>
+                    </td>
                     <td className="small">{fmtDate(rel.date)}</td>
                     <td className="small dim">{rel.notes[0]}</td>
                     <td>{installed ? <Chip tone="allow">installed</Chip> : <Chip tone="review">available</Chip>}</td>

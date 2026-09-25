@@ -103,8 +103,10 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
     return out;
   }, [group, s.contracts, s.kernel, s.standing]);
 
+  const planeLabel = sc.plane.charAt(0) + sc.plane.slice(1).toLowerCase();
+
   return (
-    <div className="page">
+    <div className="page page-wide">
       <PageHead
         eyebrow="Simulation"
         title="Simulation Lab"
@@ -112,254 +114,302 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
         right={<SimNote>Environments simulated · decisions & state real</SimNote>}
       />
 
-      <div className="section">
-        <SectionHead title="Enforcement plane" sub="Choose the plane to simulate, then pick a scenario within it." />
-        <div className="row" style={{ flexWrap: "wrap" }}>
-          {GROUPS.map((g) => (
-            <button key={g.key} className={`btn btn-sm ${group === g.key ? "btn-primary" : ""}`} onClick={() => pick(g.key)}>
+      {/* Enforcement plane — one plane at a time, tab-style */}
+      <div className="tabs" role="tablist" aria-label="Enforcement plane">
+        {GROUPS.map((g) => {
+          const count = SCENARIOS.filter((x) => x.group === g.key).length;
+          return (
+            <button
+              key={g.key}
+              role="tab"
+              aria-selected={group === g.key}
+              className={`tab ${group === g.key ? "active" : ""}`}
+              onClick={() => pick(g.key)}
+            >
               {GROUP_ICON[g.key]} {g.label}
+              <span className="tab-count">{count}</span>
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       <div className="grid" style={{ gridTemplateColumns: "280px 1fr", gap: 16, alignItems: "start" }}>
         {/* Scenario picker */}
-        <div className="section">
+        <div className="card">
           <SectionHead title="Scenarios" sub={`${groupScenarios.length} in the ${groupLabel} plane`} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {groupScenarios.map((x) => (
-              <div
-                key={x.id}
-                className="card rowlink"
-                onClick={() => { setScenarioId(x.id); reset(); }}
-                style={{
-                  cursor: "pointer", padding: "12px 14px",
-                  borderColor: x.id === scenarioId ? "var(--accent)" : "var(--border)",
-                  boxShadow: x.id === scenarioId ? "0 0 0 1px var(--accent)" : undefined,
-                }}
-              >
-                <b className="small">{x.title}</b>
-                {(() => {
-                  const now = outlook[x.id];
-                  if (!now) return null;
-                  const changed = now.current !== now.baseline;
-                  const note = x.expected.includes(" — ") ? x.expected.split(" — ")[1] : "";
-                  return (
-                    <div className="row small" style={{ marginTop: 6, gap: 6 }}>
-                      <span className="faint">Right now:</span>
-                      <DecisionChip d={now.current} small />
-                      {changed
-                        ? <span style={{ color: "var(--review)" }}>changed by current policy (was {now.baseline})</span>
-                        : note && <span className="faint">{note}</span>}
-                    </div>
-                  );
-                })()}
-              </div>
-            ))}
-            {group === "GATEWAY" && (
-              <div className="small faint" style={{ padding: "4px 4px 0" }}>
-                The 10-step park/resume task lives in <a onClick={() => nav("tasks")}>Tasks</a>.
-              </div>
-            )}
+          <div style={{ margin: "0 -20px" }}>
+            {groupScenarios.map((x) => {
+              const selected = x.id === scenarioId;
+              return (
+                <div
+                  key={x.id}
+                  className="stream-item rowlink"
+                  onClick={() => { setScenarioId(x.id); reset(); }}
+                  style={{
+                    cursor: "pointer",
+                    padding: "12px 20px",
+                    ...(selected ? { background: "var(--accent-soft)", boxShadow: "inset 2.5px 0 0 var(--accent)" } : {}),
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="stream-sentence" style={{ fontSize: 13, color: selected ? "var(--accent-active)" : undefined }}>{x.title}</div>
+                    {(() => {
+                      const now = outlook[x.id];
+                      if (!now) return null;
+                      const changed = now.current !== now.baseline;
+                      const note = x.expected.includes(" — ") ? x.expected.split(" — ")[1] : "";
+                      return (
+                        <div className="row small" style={{ marginTop: 6, gap: 6 }}>
+                          <span className="faint">Right now</span>
+                          <DecisionChip d={now.current} small />
+                          {changed
+                            ? <span style={{ color: "var(--review)" }}>changed by current policy (was {now.baseline})</span>
+                            : note && <span className="faint" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{note}</span>}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              );
+            })}
           </div>
+          {group === "GATEWAY" && (
+            <div className="small faint" style={{ paddingTop: 12, marginTop: 4, borderTop: "1px solid var(--line)" }}>
+              The 10-step park/resume task lives in <a onClick={() => nav("tasks")}>Tasks</a>.
+            </div>
+          )}
         </div>
 
         {/* Stage */}
-        <div className="section">
+        <div>
+          {/* Scenario header + run controls */}
           <div className="card">
-            <div className="spread">
-              <div>
-                <b>{sc.title}</b>
-                <div className="small dim">{sc.narrative}</div>
+            <div className="spread" style={{ alignItems: "flex-start" }}>
+              <div style={{ minWidth: 0 }}>
+                <div className="row" style={{ gap: 9 }}>
+                  <Chip tone="neutral"><span className="row" style={{ gap: 4, flexWrap: "nowrap" }}>{GROUP_ICON[sc.plane]} {planeLabel}</span></Chip>
+                  <b style={{ fontSize: 15.5, letterSpacing: "-0.01em" }}>{sc.title}</b>
+                </div>
+                <div className="small dim" style={{ marginTop: 7, maxWidth: 640, lineHeight: 1.55 }}>{sc.narrative}</div>
+                <div className="row" style={{ gap: 16, marginTop: 12 }}>
+                  <span className="row" style={{ gap: 6 }}>
+                    <Avatar userId={sc.user} size={20} />
+                    <span className="small dim">{userById(sc.user)?.name}</span>
+                  </span>
+                  <span className="row" style={{ gap: 6 }}>
+                    <AgentMark agentId={sc.agent} size={16} />
+                    <span className="small dim">{agentById(sc.agent)?.name}</span>
+                  </span>
+                  {sc.application && <span className="small faint">{sc.application}</span>}
+                  {sc.destination && (
+                    <span className="row" style={{ gap: 6 }}>
+                      <DestMark destId={sc.destination} size={16} />
+                      <span className="small dim">{destById(sc.destination)?.label}</span>
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="row">
+              <div className="row" style={{ flexShrink: 0 }}>
                 {mode === "idle" && <>
-                  <button className="btn btn-primary btn-sm" onClick={() => start(true)}><Play size={13} /> Run</button>
-                  <button className="btn btn-sm" onClick={() => start(false)}>Step through</button>
+                  <button className="btn btn-accent btn-sm" onClick={() => start(true)}><Play size={13} /> Run</button>
+                  <button className="btn btn-sm" onClick={() => start(false)}><StepForward size={13} /> Step through</button>
                 </>}
                 {mode === "auto" && <button className="btn btn-sm" onClick={pause}><Pause size={13} /> Pause</button>}
-                {mode === "step" && !finished && <button className="btn btn-primary btn-sm" onClick={stepOnce}><StepForward size={13} /> Next step</button>}
+                {mode === "step" && !finished && <button className="btn btn-accent btn-sm" onClick={stepOnce}><StepForward size={13} /> Next step</button>}
                 {(finished || mode !== "idle") && <button className="btn btn-ghost btn-sm" onClick={reset}><RotateCcw size={13} /> Reset</button>}
               </div>
             </div>
+            <div className="small faint" style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+              Expected under the brief · {sc.expected}
+            </div>
           </div>
 
-          <div className="reality">
-            {/* LEFT — what the human/agent sees */}
-            <div>
-              <div className="payload-title dim">WHAT {sc.plane === "NETWORK" ? "THE EMPLOYEE" : "THE AGENT"} SEES</div>
-              {sc.plane === "NETWORK" ? (
-                <div className="browser-frame">
-                  <div className="browser-bar">
-                    <div className="term-chrome"><i /><i /><i /></div>
-                    <div className="browser-url" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      {sc.destination && <DestMark destId={sc.destination} size={13} />}
-                      https://{sc.destination ? destById(sc.destination)?.host : "app.example"}/
-                    </div>
-                  </div>
-                  <div className="browser-body">
-                    <div className="chat-bubble">
-                      <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
-                        <Avatar userId={sc.user} size={18} />
-                        <b className="small">{userById(sc.user)?.name}</b>
-                      </span>
-                      <div className="small dim" style={{ marginTop: 2 }}>
-                        {sc.id === "net-pii-approved" && "Here's our customer list — draft a personalised renewal email for each."}
-                        {sc.id === "net-cred-approved" && "Why is this service failing? Config attached."}
-                        {sc.id === "net-code-approved" && "Refactor this checkout module for readability."}
-                        {sc.id === "net-code-unapproved" && "Optimize this code for me."}
-                        {sc.id === "net-encrypted" && "Summarise the records in this archive."}
-                        {sc.id === "net-unknown-dest" && "(background process posting data…)"}
-                        {sc.id === "sk-privkey-exfil" && "(unknown process posting ~/.ssh/id_rsa…)"}
+          {/* Reality — the person's screen beside the machine's view */}
+          <div className="card">
+            <div className="reality">
+              {/* LEFT — what the human/agent sees */}
+              <div>
+                <div className="payload-title dim" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {sc.plane === "NETWORK" ? <Network size={12} /> : <Server size={12} />}
+                  WHAT {sc.plane === "NETWORK" ? "THE EMPLOYEE" : "THE AGENT"} SEES
+                </div>
+                {sc.plane === "NETWORK" ? (
+                  <div className="browser-frame">
+                    <div className="browser-bar">
+                      <div className="term-chrome"><i /><i /><i /></div>
+                      <div className="browser-url" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        {sc.destination && <DestMark destId={sc.destination} size={13} />}
+                        https://{sc.destination ? destById(sc.destination)?.host : "app.example"}/
                       </div>
-                      {sc.fileName && (
-                        <div style={{ marginTop: 6 }}>
-                          <span className="attach-chip">📎 {sc.fileName}</span>
+                    </div>
+                    <div className="browser-body">
+                      <div className="chat-bubble">
+                        <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                          <Avatar userId={sc.user} size={18} />
+                          <b className="small">{userById(sc.user)?.name}</b>
+                        </span>
+                        <div className="small dim" style={{ marginTop: 2 }}>
+                          {sc.id === "net-pii-approved" && "Here's our customer list — draft a personalised renewal email for each."}
+                          {sc.id === "net-cred-approved" && "Why is this service failing? Config attached."}
+                          {sc.id === "net-code-approved" && "Refactor this checkout module for readability."}
+                          {sc.id === "net-code-unapproved" && "Optimize this code for me."}
+                          {sc.id === "net-encrypted" && "Summarise the records in this archive."}
+                          {sc.id === "net-unknown-dest" && "(background process posting data…)"}
+                          {sc.id === "sk-privkey-exfil" && "(unknown process posting ~/.ssh/id_rsa…)"}
                         </div>
+                        {sc.fileName && (
+                          <div style={{ marginTop: 6 }}>
+                            <span className="attach-chip">📎 {sc.fileName}</span>
+                          </div>
+                        )}
+                      </div>
+                      {!event && <div className="small faint">Press Send (Run) to transmit…</div>}
+                      {event && !finished && <div className="small dim">Transmitting…</div>}
+                      {finished && liveEvent && (
+                        <>
+                          {liveEvent.decision === "ALLOW" && (
+                            <div className="chat-bubble" style={{ borderColor: "var(--good)" }}>
+                              <b className="small" style={{ color: "var(--good)" }}>✓ Delivered</b>
+                              <div className="small dim">The destination received the content. Normal work was not interrupted.</div>
+                            </div>
+                          )}
+                          {liveEvent.decision === "CONSTRAIN" && liveEvent.payloadAfter && (
+                            <div className="chat-bubble" style={{ borderColor: "var(--info)" }}>
+                              <b className="small" style={{ color: "var(--info)" }}>✓ Delivered — protected</b>
+                              <div className="small dim" style={{ marginBottom: 6 }}>What the destination actually received:</div>
+                              <Payload title="" text={liveEvent.payloadAfter} highlight="tokens" />
+                            </div>
+                          )}
+                          {liveEvent.decision === "BLOCK" && (
+                            <div className="chat-bubble" style={{ borderColor: "var(--bad)" }}>
+                              <b className="small" style={{ color: "var(--bad)" }}>⛔ Blocked by Wrapbox before transmission</b>
+                              <div className="small dim">
+                                {liveEvent.decidedBy ? `Decided by ${liveEvent.decidedBy.label}` : liveEvent.decisionReasons[0]}
+                                {liveEvent.safeAlternative && <div style={{ marginTop: 4 }}><b>Safe next step:</b> {liveEvent.safeAlternative}</div>}
+                              </div>
+                            </div>
+                          )}
+                          {liveEvent.decision === "REVIEW" && (
+                            <div className="chat-bubble" style={{ borderColor: "var(--warn)" }}>
+                              <b className="small" style={{ color: "var(--warn)" }}>⏸ Held for approval</b>
+                              <div className="small dim">This transfer needs a scoped approval. You can keep working — it resumes if approved in <a onClick={() => nav("reviews")}>Review Center</a>.</div>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
-                    {!event && <div className="small faint">Press Send (Run) to transmit…</div>}
-                    {event && !finished && <div className="small dim">Transmitting…</div>}
+                  </div>
+                ) : (
+                  <div className="term">
+                    <div className="term-chrome" style={{ alignItems: "center", gap: 8 }}>
+                      <i /><i /><i />
+                      <span style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <AgentMark agentId={sc.agent} size={13} />
+                        <span className="dim">{userById(sc.user)?.name} · {agentById(sc.agent)?.name} · {sc.application}</span>
+                      </span>
+                    </div>
+                    <span style={{ color: "var(--good)" }}>❯</span> {sc.actionRaw ?? sc.action.toLowerCase()}{"\n"}
+                    {!event && <span className="faint">… press Run to execute</span>}
+                    {event && !finished && <span className="dim">…</span>}
                     {finished && liveEvent && (
                       <>
-                        {liveEvent.decision === "ALLOW" && (
-                          <div className="chat-bubble" style={{ borderColor: "var(--good)" }}>
-                            <b className="small" style={{ color: "var(--good)" }}>✓ Delivered</b>
-                            <div className="small dim">The destination received the content. Normal work was not interrupted.</div>
-                          </div>
-                        )}
-                        {liveEvent.decision === "CONSTRAIN" && liveEvent.payloadAfter && (
-                          <div className="chat-bubble" style={{ borderColor: "var(--info)" }}>
-                            <b className="small" style={{ color: "var(--info)" }}>✓ Delivered — protected</b>
-                            <div className="small dim" style={{ marginBottom: 6 }}>What the destination actually received:</div>
-                            <Payload title="" text={liveEvent.payloadAfter} highlight="tokens" />
-                          </div>
-                        )}
+                        {liveEvent.decision === "ALLOW" && <span style={{ color: "var(--good)" }}>{"✓ allowed — the agent's command runs unchanged"}</span>}
                         {liveEvent.decision === "BLOCK" && (
-                          <div className="chat-bubble" style={{ borderColor: "var(--bad)" }}>
-                            <b className="small" style={{ color: "var(--bad)" }}>⛔ Blocked by Wrapbox before transmission</b>
-                            <div className="small dim">
-                              {liveEvent.decidedBy ? `Decided by ${liveEvent.decidedBy.label}` : liveEvent.decisionReasons[0]}
-                              {liveEvent.safeAlternative && <div style={{ marginTop: 4 }}><b>Safe next step:</b> {liveEvent.safeAlternative}</div>}
-                            </div>
-                          </div>
+                          <span style={{ color: "var(--bad)" }}>
+                            {"⛔ wrapbox: action blocked\n"}
+                            <span className="dim">{"   reason: "}{liveEvent.decidedBy?.label ?? liveEvent.decisionReasons[0]}{"\n"}</span>
+                            {liveEvent.safeAlternative && <span className="dim">{"   hint: "}{liveEvent.safeAlternative}</span>}
+                          </span>
                         )}
                         {liveEvent.decision === "REVIEW" && (
-                          <div className="chat-bubble" style={{ borderColor: "var(--warn)" }}>
-                            <b className="small" style={{ color: "var(--warn)" }}>⏸ Held for approval</b>
-                            <div className="small dim">This transfer needs a scoped approval. You can keep working — it resumes if approved in <a onClick={() => nav("reviews")}>Review Center</a>.</div>
-                          </div>
+                          <span style={{ color: "var(--warn)" }}>
+                            {"⏸ wrapbox: authorization required — request filed\n"}
+                            <span className="dim">{"   the agent continues other safe work while this waits"}</span>
+                          </span>
                         )}
+                        {liveEvent.decision === "CONSTRAIN" && <span style={{ color: "var(--info)" }}>{"✓ completed with protective transform"}</span>}
                       </>
                     )}
                   </div>
-                </div>
-              ) : (
-                <div className="term">
-                  <div className="term-chrome" style={{ alignItems: "center", gap: 8 }}>
-                    <i /><i /><i />
-                    <span style={{ marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <AgentMark agentId={sc.agent} size={13} />
-                      <span className="dim">{userById(sc.user)?.name} · {agentById(sc.agent)?.name} · {sc.application}</span>
-                    </span>
-                  </div>
-                  <span style={{ color: "var(--good)" }}>❯</span> {sc.actionRaw ?? sc.action.toLowerCase()}{"\n"}
-                  {!event && <span className="faint">… press Run to execute</span>}
-                  {event && !finished && <span className="dim">…</span>}
-                  {finished && liveEvent && (
-                    <>
-                      {liveEvent.decision === "ALLOW" && <span style={{ color: "var(--good)" }}>{"✓ allowed — the agent's command runs unchanged"}</span>}
-                      {liveEvent.decision === "BLOCK" && (
-                        <span style={{ color: "var(--bad)" }}>
-                          {"⛔ wrapbox: action blocked\n"}
-                          <span className="dim">{"   reason: "}{liveEvent.decidedBy?.label ?? liveEvent.decisionReasons[0]}{"\n"}</span>
-                          {liveEvent.safeAlternative && <span className="dim">{"   hint: "}{liveEvent.safeAlternative}</span>}
-                        </span>
-                      )}
-                      {liveEvent.decision === "REVIEW" && (
-                        <span style={{ color: "var(--warn)" }}>
-                          {"⏸ wrapbox: authorization required — request filed\n"}
-                          <span className="dim">{"   the agent continues other safe work while this waits"}</span>
-                        </span>
-                      )}
-                      {liveEvent.decision === "CONSTRAIN" && <span style={{ color: "var(--info)" }}>{"✓ completed with protective transform"}</span>}
-                    </>
-                  )}
-                </div>
-              )}
+                )}
 
-              {/* Before payload preview for content scenarios */}
-              {sc.payload && (
-                <div style={{ marginTop: 12 }}>
-                  <Payload title={`ORIGINAL — ${sc.fileName ?? "content"}`} text={sc.payload} highlight="sensitive" />
-                  {inspectionPreview && !inspectionPreview.inspectable && (
-                    <div className="small faint" style={{ marginTop: 4 }}>Encrypted content — Wrapbox cannot read it, and says so.</div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* RIGHT — what Wrapbox sees */}
-            <div>
-              <div className="payload-title dim">WHAT WRAPBOX SEES AND DOES</div>
-              <div className="card" style={{ minHeight: 220 }}>
-                {stages.length === 0 && (
-                  <div className="empty">
-                    Run the scenario to watch the {sc.plane.toLowerCase()} plane intercept, inspect, decide and enforce.
+                {/* Before payload preview for content scenarios */}
+                {sc.payload && (
+                  <div style={{ marginTop: 12 }}>
+                    <Payload title={`ORIGINAL — ${sc.fileName ?? "content"}`} text={sc.payload} highlight="sensitive" />
+                    {inspectionPreview && !inspectionPreview.inspectable && (
+                      <div className="small faint" style={{ marginTop: 4 }}>Encrypted content — Wrapbox cannot read it, and says so.</div>
+                    )}
                   </div>
                 )}
-                <div className="pipe">
-                  {stages.slice(0, visible).map((st, i) => (
-                    <div className="pipe-stage" key={st.key + i}>
-                      <div className="pipe-rail">
-                        <div className={`pipe-dot t-${st.tone}`} />
-                        {i < visible - 1 && <div className="pipe-line" />}
-                      </div>
-                      <div className="pipe-body">
-                        <div className="pipe-label">{st.label}</div>
-                        <div className="pipe-detail">{st.detail}</div>
-                        {st.items && (
-                          <div className="rule-list">
-                            {st.items.map((it, k) => (
-                              <div key={k} className={`rule-item ${it.decided ? "decided" : ""}`}>
-                                <DecisionChip d={it.effect} small />
-                                <div style={{ minWidth: 0 }}>
-                                  <div className="rule-text">“{it.text}”</div>
-                                  <div className="rule-source">
-                                    {it.source}
-                                    {it.decided && <span className="rule-decided"> · this rule decided</span>}
+              </div>
+
+              {/* RIGHT — what Wrapbox sees */}
+              <div>
+                <div className="payload-title dim" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <ShieldCheck size={12} /> WHAT WRAPBOX SEES AND DOES
+                </div>
+                <div className="card" style={{ minHeight: 220 }}>
+                  {stages.length === 0 && (
+                    <div className="empty">
+                      Run the scenario to watch the {sc.plane.toLowerCase()} plane intercept, inspect, decide and enforce.
+                    </div>
+                  )}
+                  <div className="pipe">
+                    {stages.slice(0, visible).map((st, i) => (
+                      <div className="pipe-stage" key={st.key + i}>
+                        <div className="pipe-rail">
+                          <div className={`pipe-dot t-${st.tone}`} />
+                          {i < visible - 1 && <div className="pipe-line" />}
+                        </div>
+                        <div className="pipe-body">
+                          <div className="pipe-label">{st.label}</div>
+                          <div className="pipe-detail">{st.detail}</div>
+                          {st.items && (
+                            <div className="rule-list">
+                              {st.items.map((it, k) => (
+                                <div key={k} className={`rule-item ${it.decided ? "decided" : ""}`}>
+                                  <DecisionChip d={it.effect} small />
+                                  <div style={{ minWidth: 0 }}>
+                                    <div className="rule-text">“{it.text}”</div>
+                                    <div className="rule-source">
+                                      {it.source}
+                                      {it.decided && <span className="rule-decided"> · this rule decided</span>}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {finished && liveEvent && (
+                  <div className="card" style={{ marginTop: 12 }}>
+                    <div className="spread">
+                      <div className="row">
+                        <DecisionChip d={liveEvent.decision} />
+                        <span className="row" style={{ gap: 6 }}>
+                          <AgentMark agentId={liveEvent.agent} size={14} />
+                          <span className="small dim">{names(liveEvent).agent} · {liveEvent.plane}</span>
+                        </span>
+                      </div>
+                      <div className="row">
+                        <button className="btn btn-sm" onClick={() => setOpenDetail(true)}>Evidence <ArrowRight size={13} /></button>
+                        {liveEvent.reviewState?.status === "pending" && (
+                          <button className="btn btn-warn btn-sm" onClick={() => nav("reviews")}>Open review</button>
                         )}
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="small faint" style={{ marginTop: 8 }}>
+                      This event is now visible in Control Room, Live Actions, Agent Inventory{liveEvent.transformation?.length ? ", Token Vault" : ""} and Evidence.
+                    </div>
+                  </div>
+                )}
               </div>
-
-              {finished && liveEvent && (
-                <div className="card" style={{ marginTop: 12 }}>
-                  <div className="spread">
-                    <div className="row">
-                      <DecisionChip d={liveEvent.decision} />
-                      <span className="small dim">{names(liveEvent).agent} · {liveEvent.plane}</span>
-                    </div>
-                    <div className="row">
-                      <button className="btn btn-sm" onClick={() => setOpenDetail(true)}>Evidence <ArrowRight size={13} /></button>
-                      {liveEvent.reviewState?.status === "pending" && (
-                        <button className="btn btn-warn btn-sm" onClick={() => nav("reviews")}>Open review</button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="small faint" style={{ marginTop: 8 }}>
-                    This event is now visible in Control Room, Live Actions, Agent Inventory{liveEvent.transformation?.length ? ", Token Vault" : ""} and Evidence.
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>

@@ -4,11 +4,12 @@
 // never displayed — originals are masked on screen.
 import React, { useMemo, useState } from "react";
 import { useAppState, restoreToken } from "../state/store";
-import { PageHead, Stat, Chip, SimNote, SectionHead } from "../ui/kit";
+import { PageHead, Chip, SimNote, SectionHead, MetricBar, Avatar, DestMark } from "../ui/kit";
+import { DEST_LOGOS } from "../ui/logos";
 import { EventDetail } from "../ui/event-detail";
 import { destById } from "../model/registries";
 import type { RestoreRecord, SimulationEvent } from "../model/types";
-import { Vault, ShieldCheck, ShieldX, Database, Building2, Globe, ArrowDown } from "lucide-react";
+import { Vault, ShieldCheck, ShieldX, Globe, KeyRound, ArrowDown } from "lucide-react";
 
 /** Show enough to recognise a value without revealing it. */
 function mask(v: string): string {
@@ -66,16 +67,23 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
         right={<SimNote>Vault storage simulated · restore rules and log real</SimNote>}
       />
 
-      <div className="grid g4">
-        <Stat icon={<Vault size={17} />} label="Tokens in vault" value={s.tokens.length} note="private values swapped out" />
-        <Stat icon={<ShieldCheck size={17} />} label="Restores allowed" value={allowedCount} tone="good" note="inside Veridian" />
-        <Stat icon={<ShieldX size={17} />} label="Restores denied" value={deniedCount} tone={deniedCount ? "bad" : undefined} note="asked from outside" />
-        <Stat icon={<Database size={17} />} label="Data types" value={new Set(s.tokens.map((t) => t.dataClass)).size} note="kinds of private data" />
+      {/* Vault at a glance — one refined strip, never a wall of number-boxes */}
+      <div className="card">
+        <MetricBar
+          band
+          items={[
+            { label: "Tokens in vault", value: s.tokens.length, note: "private values swapped out" },
+            { label: "Restores allowed", value: allowedCount, tone: "good", note: "inside Veridian" },
+            { label: "Restores denied", value: deniedCount, tone: deniedCount ? "bad" : undefined, note: "asked from outside" },
+            { label: "Data types", value: new Set(s.tokens.map((t) => t.dataClass)).size, note: "kinds of private data" },
+          ]}
+        />
       </div>
 
+      {/* The round trip — the vault's centrepiece, one framed panel */}
       <div className="section">
         <SectionHead
-          title="Try it — the round trip"
+          title="The round trip"
           sub="The AI writes its answer using the token. On the way back, who gets the real value?"
           right={
             tokens.length > 0 ? (
@@ -86,12 +94,23 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
           }
         />
         {!token || !origin ? (
-          <div className="card empty">No tokens yet — run "Customer PII → approved AI" in the Simulation Lab.</div>
+          <div className="card empty">
+            <Vault size={26} className="dim" />
+            <div style={{ fontWeight: 600, fontSize: 15, marginTop: 10 }}>The vault is empty</div>
+            <div className="small dim" style={{ maxWidth: 460, margin: "6px auto 0", lineHeight: 1.55 }}>
+              Run “Customer PII → approved AI” in the Simulation Lab to mint the first reversible token.
+            </div>
+          </div>
         ) : (
-          <>
+          <div className="card">
+            {/* Steps 1 · 2 · 3 — a left-to-right journey of the same token */}
             <div className="grid g3">
               <div className="card">
                 <div className="eyebrow">1 · Sent to the AI</div>
+                <div className="row small dim" style={{ gap: 7, marginTop: 8, flexWrap: "nowrap", minWidth: 0 }}>
+                  {origin.event.destination && DEST_LOGOS[origin.event.destination] && <DestMark destId={origin.event.destination} size={15} />}
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{outsider}</span>
+                </div>
                 <div className="payload" style={{ marginTop: 10 }}>… <span className="hl-tok">{token.id}</span> …</div>
                 <div className="small faint" style={{ marginTop: 8 }}>The real value never left Veridian.</div>
               </div>
@@ -111,25 +130,43 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
               </div>
             </div>
 
-            <div className="grid g2" style={{ marginTop: 16 }}>
+            <hr className="divider" />
+
+            <div style={{ marginBottom: 14 }}>
+              <div className="section-title" style={{ fontSize: 14.5 }}>Who gets the real value back?</div>
+              <div className="section-sub">Same token, two requesters — Wrapbox decides who is inside the company.</div>
+            </div>
+
+            <div className="grid g2">
               {([
-                { who: "inside" as const, icon: <Building2 size={17} />, title: "Priya Menon asks", sub: "inside Veridian, reading the AI's reply" },
-                { who: "outside" as const, icon: <Globe size={17} />, title: `${outsider} asks`, sub: "the AI that received the token tries to learn the real value" },
+                { who: "inside" as const, title: "Priya Menon asks", sub: "inside Veridian, reading the AI's reply" },
+                { who: "outside" as const, title: `${outsider} asks`, sub: "the AI that received the token tries to learn the real value" },
               ]).map((c) => {
                 const r = last[c.who];
                 return (
                   <div className="card" key={c.who} style={r ? { borderColor: r.allowed ? "var(--good)" : "var(--bad)" } : undefined}>
                     <div className="spread">
-                      <div className="row" style={{ gap: 10, flexWrap: "nowrap" }}>
-                        <div className="stat-icon">{c.icon}</div>
-                        <div><b className="small">{c.title}</b><div className="small faint">{c.sub}</div></div>
+                      <div className="row" style={{ gap: 11, flexWrap: "nowrap", minWidth: 0 }}>
+                        <span style={{ width: 38, height: 38, borderRadius: 10, display: "grid", placeItems: "center", background: "var(--surface)", border: "1px solid var(--line)", flexShrink: 0 }}>
+                          {c.who === "inside"
+                            ? <Avatar userId="u-priya" size={26} />
+                            : origin.event.destination && DEST_LOGOS[origin.event.destination]
+                              ? <DestMark destId={origin.event.destination} size={20} />
+                              : <Globe size={18} className="faint" />}
+                        </span>
+                        <div style={{ minWidth: 0 }}>
+                          <b className="small" style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis" }}>{c.title}</b>
+                          <div className="small faint">{c.sub}</div>
+                        </div>
                       </div>
                       <button className="btn btn-sm" onClick={() => ask(c.who)}>Restore</button>
                     </div>
                     {r && (
                       <div style={{ marginTop: 14 }}>
                         <div className="row" style={{ gap: 8 }}>
-                          {r.allowed ? <Chip tone="allow">ALLOWED</Chip> : <Chip tone="block">DENIED</Chip>}
+                          {r.allowed
+                            ? <Chip tone="allow"><ShieldCheck size={11} /> ALLOWED</Chip>
+                            : <Chip tone="block"><ShieldX size={11} /> DENIED</Chip>}
                           <span className="small dim">{r.reason}</span>
                         </div>
                         <div className="payload" style={{ marginTop: 10 }}>
@@ -148,13 +185,14 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
                 );
               })}
             </div>
-            <div className="small faint row" style={{ gap: 6, marginTop: 10 }}>
+            <div className="small faint row" style={{ gap: 6, marginTop: 14 }}>
               <ArrowDown size={13} /> Every attempt — allowed or denied — is recorded in the restore log.
             </div>
-          </>
+          </div>
         )}
       </div>
 
+      {/* Restore log — the audit trail of every attempt */}
       <div className="section">
         <SectionHead title="Restore log" sub="Who asked to see a real value, and what Wrapbox said" />
         <div className="card card-pad-0">
@@ -163,10 +201,21 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
             <tbody>
               {[...s.restorations].reverse().map((r) => (
                 <tr key={r.id}>
-                  <td className="small dim">{new Date(r.at).toLocaleTimeString()}</td>
-                  <td className="mono small"><span className="hl-tok">{r.tokenId}</span></td>
-                  <td className="small">{r.requester}</td>
-                  <td>{r.allowed ? <Chip tone="allow">ALLOWED</Chip> : <Chip tone="block">DENIED</Chip>}</td>
+                  <td className="small dim tnum">{new Date(r.at).toLocaleTimeString()}</td>
+                  <td className="mono small">
+                    <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                      <KeyRound size={12} className="faint" /><span className="hl-tok">{r.tokenId}</span>
+                    </span>
+                  </td>
+                  <td className="small">
+                    <span className="row" style={{ gap: 7, flexWrap: "nowrap", minWidth: 0 }}>
+                      {r.inside ? <Avatar userId="u-priya" size={18} /> : <Globe size={13} className="faint" />}
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{r.requester}</span>
+                    </span>
+                  </td>
+                  <td>{r.allowed
+                    ? <Chip tone="allow"><ShieldCheck size={11} /> ALLOWED</Chip>
+                    : <Chip tone="block"><ShieldX size={11} /> DENIED</Chip>}</td>
                   <td className="small dim">{r.reason}</td>
                 </tr>
               ))}
@@ -176,8 +225,9 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
         </div>
       </div>
 
+      {/* Vault contents — every token, where it came from */}
       <div className="section">
-        <SectionHead title="All tokens" sub="Every private value Wrapbox has swapped out, and where it came from" />
+        <SectionHead title="Vault contents" sub="Every private value Wrapbox has swapped out, and where it came from" />
         <div className="card card-pad-0">
           <table className="tbl">
             <thead><tr><th>Token</th><th>Data type</th><th>Created</th><th>Who can restore</th><th>Expires</th><th>From</th></tr></thead>
@@ -186,12 +236,23 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
                 const o = originOf(t.id);
                 return (
                   <tr key={t.id + t.eventId}>
-                    <td className="mono small"><span className="hl-tok">{t.id}</span></td>
+                    <td className="mono small">
+                      <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                        <KeyRound size={12} className="faint" /><span className="hl-tok">{t.id}</span>
+                      </span>
+                    </td>
                     <td><Chip tone="violet">{t.dataClass}</Chip></td>
-                    <td className="small dim">{new Date(t.createdAt).toLocaleString()}</td>
-                    <td className="small">{scopeLabel(t.scope)}</td>
-                    <td className="small dim">{new Date(t.expiresAt).toLocaleDateString()}</td>
-                    <td className="mono small">{o ? <a onClick={() => setOpenEvt(o.event)}>{t.eventId}</a> : t.eventId}</td>
+                    <td className="small dim tnum">{new Date(t.createdAt).toLocaleString()}</td>
+                    <td className="small">
+                      <span className="chip c-constrain"><ShieldCheck size={11} /> {scopeLabel(t.scope)}</span>
+                    </td>
+                    <td className="small dim tnum">{new Date(t.expiresAt).toLocaleDateString()}</td>
+                    <td className="mono small">
+                      <span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                        {o?.event.destination && DEST_LOGOS[o.event.destination] && <DestMark destId={o.event.destination} size={14} />}
+                        {o ? <a onClick={() => setOpenEvt(o.event)}>{t.eventId}</a> : t.eventId}
+                      </span>
+                    </td>
                   </tr>
                 );
               })}

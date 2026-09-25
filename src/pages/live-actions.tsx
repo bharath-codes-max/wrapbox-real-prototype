@@ -1,12 +1,24 @@
 // Live Action Stream — human-readable real-time chain with full filtering.
 import { useAppState, metrics } from "../state/store";
-import { PageHead, SimNote, Stat, SectionHead } from "../ui/kit";
+import { PageHead, SimNote } from "../ui/kit";
 import { EventStream } from "../ui/event-stream";
-import { CheckCircle2, Shuffle, Hand, ShieldX } from "lucide-react";
+
+const DECISIONS = [
+  { key: "ALLOW", tone: "allow", label: "Allowed" },
+  { key: "CONSTRAIN", tone: "constrain", label: "Constrained" },
+  { key: "REVIEW", tone: "review", label: "Reviewed" },
+  { key: "BLOCK", tone: "block", label: "Blocked" },
+] as const;
 
 export function LiveActions({ nav }: { nav: (r: string) => void }) {
   const s = useAppState();
   const m = metrics(s);
+  const notes: Record<(typeof DECISIONS)[number]["key"], string> = {
+    ALLOW: "flowed automatically",
+    CONSTRAIN: `${m.transfersTransformed} sensitive transfer(s) transformed`,
+    REVIEW: "escalated to a human",
+    BLOCK: "stopped before execution",
+  };
   return (
     <div className="page page-wide">
       <PageHead
@@ -16,18 +28,48 @@ export function LiveActions({ nav }: { nav: (r: string) => void }) {
         right={<SimNote />}
       />
 
-      <div className="grid g4">
-        <Stat icon={<CheckCircle2 size={17} />} label="Allowed" value={m.counts.ALLOW} tone="good" note="normal work flowed automatically" />
-        <Stat icon={<Shuffle size={17} />} label="Constrained" value={m.counts.CONSTRAIN} tone="info" note={`${m.transfersTransformed} sensitive transfer(s) transformed`} />
-        <Stat icon={<Hand size={17} />} label="Reviewed" value={m.counts.REVIEW} tone="warn" note="exceptions escalated to humans" />
-        <Stat icon={<ShieldX size={17} />} label="Blocked" value={m.counts.BLOCK} tone="bad" note="stopped before execution" />
-      </div>
+      {/* Hero — the live decision stream, led by a slim decision-mix band */}
+      <div className="card overview-card">
+        <div className="spread" style={{ alignItems: "baseline", gap: 20 }}>
+          <div style={{ minWidth: 0 }}>
+            <div className="section-title">Live decision stream</div>
+            <div className="section-sub">
+              {m.total} consequential action{m.total === 1 ? "" : "s"} recorded, newest first — filter by agent, user, plane, decision or risk.
+            </div>
+          </div>
+          <span className="eyebrow" style={{ whiteSpace: "nowrap" }}>Decision mix</span>
+        </div>
 
-      <div className="section">
-        <SectionHead
-          title="Action stream"
-          sub={`${m.total} consequential action${m.total === 1 ? "" : "s"} recorded, newest first — filter by agent, user, plane, decision or risk`}
-        />
+        <div className="decision-track" style={{ marginTop: 16 }}>
+          {DECISIONS.map((d) => {
+            const c = m.counts[d.key];
+            if (c === 0) return null;
+            return (
+              <div
+                key={d.key}
+                className="decision-seg"
+                style={{ flex: c, background: `var(--${d.tone})`, cursor: "default" }}
+                title={`${d.label}: ${c}`}
+              >
+                {m.total > 0 && c / m.total > 0.06 && <span>{c}</span>}
+              </div>
+            );
+          })}
+          {m.total === 0 && <div className="decision-seg" style={{ flex: 1, cursor: "default" }} />}
+        </div>
+
+        <div className="decision-legend">
+          {DECISIONS.map((d) => (
+            <div key={d.key} className="decision-leg" style={{ cursor: "default" }}>
+              <span className="dot" style={{ background: `var(--${d.tone})` }} />
+              <span className="n" style={{ color: `var(--${d.tone})` }}>{m.counts[d.key]}</span>
+              <span className="lbl">{d.label} · {notes[d.key]}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="overview-sep" />
+
         <EventStream events={s.events} nav={nav} />
       </div>
     </div>
