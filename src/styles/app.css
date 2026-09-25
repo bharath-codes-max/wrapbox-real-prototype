@@ -24,8 +24,8 @@
   --accent-soft: #f6ece5;
   --accent-fg: #ffffff;
   --accent-active: #a9583e;
-  /* Navy-blue header bar (brand chrome over a light app) */
-  --header: #132a4d;
+  /* Matte dark-grey header bar (the only dark chrome; body stays light) */
+  --header: #2f3033;
   --ink: #201f1c;
   --ink-fg: #faf9f5;
   /* Decision tones — warm-aligned */
@@ -278,7 +278,7 @@ button { font-family: var(--sans); }
   background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--r); padding: 18px 20px; box-shadow: var(--shadow);
 }
-.card .card, .drawer .card { box-shadow: none; background: var(--surface-2); border-color: var(--line); }
+.card .card, .drawer .card { box-shadow: none; background: var(--surface); border-color: var(--line); }
 
 /* Metric bar — inline KPIs in one strip (replaces repetitive 4-card rows) */
 .metricbar {
@@ -304,14 +304,15 @@ button { font-family: var(--sans); }
 
 /* Metric band — borderless KPIs straight on the canvas (airy, un-boxed) */
 .metricband { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0; }
-.metricband .metric { border-left: 1px solid var(--line); padding: 4px 28px 4px 0; margin-left: 28px; }
-.metricband .metric:first-child { border-left: none; margin-left: 0; padding-left: 0; }
+.metricband .metric { border-left: 1px solid var(--line); padding: 4px 24px; margin-left: 0; }
+.metricband .metric:first-child { border-left: none; padding-left: 0; }
+.metricband .metric:last-child { padding-right: 0; }
 .metricband .metric-value { font-weight: 700; font-size: 23px; letter-spacing: -0.02em; margin-top: 7px; }
 .metricband .metric-label { color: var(--fg-3); }
 @media (max-width: 760px) {
   .metricband { grid-auto-flow: row; grid-template-columns: 1fr 1fr; gap: 22px 0; }
-  .metricband .metric { border-left: 1px solid var(--line); margin-left: 22px; padding-right: 12px; }
-  .metricband .metric:nth-child(odd) { border-left: none; margin-left: 0; }
+  .metricband .metric { border-left: 1px solid var(--line); padding: 4px 16px; }
+  .metricband .metric:nth-child(odd) { border-left: none; padding-left: 0; }
 }
 
 /* Overview panel — KPIs + decision mix combined in one card */
