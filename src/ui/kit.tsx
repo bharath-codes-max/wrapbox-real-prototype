@@ -170,6 +170,34 @@ export function Pager({ page, pages, setPage, total, size }: { page: number; pag
   );
 }
 
+/**
+ * Progress bar — the one component used everywhere. Prism fill by default;
+ * pass a tone ("allow" | "review" | "block") when the colour carries meaning.
+ */
+export function Progress({
+  value, max = 1, label, detail, tone, size = "md", showPct,
+}: {
+  value: number; max?: number; label?: React.ReactNode; detail?: React.ReactNode;
+  tone?: "allow" | "review" | "block"; size?: "sm" | "md" | "lg"; showPct?: boolean;
+}) {
+  const ratio = max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;
+  const pct = Math.round(ratio * 100);
+  const right = detail ?? (showPct ? `${pct}%` : null);
+  return (
+    <div className={`progress ${size} ${tone ? `tone-${tone}` : ""}`}>
+      {(label || right) && (
+        <div className="progress-head">
+          {label ? <span className="lbl">{label}</span> : <span />}
+          {right !== null && <span className="val">{right}</span>}
+        </div>
+      )}
+      <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={max} aria-valuenow={value}>
+        <div className="progress-fill" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
 export function PageHead({ title, sub, right, eyebrow }: { title: string; sub?: string; right?: React.ReactNode; eyebrow?: string }) {
   return (
     <div className="page-head">

@@ -19,11 +19,14 @@
   --fg-3: #6c6a64;
   --fg-4: #98958c;
   /* Brand — Anthropic coral */
-  --accent: #cc785c;
-  --accent-2: #d98b70;
-  --accent-soft: #f6ece5;
+  /* Brand — the Wrapbox prism (same as the main prototype): coral → orange → pink → lilac → violet */
+  --brand-grad: linear-gradient(90deg, #ec4a22 0%, #ff6a3d 16%, #ff8580 32%, #ff9fcf 50%, #d69bff 64%, #9a82f7 80%, #6d66e6 100%);
+  --brand-swatch: linear-gradient(120deg, #ff6a3d, #ff9fcf 50%, #9a82f7);
+  --accent: #d4471f;          /* prism coral-orange, darkened just enough for text on cream */
+  --accent-2: #ff6a3d;
+  --accent-soft: #fdebe4;
   --accent-fg: #ffffff;
-  --accent-active: #a9583e;
+  --accent-active: #b23a17;
   /* Matte dark-grey header bar (the only dark chrome; body stays light) */
   --header: #2f3033;
   --ink: #201f1c;
@@ -95,10 +98,10 @@
   --fg-2: #c7c3ba;
   --fg-3: #98948a;
   --fg-4: #6f6b63;
-  --accent: #d98463;
-  --accent-2: #e59a7c;
-  --accent-soft: #3b2a22;
-  --accent-active: #f0a88b;
+  --accent: #ff7a52;
+  --accent-2: #ff9b7a;
+  --accent-soft: #3d2219;
+  --accent-active: #ff9f82;
   --header: #131312;
   --sidebar: #1f1e1c;
   --ink: #efece6;
@@ -877,3 +880,67 @@ textarea.input { resize: vertical; line-height: 1.6; }
 .nav-item .badge-setup { background: color-mix(in oklab, var(--fg) 8%, transparent); color: var(--fg-2); }
 :root[data-theme="dark"] .nav-item:hover { background: rgba(255, 255, 255, 0.06); }
 :root[data-theme="dark"] .nav-item.active { background: rgba(255, 255, 255, 0.1); }
+
+
+/* ==========================================================================
+   Brand — prism gradient touches (workspace mark, active nav line, wizard)
+   ========================================================================== */
+.workspace-dot { background: var(--brand-swatch) !important; }
+.nav-active-bar { background: linear-gradient(180deg, #ff6a3d, #ff9fcf 50%, #9a82f7) !important; width: 3px; }
+.setup-num.current { background: var(--brand-swatch); border-color: transparent; color: #fff; }
+
+/* Get started hero — ribbed-glass prism, as in the main prototype */
+.hero-prism {
+  position: relative; isolation: isolate;
+  background:
+    radial-gradient(62% 95% at 80% 112%, rgba(9, 34, 46, 0.97) 0%, rgba(9, 34, 46, 0.7) 40%, transparent 76%),
+    radial-gradient(30% 60% at 52% -10%, rgba(255, 236, 246, 0.42), transparent 72%),
+    linear-gradient(90deg, #ec4a22 0%, #ff6a3d 16%, #ff8580 32%, #ff9fcf 50%, #d69bff 64%, #9a82f7 80%, #6d66e6 100%);
+  background-size: 100% 100%, 100% 100%, 130% 100%;
+  animation: prism-drift 18s ease-in-out infinite alternate;
+}
+.hero-prism::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.2) 0px, rgba(255, 255, 255, 0.04) 3px, rgba(20, 8, 40, 0.1) 8px, rgba(255, 255, 255, 0.12) 11px);
+  mix-blend-mode: soft-light;
+}
+.hero-prism::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(90deg, rgba(150, 24, 40, 0.16) 0%, rgba(150, 24, 40, 0.06) 36%, transparent 55%);
+}
+@keyframes prism-drift { from { background-position: 0 0, 0 0, 0% 0; } to { background-position: 0 0, 0 0, 100% 0; } }
+
+/* ==========================================================================
+   Progress — one component everywhere: slim track, prism fill with a soft
+   glow and a travelling sheen; semantic tones for thresholds.
+   ========================================================================== */
+.progress { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.progress-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 12px; }
+.progress-head .lbl { color: var(--fg-3); }
+.progress-head .val { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--fg-2); }
+.progress-track {
+  position: relative; height: 6px; border-radius: 999px; overflow: hidden;
+  background: color-mix(in oklab, var(--fg) 8%, transparent);
+}
+.progress.sm .progress-track { height: 4px; }
+.progress.lg .progress-track { height: 8px; }
+.progress-fill {
+  position: relative; height: 100%; border-radius: 999px; overflow: hidden;
+  background: var(--brand-grad); background-size: 180% 100%;
+  box-shadow: 0 0 12px -2px color-mix(in oklab, #ff6a3d 55%, transparent);
+  transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.progress-fill::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+  transform: translateX(-100%); animation: sheen 2.4s ease-in-out infinite;
+}
+@keyframes sheen { to { transform: translateX(100%); } }
+.progress.tone-allow .progress-fill { background: var(--allow); box-shadow: none; }
+.progress.tone-review .progress-fill { background: var(--review); box-shadow: none; }
+.progress.tone-block .progress-fill { background: var(--block); box-shadow: none; }
+/* Wizard + demo bars share the look */
+.setup-progress { height: 5px !important; background: color-mix(in oklab, var(--fg) 8%, transparent) !important; }
+.setup-progress > div, .demo-progress-fill { background: var(--brand-grad) !important; background-size: 180% 100% !important; box-shadow: 0 0 10px -2px color-mix(in oklab, #ff6a3d 55%, transparent); }
+.demo-progress { background: color-mix(in oklab, var(--fg) 8%, transparent) !important; }
+@media (prefers-reduced-motion: reduce) { .progress-fill::after { animation: none; display: none; } .hero-prism { animation: none; } }

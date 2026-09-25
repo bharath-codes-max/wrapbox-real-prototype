@@ -1,4 +1,5 @@
 // Get started hub — the front door. Two ways in (set up a fresh workspace as
+import type React from "react";
 // the admin, or explore the Veridian demo), the employee side, and a setup
 // checklist for the CURRENT workspace. Every state, count and decision on this
 // page is read from the store; the decision ticker replays real recorded
@@ -12,7 +13,7 @@ import {
 import { AGENTS, agentById, userById } from "../model/org";
 import { ROLLOUT } from "../model/rollout";
 import type { SimulationEvent } from "../model/types";
-import { AgentMark, Avatar, Chip, DecisionChip, timeAgo } from "../ui/kit";
+import { AgentMark, Avatar, Chip, DecisionChip, timeAgo, Progress } from "../ui/kit";
 import { describe } from "../ui/describe";
 
 // ---------------------------------------------------------------------------
@@ -166,41 +167,24 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
     <div className="page page-wide">
       {/* 1 · Hero ------------------------------------------------------- */}
       <section
-        className="card"
+        className="card hero-prism"
         onMouseMove={onHeroMove}
         onMouseLeave={onHeroLeave}
         style={{
-          position: "relative", overflow: "hidden", isolation: "isolate",
+          position: "relative", overflow: "hidden",
           padding: "clamp(24px, 3.4vw, 44px)", borderRadius: "var(--r-xl)",
-          border: "1px solid color-mix(in oklab, var(--accent) 16%, var(--line))",
-          boxShadow: "var(--shadow-md)",
-          background:
-            "linear-gradient(155deg, color-mix(in oklab, var(--accent-soft) 75%, var(--surface)) 0%, var(--surface) 52%, color-mix(in oklab, var(--constrain-soft) 70%, var(--surface)) 100%)",
+          border: "none", boxShadow: "var(--shadow-md)",
+          // The prism is bright in both themes, so the hero keeps a fixed ink palette.
+          ...({
+            "--fg": "#1b0f33", "--fg-2": "rgba(27, 15, 51, 0.8)", "--fg-3": "rgba(27, 15, 51, 0.62)", "--fg-4": "rgba(27, 15, 51, 0.45)",
+            "--ink": "#1b0f33", "--ink-fg": "#ffffff", "--surface": "#ffffff", "--surface-2": "#f6f2f8",
+            "--line": "rgba(27, 15, 51, 0.12)", "--line-strong": "rgba(27, 15, 51, 0.2)", color: "#1b0f33",
+          } as React.CSSProperties),
         }}
       >
-        {/* Decorative depth layers */}
-        <div aria-hidden="true" style={{
-          position: "absolute", inset: -48, zIndex: 0, pointerEvents: "none", ...depth(-14),
-          background:
-            "radial-gradient(560px 360px at 6% 0%, color-mix(in oklab, var(--accent) 24%, transparent), transparent 70%)," +
-            "radial-gradient(520px 380px at 96% 104%, color-mix(in oklab, var(--constrain) 22%, transparent), transparent 70%)",
-        }} />
-        <div aria-hidden="true" style={{
-          position: "absolute", inset: -48, zIndex: 0, pointerEvents: "none", ...depth(-6),
-          backgroundImage: "radial-gradient(color-mix(in oklab, var(--fg) 13%, transparent) 1px, transparent 1.6px)",
-          backgroundSize: "20px 20px",
-          maskImage: "radial-gradient(ellipse 48% 62% at 26% 42%, black, transparent 78%)",
-          WebkitMaskImage: "radial-gradient(ellipse 48% 62% at 26% 42%, black, transparent 78%)",
-        }} />
-        <div aria-hidden="true" style={{
-          position: "absolute", inset: -48, zIndex: 0, pointerEvents: "none", ...depth(18),
-          background: "repeating-radial-gradient(circle at 80% 52%, transparent 0 62px, color-mix(in oklab, var(--accent) 20%, transparent) 62px 63px)",
-          maskImage: "radial-gradient(circle at 80% 52%, black 0, transparent 330px)",
-          WebkitMaskImage: "radial-gradient(circle at 80% 52%, black 0, transparent 330px)",
-        }} />
         <div aria-hidden="true" style={{
           position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
-          background: "radial-gradient(420px circle at calc((var(--mx, 0) + 1) * 50%) calc((var(--my, 0) + 1) * 50%), color-mix(in oklab, var(--accent) 9%, transparent), transparent 70%)",
+          background: "radial-gradient(420px circle at calc((var(--mx, 0) + 1) * 50%) calc((var(--my, 0) + 1) * 50%), rgba(255, 255, 255, 0.28), transparent 70%)",
         }} />
 
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexWrap: "wrap", alignItems: "center", gap: "32px 40px" }}>
@@ -217,10 +201,7 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
             </span>
             <h1 style={{ fontSize: "clamp(34px, 3.9vw, 52px)", lineHeight: 1.03, letterSpacing: "-0.04em", fontWeight: 700, margin: "20px 0 0" }}>
               Put every AI agent on a{" "}
-              <span style={{
-                background: "linear-gradient(95deg, var(--accent) 10%, color-mix(in oklab, var(--accent) 45%, var(--constrain)) 100%)",
-                WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
-              }}>permit</span>.
+              <span style={{ color: "#1b0f33", textDecoration: "underline", textDecorationColor: "rgba(27, 15, 51, 0.35)", textDecorationThickness: 3, textUnderlineOffset: 8 }}>permit</span>.
             </h1>
             <p style={{ margin: "16px 0 0", fontSize: 15.5, lineHeight: 1.6, color: "var(--fg-2)", maxWidth: "54ch" }}>
               Claude Code, Codex, ChatGPT, your own agents — every consequential action checked before it runs.
@@ -341,21 +322,7 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
             </div>
           </div>
           <div style={{ flex: "0 1 260px", minWidth: 180 }}>
-            <div className="spread small" style={{ marginBottom: 7 }}>
-              <span className="faint">Progress</span>
-              <span className="tnum" style={{ fontWeight: 600 }}>{pct}%</span>
-            </div>
-            <div
-              role="progressbar" aria-valuemin={0} aria-valuemax={items.length} aria-valuenow={done}
-              aria-label={`${done} of ${items.length} setup steps done`}
-              style={{ height: 6, borderRadius: 999, background: "var(--surface-3)", overflow: "hidden" }}
-            >
-              <div style={{
-                width: `${pct}%`, height: "100%", borderRadius: 999,
-                background: "linear-gradient(90deg, var(--accent), color-mix(in oklab, var(--accent) 55%, var(--constrain)))",
-                transition: "width 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
-              }} />
-            </div>
+            <Progress value={done} max={items.length} label="Progress" detail={`${done} of ${items.length} · ${pct}%`} size="lg" />
           </div>
         </div>
         <div className="grid g2" style={{ gap: "2px 12px", padding: "10px 12px 12px", borderTop: "1px solid var(--line)" }}>

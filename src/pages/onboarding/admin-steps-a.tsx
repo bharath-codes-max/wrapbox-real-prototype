@@ -20,7 +20,7 @@ import type { ContractClause, IntentContract } from "../../model/types";
 import { draftClauses } from "../../engine/drafter";
 import { canActivate, clauseCoverage, contractCoverage, coverageOf, destinationText } from "../../engine/coverage";
 import { StepHead, StepFooter, Tick, Choice, Segmented, Modal, sleep } from "../../ui/setup";
-import { Avatar, AgentMark, Chip, StatusChip, DecisionChip, SimNote } from "../../ui/kit";
+import { Avatar, AgentMark, Chip, StatusChip, DecisionChip, SimNote, Progress } from "../../ui/kit";
 import { logoUrl } from "../../ui/logos";
 import type { AdminStepProps } from "./types";
 import {
@@ -42,11 +42,7 @@ function Logo({ name, size = 18 }: { name: string; size?: number }) {
 }
 
 function Bar({ value }: { value: number }) {
-  return (
-    <div style={{ flex: 1, height: 5, borderRadius: 999, background: "var(--surface-3)", overflow: "hidden" }}>
-      <div style={{ width: `${Math.round(Math.min(1, Math.max(0, value)) * 100)}%`, height: "100%", borderRadius: 999, background: "var(--accent)", transition: "width 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }} />
-    </div>
-  );
+  return <div style={{ flex: 1 }}><Progress value={value} size="sm" /></div>;
 }
 
 function Box({ on }: { on: boolean }) {

@@ -3,7 +3,7 @@
 // step 6 (production deploy) parks; independent steps continue; approval resumes.
 import { useAppState, startTask, advanceTask } from "../state/store";
 import { TASK_JOBS } from "../engine/scenarios";
-import { PageHead, SectionHead, MetricBar, Chip, DecisionChip, SimNote, AgentMark, Avatar, PageTabs, usePaged, Pager } from "../ui/kit";
+import { PageHead, SectionHead, MetricBar, Chip, DecisionChip, SimNote, AgentMark, Avatar, PageTabs, usePaged, Pager, Progress } from "../ui/kit";
 import { EventDetail } from "../ui/event-detail";
 import { useState, type CSSProperties } from "react";
 import { agentById, resourceById, userById } from "../model/org";
@@ -45,10 +45,10 @@ function StepState({ s }: { s: string }) {
 }
 
 /** Slim progress meter — token-coloured, no big number box. */
-function Meter({ pct, tone = "accent" }: { pct: number; tone?: string }) {
+function Meter({ pct }: { pct: number }) {
   return (
-    <div style={{ height: 5, background: "var(--surface-2)", borderRadius: 999, marginTop: 7, overflow: "hidden", boxShadow: "inset 0 0 0 1px var(--line)" }}>
-      <div style={{ height: "100%", width: `${pct}%`, background: `var(--${tone})`, borderRadius: 999 }} />
+    <div style={{ marginTop: 7 }}>
+      <Progress value={pct} max={100} size="sm" tone={pct >= 90 ? "block" : pct >= 75 ? "review" : undefined} />
     </div>
   );
 }
