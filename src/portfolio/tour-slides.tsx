@@ -60,6 +60,23 @@ const PAGE: Record<string, string> = {
 };
 const pageOf = (route: string) => PAGE[route.split("/")[0]] ?? "Wrapbox";
 
+/** Ambient layer behind a live use case: the case's pastel tint as slowly drifting
+ *  glows, a faint blueprint grid, and two hairlines that draw themselves in. */
+function LiveBackdrop({ tint }: { tint: number }) {
+  const second = (tint % 6) + 1;
+  return (
+    <div className="lvbg" aria-hidden="true">
+      <div className="lvbg-grid" />
+      <div className="lvbg-blob a" style={{ background: `radial-gradient(closest-side, var(--ice${tint}), transparent)` }} />
+      <div className="lvbg-blob b" style={{ background: `radial-gradient(closest-side, var(--ice${second}), transparent)` }} />
+      <svg className="lvbg-lines" viewBox="0 0 1600 900" preserveAspectRatio="none">
+        <path d="M -40 760 C 260 640, 420 860, 760 720 S 1260 540, 1660 640" />
+        <path d="M -40 170 C 300 250, 520 60, 880 150 S 1340 300, 1660 180" />
+      </svg>
+    </div>
+  );
+}
+
 const VOICE_KEY = "wrapbox-deck-voice";
 function readVoicePref(): boolean { try { return localStorage.getItem(VOICE_KEY) !== "0"; } catch { return true; } }
 
@@ -119,8 +136,18 @@ export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & S
   const paused = status === "paused";
   const tint = ((n - 1) % 6) + 1;
 
+  // Gentle parallax: the window and the card drift a few pixels against each other.
+  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (SHOT) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty("--px", (((e.clientX - r.left) / r.width) * 2 - 1).toFixed(3));
+    e.currentTarget.style.setProperty("--py", (((e.clientY - r.top) / r.height) * 2 - 1).toFixed(3));
+  };
+  const onLeave = (e: React.MouseEvent<HTMLDivElement>) => { e.currentTarget.style.setProperty("--px", "0"); e.currentTarget.style.setProperty("--py", "0"); };
+
   return (
-    <div className="lvwrap">
+    <div className="lvwrap" onMouseMove={onMove} onMouseLeave={onLeave}>
+      <LiveBackdrop tint={tint} />
       <Reveal><h1 className="lvtitle">{tc.title}</h1></Reveal>
       <div className="lvbody">
         <Reveal i={1} className="lvframe" style={{ width: APP_W * SCALE }}>
