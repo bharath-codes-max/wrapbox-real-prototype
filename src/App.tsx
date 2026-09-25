@@ -283,19 +283,18 @@ function KernelBar({ nav }: { nav: (r: string) => void }) {
     <div className="subbar">
       {pending ? (
         <>
-          <span className="subbar-tag new">New</span>
+          <span className="subbar-dot" aria-hidden="true" />
           <span className="subbar-text">
-            <b>Safety Kernel {pending.version}</b>
+            <b>Update available now</b>
             <span className="subbar-sep">·</span>
-            {pending.notes[0].replace(/^New rule:\s*/, "")}
+            Safety Kernel {pending.version} — {pending.notes[0].replace(/^New rule:\s*/, "")}
           </span>
           <button className="subbar-link" onClick={() => nav("safety")}>Review &amp; install <ArrowRight size={13} /></button>
         </>
       ) : (
         <>
-          <span className="subbar-tag">Safety Kernel</span>
           <span className="subbar-text">
-            <b>{installed?.version ?? s.kernel.version}</b> installed
+            Safety Kernel <b>{installed?.version ?? s.kernel.version}</b> is up to date
             <span className="subbar-sep">·</span>
             {rules} always-on rules{observing > 0 ? ` · ${observing} observing` : ""}
           </span>
