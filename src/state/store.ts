@@ -10,14 +10,51 @@ import type {
   StandingPermission, TaskEnvelope, VaultToken, Decision, RestoreRecord, Environment,
 } from "../model/types";
 import { SEED_CONTRACTS } from "../model/contracts";
-import { deviceOfUser, userById } from "../model/org";
+import { ORG, USERS, AGENTS, deviceOfUser, userById } from "../model/org";
+import { ROLLOUT, type AgentKind } from "../model/rollout";
 import { canActivate, contractCoverage } from "../engine/coverage";
 import { BASELINE_KERNEL, enforceRule, installRelease, pendingRelease, type KernelState } from "../engine/kernel";
 import { SCENARIOS, jobById, scenarioById, type Scenario } from "../engine/scenarios";
 import { runScenario, setSeq, getSeq, setTokenCounter, getTokenCounter } from "../engine/simulate";
 import { decide } from "../engine/brain";
 
+// ---------------------------------------------------------------------------
+// Workspaces + onboarding
+// "demo" = Veridian Systems, three months in (seeded history).
+// "fresh" = day one: no history, no contracts, nothing connected — the admin
+// onboarding wizard builds it, and every page reflects what they did.
+// Each workspace persists under its own key, so neither overwrites the other.
+// ---------------------------------------------------------------------------
+export type Workspace = "demo" | "fresh";
+export type Region = "us" | "eu" | "in";
+export type Idp = "" | "Google Workspace" | "Microsoft Entra ID" | "Okta";
+
+export interface OrgProfile {
+  company: string;
+  domain: string;
+  region: Region;
+  idp: Idp;
+  keyThumb?: string;   // thumbprint of the workspace signing key (real ECDSA P-256, generated in the browser)
+  createdAt?: number;
+}
+
+export interface AlertPrefs { slack: boolean; teams: boolean; email: boolean; passkey: boolean; escalateMin: 5 | 15 | 30 }
+
+export interface OnboardingState {
+  adminDone: boolean;
+  employeeDone: boolean;
+  categories: AgentKind[];  // agent kinds the admin chose to govern (Step 2)
+  connected: string[];      // ROLLOUT target ids rolled out (Step 4 — simulated)
+  alerts: AlertPrefs;       // where approvers get asked (Step 5)
+  invited: string[];        // user ids synced from the directory / invited (Step 6)
+  selfTests: string[];      // event ids produced by the go-live self-tests (Step 7)
+  employee: { accepted: boolean; passkey: boolean; installed: boolean; tries: string[] };
+}
+
 export interface AppState {
+  workspace: Workspace;
+  org: OrgProfile;
+  onboarding: OnboardingState;
   events: SimulationEvent[];
   contracts: IntentContract[];
   tasks: TaskEnvelope[];
@@ -31,7 +68,34 @@ export interface AppState {
   kernel: KernelState; // installed Wrapbox Safety Kernel pack
 }
 
-const STORAGE_KEY = "wrapbox-real-prototype-v1";
+const STORAGE_KEY = "wrapbox-real-prototype-v1"; // demo workspace (unchanged key — existing data survives)
+const FRESH_KEY = "wrapbox-real-prototype-fresh-v1";
+const WS_KEY = "wrapbox-real-prototype-workspace";
+const keyFor = (ws: Workspace) => (ws === "fresh" ? FRESH_KEY : STORAGE_KEY);
+
+const ALL_KINDS: AgentKind[] = [...new Set(AGENTS.map((a) => a.kind))];
+const DEFAULT_ALERTS: AlertPrefs = { slack: true, teams: false, email: true, passkey: true, escalateMin: 15 };
+const DEMO_ORG: OrgProfile = { company: ORG.name, domain: ORG.domain, region: "us", idp: "Okta" };
+
+/** Veridian has been live for months: onboarding is complete and everything is connected. */
+function demoOnboarding(): OnboardingState {
+  return {
+    adminDone: true, employeeDone: true, categories: ALL_KINDS, connected: ROLLOUT.map((t) => t.id),
+    alerts: DEFAULT_ALERTS, invited: USERS.map((u) => u.id), selfTests: [],
+    employee: { accepted: true, passkey: true, installed: true, tries: [] },
+  };
+}
+function freshOnboarding(): OnboardingState {
+  return {
+    adminDone: false, employeeDone: false, categories: [], connected: [],
+    alerts: DEFAULT_ALERTS, invited: ["u-priya"], selfTests: [],
+    employee: { accepted: false, passkey: false, installed: false, tries: [] },
+  };
+}
+
+function currentWorkspace(): Workspace {
+  try { return localStorage.getItem(WS_KEY) === "fresh" ? "fresh" : "demo"; } catch { return "demo"; }
+}
 
 // ---------------------------------------------------------------------------
 // Seed generation — a believable few days of history, produced through the
@@ -94,6 +158,9 @@ function seedState(): AppState {
   const autopilot: AutopilotRecommendation[] = autopilotSeed();
 
   return {
+    workspace: "demo",
+    org: DEMO_ORG,
+    onboarding: demoOnboarding(),
     events,
     contracts,
     tasks: [],
@@ -103,6 +170,30 @@ function seedState(): AppState {
     breakGlass: [],
     autopilot,
     lastHash,
+    demoStep: -1,
+    kernel: BASELINE_KERNEL,
+  };
+}
+
+/** Day one: nothing has happened yet. No history, no contracts, no standing
+ *  permissions, no Autopilot suggestions (those need history). The baseline
+ *  Safety Kernel is on from the first second — it needs no setup. */
+function freshState(): AppState {
+  setSeq(0);
+  setTokenCounter(0);
+  return {
+    workspace: "fresh",
+    org: { ...DEMO_ORG, idp: "" },
+    onboarding: freshOnboarding(),
+    events: [],
+    contracts: [],
+    tasks: [],
+    tokens: [],
+    restorations: [],
+    standing: [],
+    breakGlass: [],
+    autopilot: [],
+    lastHash: "genesis0",
     demoStep: -1,
     kernel: BASELINE_KERNEL,
   };
@@ -207,9 +298,9 @@ function autopilotSeed(): AutopilotRecommendation[] {
 let state: AppState = load();
 const listeners = new Set<() => void>();
 
-function load(): AppState {
+function load(ws: Workspace = currentWorkspace()): AppState {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(keyFor(ws));
     if (raw) {
       const parsed = JSON.parse(raw) as AppState & { _seq?: number; _tok?: number };
       setSeq(parsed._seq ?? parsed.events.length);
@@ -240,18 +331,19 @@ function load(): AppState {
         }
         return out;
       });
-      return { ...parsed, events, kernel: parsed.kernel ?? BASELINE_KERNEL, restorations: parsed.restorations ?? [], standing: parsed.standing?.every((p) => p.resource) ? parsed.standing : standingSeed().map((seed) => ({ ...seed, status: parsed.standing?.find((x) => x.id === seed.id)?.status ?? seed.status })), autopilot: autopilotSeed().map((seed) => ({ ...seed, ...(parsed.autopilot ?? []).find((x) => x.id === seed.id), proposes: seed.proposes, recommendation: seed.recommendation })), demoStep: -1 }; // demo mode never persists across reloads
+      const baseOnboarding = ws === "fresh" ? freshOnboarding() : demoOnboarding();
+      return { ...parsed, workspace: ws, org: parsed.org ?? (ws === "fresh" ? { ...DEMO_ORG, idp: "" } : DEMO_ORG), onboarding: { ...baseOnboarding, ...parsed.onboarding, employee: { ...baseOnboarding.employee, ...parsed.onboarding?.employee } }, events, kernel: parsed.kernel ?? BASELINE_KERNEL, restorations: parsed.restorations ?? [], standing: parsed.standing?.every((p) => p.resource) ? parsed.standing : standingSeed().map((seed) => ({ ...seed, status: parsed.standing?.find((x) => x.id === seed.id)?.status ?? seed.status })), autopilot: autopilotSeed().map((seed) => ({ ...seed, ...(parsed.autopilot ?? []).find((x) => x.id === seed.id), proposes: seed.proposes, recommendation: seed.recommendation })), demoStep: -1 }; // demo mode never persists across reloads
     }
   } catch {
     /* corrupted state → reseed */
   }
-  return seedState();
+  return ws === "fresh" ? freshState() : seedState();
 }
 
 function persist() {
   try {
     localStorage.setItem(
-      STORAGE_KEY,
+      keyFor(state.workspace),
       JSON.stringify({ ...state, _seq: getSeq(), _tok: getTokenCounter() })
     );
   } catch {
@@ -331,9 +423,72 @@ export function setDemoStep(n: number) {
   set({ demoStep: n });
 }
 
+/** Reset the CURRENT workspace to its starting point (demo → seeded history, fresh → day one). */
 export function resetDemoData() {
-  state = seedState();
+  state = state.workspace === "fresh" ? freshState() : seedState();
   emit();
+}
+
+// ---------------------------------------------------------------------------
+// Workspaces + onboarding actions
+// ---------------------------------------------------------------------------
+
+/** Switch workspace: the current one is saved, the other is loaded (or created). */
+export function switchWorkspace(ws: Workspace) {
+  if (ws === state.workspace) return;
+  persist();
+  try { localStorage.setItem(WS_KEY, ws); } catch { /* session-only */ }
+  state = load(ws);
+  emit();
+}
+
+/** Start the fresh workspace over from day one and make it current. */
+export function startFreshWorkspace() {
+  persist();
+  try { localStorage.setItem(WS_KEY, "fresh"); } catch { /* session-only */ }
+  // Wizards reopen at step 1 after a fresh start.
+  try { for (const k of ["admin", "employee"]) sessionStorage.removeItem(`wrapbox-onboarding-${k}:fresh`); } catch { /* ignore */ }
+  state = freshState();
+  emit();
+}
+
+export function setOrg(patch: Partial<OrgProfile>) {
+  set({ org: { ...state.org, ...patch } });
+}
+
+export function setOnboarding(patch: Partial<Omit<OnboardingState, "employee">>) {
+  set({ onboarding: { ...state.onboarding, ...patch } });
+}
+
+export function setEmployeeProgress(patch: Partial<OnboardingState["employee"]>) {
+  set({ onboarding: { ...state.onboarding, employee: { ...state.onboarding.employee, ...patch } } });
+}
+
+/** Publish the recommended contract pack. Each contract goes ACTIVE only if
+ *  Wrapbox has the skills to keep it (canActivate) — otherwise it lands as a
+ *  DRAFT and says so. Returns which ids went live and which stayed draft. */
+export function publishRecommendedContracts(): { active: string[]; draft: string[] } {
+  const active: string[] = [];
+  const draft: string[] = [];
+  const next = [...state.contracts];
+  for (const seed of structuredClone(SEED_CONTRACTS) as IntentContract[]) {
+    const ok = canActivate(seed);
+    const status: IntentContract["status"] = ok ? "ACTIVE" : "DRAFT";
+    (ok ? active : draft).push(seed.id);
+    const i = next.findIndex((c) => c.id === seed.id);
+    const c = { ...seed, status, coverage: contractCoverage(seed) };
+    if (i >= 0) next[i] = { ...c, version: next[i].version + 1 }; else next.push(c);
+  }
+  set({ contracts: next });
+  return { active, draft };
+}
+
+export function completeAdminOnboarding() {
+  set({ onboarding: { ...state.onboarding, adminDone: true } });
+}
+
+export function completeEmployeeOnboarding() {
+  set({ onboarding: { ...state.onboarding, employeeDone: true } });
 }
 
 export function activeBreakGlass(now = Date.now()): BreakGlassSession | undefined {

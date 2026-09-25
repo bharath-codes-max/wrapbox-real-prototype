@@ -78,7 +78,7 @@ export function EventDetail({ e, onClose, onNavigate }: {
         <div className="card" style={{ marginTop: 14, borderColor: "var(--border-strong)", background: "var(--bg-inset)" }}>
           <div className="row" style={{ gap: 9, alignItems: "flex-start" }}>
             <ShieldCheck size={16} style={{ color: "var(--good)", flexShrink: 0, marginTop: 1 }} />
-            <span className="small"><b>Safe alternative:</b> {e.safeAlternative}</span>
+            <span className="small"><b>Safe alternative:</b> {e.safeAlternative.replace(/^Safer alternative:\s*/i, "")}</span>
           </div>
         </div>
       )}

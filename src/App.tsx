@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bot, BrainCircuit, CirclePlay, FileCheck2, FlaskConical, Hand, KeyRound,
-  LayoutGrid, ListChecks, ListTree, Moon, Play, Plug, ScrollText, Search, Sun,
+  Check, ChevronDown, LayoutGrid, ListChecks, ListTree, Moon, Play, Plug, RotateCcw, Rocket, ScrollText, Search, Sun,
   Settings as SettingsIcon, ShieldCheck, Siren, Table2, Timer, Waypoints,
   type LucideIcon,
 } from "lucide-react";
-import { useAppState, metrics } from "./state/store";
+import { useAppState, getState, metrics, switchWorkspace, startFreshWorkspace, type Workspace } from "./state/store";
 import { WrapboxWordmark } from "./ui/logo";
 import { Avatar } from "./ui/kit";
 import { ControlRoom } from "./pages/control-room";
@@ -26,6 +26,9 @@ import { IntegrationsPage } from "./pages/integrations";
 import { TokenVaultPage } from "./pages/token-vault";
 import { CoreBrainPage } from "./pages/core-brain";
 import { SettingsPage } from "./pages/settings";
+import { StartPage } from "./pages/start";
+import { AdminOnboarding } from "./pages/onboarding-admin";
+import { EmployeeOnboarding } from "./pages/onboarding-employee";
 import { DemoBar, DEMO_SCRIPT } from "./pages/demo";
 
 export type Route = string;
@@ -75,7 +78,8 @@ const NAV: { group?: string; items: NavItem[] }[] = [
     ],
   },
 ];
-const ALL_ITEMS: NavItem[] = [...NAV.flatMap((g) => g.items), { route: "settings", label: "Settings", icon: SettingsIcon }];
+const START_ITEM: NavItem = { route: "start", label: "Get started", icon: Rocket };
+const ALL_ITEMS: NavItem[] = [START_ITEM, ...NAV.flatMap((g) => g.items), { route: "settings", label: "Settings", icon: SettingsIcon }];
 
 function useRoute(): [Route, (r: Route) => void] {
   const [route, setRoute] = useState<Route>(() => location.hash.slice(1) || "control");
@@ -154,6 +158,67 @@ function Palette({ open, onClose, nav }: { open: boolean; onClose: () => void; n
   );
 }
 
+/** Workspace switcher — the Veridian demo (three months in) or a fresh day-one workspace. */
+function WorkspaceMenu({ nav }: { nav: (r: string) => void }) {
+  const s = useAppState();
+  const [open, setOpen] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) { setConfirmReset(false); return; }
+    const onDown = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+  const pick = (ws: Workspace) => {
+    setOpen(false);
+    if (ws !== s.workspace) switchWorkspace(ws);
+    nav(getState().onboarding.adminDone ? "control" : "start");
+  };
+  return (
+    <div className="ws-menu" ref={ref}>
+      <button className="workspace-menu" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu">
+        <span className="workspace-dot" />
+        {s.org.company || "New workspace"}
+        <span className="faint">· {s.workspace === "demo" ? "Demo · 3 months in" : "Fresh workspace"}</span>
+        <ChevronDown size={13} />
+      </button>
+      {open && (
+        <div className="ws-pop" role="menu">
+          <div className="ws-pop-label">Workspaces</div>
+          <button className="ws-item" role="menuitem" onClick={() => pick("demo")}>
+            <span><b>Veridian Systems</b><span className="ws-sub">Demo · a company three months in</span></span>
+            {s.workspace === "demo" && <Check size={14} />}
+          </button>
+          <button className="ws-item" role="menuitem" onClick={() => pick("fresh")}>
+            <span><b>Fresh workspace</b><span className="ws-sub">Day one · you set it up from zero</span></span>
+            {s.workspace === "fresh" && <Check size={14} />}
+          </button>
+          <div className="ws-sep" />
+          {!confirmReset ? (
+            <button className="ws-item" role="menuitem" onClick={() => setConfirmReset(true)}>
+              <span className="row" style={{ gap: 8 }}><RotateCcw size={14} /> Start the fresh workspace over</span>
+            </button>
+          ) : (
+            <div className="ws-confirm">
+              Erase the fresh workspace and begin again from day one? The Veridian demo is not touched.
+              <div className="row" style={{ gap: 8, marginTop: 8 }}>
+                <button className="btn btn-danger btn-sm" onClick={() => { startFreshWorkspace(); setOpen(false); nav("onboarding/admin"); }}>Start over</button>
+                <button className="btn btn-sm" onClick={() => setConfirmReset(false)}>Cancel</button>
+              </div>
+            </div>
+          )}
+          <button className="ws-item" role="menuitem" onClick={() => { setOpen(false); nav("start"); }}>
+            <span className="row" style={{ gap: 8 }}><Rocket size={14} /> Get started</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Topbar({ nav, onPalette }: { nav: (r: string) => void; onPalette: () => void }) {
   const s = useAppState();
   const [theme, toggleTheme] = useTheme();
@@ -165,11 +230,7 @@ function Topbar({ nav, onPalette }: { nav: (r: string) => void; onPalette: () =>
         <WrapboxWordmark tone="dark" />
       </button>
       <span className="topbar-div" />
-      <button className="workspace-menu" onClick={() => nav("settings")}>
-        <span className="workspace-dot" />
-        Veridian Systems
-        <span className="faint">· Demo environment</span>
-      </button>
+      <WorkspaceMenu nav={nav} />
       <button className="topbar-search" onClick={onPalette}>
         <Search size={15} />
         Search screens, agents, rules, evidence…
@@ -203,13 +264,14 @@ function Topbar({ nav, onPalette }: { nav: (r: string) => void; onPalette: () =>
   );
 }
 
-function NavLink({ it, active, onClick, badge }: { it: NavItem; active: boolean; onClick: () => void; badge?: number }) {
+function NavLink({ it, active, onClick, badge }: { it: NavItem; active: boolean; onClick: () => void; badge?: number | string }) {
   return (
     <button className={`nav-item ${active ? "active" : ""}`} onClick={onClick}>
       {active && <span className="nav-active-bar" />}
       <it.icon size={16} strokeWidth={1.8} />
       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.label}</span>
-      {badge !== undefined && badge > 0 && <span className="badge-count">{badge}</span>}
+      {typeof badge === "number" && badge > 0 && <span className="badge-count">{badge}</span>}
+      {typeof badge === "string" && <span className="badge-setup">{badge}</span>}
     </button>
   );
 }
@@ -239,6 +301,7 @@ export function App() {
     el.style.setProperty("--sy", "0");
   }, [base]);
   const demoOn = state.demoStep >= 0;
+  const focus = base === "onboarding"; // setup wizards take the full width
 
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
@@ -271,6 +334,8 @@ export function App() {
       case "vault": return <TokenVaultPage nav={nav} />;
       case "brain": return <CoreBrainPage nav={nav} />;
       case "settings": return <SettingsPage nav={nav} />;
+      case "start": return <StartPage nav={nav} />;
+      case "onboarding": return route.split("/")[1] === "employee" ? <EmployeeOnboarding nav={nav} /> : <AdminOnboarding nav={nav} />;
       default: return <ControlRoom nav={nav} />;
     }
   })();
@@ -279,8 +344,13 @@ export function App() {
     <div className="shell-col">
       <Topbar nav={nav} onPalette={() => setPalette(true)} />
       <div className="shell">
-        <aside className="sidebar">
+        {!focus && <aside className="sidebar">
           <nav className="sidebar-nav">
+            <div className="nav-group first">
+              <div className="nav-group-items">
+                <NavLink it={START_ITEM} active={base === "start"} onClick={() => nav("start")} badge={state.onboarding.adminDone ? undefined : "Setup"} />
+              </div>
+            </div>
             {NAV.map((g, gi) => (
               <div key={gi} className={gi > 0 ? "nav-group" : "nav-group first"}>
                 {g.group && <div className="nav-group-label">{g.group}</div>}
@@ -309,7 +379,7 @@ export function App() {
               Wrapbox Real Prototype · integrations simulated · product behavior live
             </div>
           </div>
-        </aside>
+        </aside>}
         <main className="main" ref={mainRef} style={demoOn ? { paddingBottom: 90 } : undefined}>
           <div className="parallax-bg" aria-hidden="true" />
           <div key={base} className="route-anim">{page}</div>

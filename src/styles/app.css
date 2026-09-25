@@ -772,3 +772,108 @@ textarea.input { resize: vertical; line-height: 1.6; }
 .clause-facts { display: grid; grid-template-columns: 70px 1fr; gap: 6px 10px; margin: 10px 0 0; font-size: 12.5px; }
 .clause-facts dt { color: var(--fg-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; padding-top: 2px; }
 .clause-facts dd { margin: 0; color: var(--fg-2); }
+
+/* ==========================================================================
+   Onboarding — setup wizard shell + shared step primitives
+   ========================================================================== */
+.setup { display: grid; grid-template-columns: 264px minmax(0, 1fr); gap: 36px; max-width: 1360px; margin: 0 auto; padding: 32px 40px 90px; position: relative; z-index: 1; }
+@media (max-width: 900px) { .setup { grid-template-columns: 1fr; gap: 20px; padding: 20px 16px 70px; } .setup-rail { position: static !important; } }
+.setup-rail { position: sticky; top: 24px; align-self: start; }
+.setup-rail-head { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+.setup-title { font-size: 13.5px; font-weight: 600; }
+.setup-persona { font-size: 11.5px; color: var(--fg-3); }
+.setup-progress { height: 4px; border-radius: 999px; background: var(--surface-3); overflow: hidden; margin-bottom: 14px; }
+.setup-progress > div { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+.setup-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.setup-step {
+  display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left;
+  padding: 8px 10px; border-radius: 10px; border: 1px solid transparent; background: none;
+  cursor: pointer; font-family: var(--sans); color: var(--fg); transition: background 0.12s, border-color 0.12s;
+}
+.setup-step:hover:not(:disabled) { background: var(--surface-2); }
+.setup-step.current { background: var(--surface); border-color: var(--line); box-shadow: var(--shadow); }
+.setup-step:disabled { cursor: default; opacity: 0.5; }
+.setup-num {
+  width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; margin-top: 1px;
+  font-size: 10.5px; font-weight: 600; border: 1px solid var(--line-strong); color: var(--fg-3);
+}
+.setup-num.current { background: var(--ink); color: var(--ink-fg); border-color: var(--ink); }
+.setup-num.done { background: var(--allow); color: #fff; border-color: var(--allow); }
+.setup-step-title { display: block; font-size: 13px; font-weight: 550; }
+.setup-step-sub { display: block; font-size: 11.5px; color: var(--fg-3); margin-top: 1px; }
+.setup-exit { margin-top: 14px; display: inline-flex; gap: 6px; align-items: center; background: none; border: none; color: var(--fg-3); font-size: 12.5px; cursor: pointer; padding: 6px 10px; font-family: var(--sans); }
+.setup-exit:hover { color: var(--fg); }
+.setup-main { min-width: 0; animation: stepIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+@keyframes stepIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+.step-head { margin-bottom: 22px; }
+.step-title { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 6px 0 0; line-height: 1.2; }
+.step-sub { font-size: 14px; color: var(--fg-2); line-height: 1.6; max-width: 68ch; margin: 8px 0 0; }
+.step-footer { display: flex; align-items: center; gap: 12px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.step-footer .hint { font-size: 12px; color: var(--fg-3); }
+.step-footer .next { margin-left: auto; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.tick { display: flex; gap: 9px; align-items: center; font-size: 13px; padding: 4px 0; animation: fadeIn 0.3s ease-out backwards; }
+.tick .spin { color: var(--fg-3); }
+.tick .ok { color: var(--allow); flex-shrink: 0; }
+.choice {
+  display: block; width: 100%; text-align: left; font-family: var(--sans); color: var(--fg);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+  cursor: pointer; transition: border-color 0.14s, box-shadow 0.14s, transform 0.14s;
+}
+.choice:hover:not(:disabled) { border-color: var(--line-strong); transform: translateY(-1px); }
+.choice.selected { border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
+.choice:disabled { opacity: 0.5; cursor: default; }
+.toggle { width: 36px; height: 20px; border-radius: 999px; background: var(--line-strong); position: relative; border: none; cursor: pointer; transition: background 0.18s; flex-shrink: 0; padding: 0; }
+.toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+.toggle.on { background: var(--accent); }
+.toggle.on::after { transform: translateX(16px); }
+.segmented { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+.segmented button { border: none; background: none; padding: 6px 14px; border-radius: 999px; font-size: 12.5px; cursor: pointer; color: var(--fg-2); font-family: var(--sans); transition: background 0.15s, color 0.15s; }
+.segmented button.on { background: var(--surface); color: var(--fg); box-shadow: var(--shadow-sm); font-weight: 550; }
+.modal {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 61; max-height: 90vh; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-lg);
+  animation: modalIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes modalIn { from { opacity: 0; transform: translate(-50%, -48%) scale(0.98); } }
+.drawer-veil + .modal { z-index: 61; }
+
+/* Workspace switcher + Setup badge */
+.ws-menu { position: relative; }
+.ws-menu .workspace-menu svg { opacity: 0.75; }
+.ws-pop {
+  position: absolute; top: calc(100% + 8px); left: 0; width: 310px; z-index: 50; padding: 6px;
+  background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: var(--shadow-lg); animation: modalIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ws-pop-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-3); padding: 6px 10px 4px; }
+.ws-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 9px 10px; border: none; background: none; border-radius: 8px; cursor: pointer; color: var(--fg);
+  font-family: var(--sans); font-size: 13px;
+}
+.ws-item:hover { background: var(--surface-2); }
+.ws-item b { display: block; font-weight: 600; }
+.ws-sub { display: block; font-size: 11.5px; color: var(--fg-3); margin-top: 1px; }
+.ws-item svg { color: var(--accent); flex-shrink: 0; }
+.ws-sep { height: 1px; background: var(--line); margin: 6px 4px; }
+.ws-confirm { font-size: 12.5px; color: var(--fg-2); padding: 10px; line-height: 1.5; }
+.nav-item .badge-setup {
+  margin-left: auto; font-size: 10.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent-active);
+}
+
+/* Dark theme: vendor marks drawn in black (OpenAI, GitHub…) sit on a light tile so they stay visible. */
+:root[data-theme="dark"] .logo-img, :root[data-theme="dark"] .logo-lg { background: #f4f2ec; border-radius: 5px; padding: 1.5px; }
+
+/* Plain surfaces — no colour glow behind pages; neutral (not terracotta) nav states. */
+.parallax-bg { display: none; }
+.page-eyebrow { color: var(--fg-3); }
+.nav-item:hover { background: color-mix(in oklab, var(--fg) 5%, transparent); color: var(--fg); }
+.nav-item.active { background: color-mix(in oklab, var(--fg) 8%, transparent); color: var(--fg); font-weight: 600; }
+.nav-item.active svg { color: var(--fg); }
+.nav-active-bar { background: var(--fg-2); }
+.nav-item .badge-setup { background: color-mix(in oklab, var(--fg) 8%, transparent); color: var(--fg-2); }
+:root[data-theme="dark"] .nav-item:hover { background: rgba(255, 255, 255, 0.06); }
+:root[data-theme="dark"] .nav-item.active { background: rgba(255, 255, 255, 0.1); }
