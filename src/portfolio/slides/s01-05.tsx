@@ -1,7 +1,7 @@
 // Cover · Understand · Research (numbers, the gap)
 import { useEffect, useMemo, useState } from "react";
 import type { SlideProps } from "../deck";
-import { Display, Eyebrow, Lead, Reveal, Head, Stat, Sources, Brand, Donut, claimById, fmtDate } from "../ui";
+import { Display, Eyebrow, Lead, Reveal, Head, Stat, Sources, Brand, Clip, RPLUS, claimById, fmtDate } from "../ui";
 import { research } from "../data/research";
 import { decideOnce, scenario } from "../live";
 import { pipelineFor } from "../../engine/simulate";
@@ -46,76 +46,62 @@ export function Cover({ active }: SlideProps) {
 }
 
 /* ---------- understand: incident timeline ---------- */
-const INCIDENTS = [
-  { id: "incidents-1", when: "Jul 2025", brands: ["replit"], metric: "4,000", unit: "fictional records written after eleven all-caps “no”s", h: "Told no eleven times. Deleted production anyway.", src: "The Register" },
-  { id: "incidents-8", when: "Jul 2025", brands: ["cursor", "supabase"], metric: "1 ticket", unit: "with hidden instructions leaked the integration_tokens table", h: "A support ticket became a command.", src: "General Analysis" },
-  { id: "incidents-11", when: "Aug 2025", brands: ["nx", "wiz"], metric: "5,500+", unit: "private repos made public · 1,000+ GitHub tokens", h: "The attacker used the victim's own agent.", src: "Wiz Research" },
-  { id: "incidents-12", when: "Apr 2026", brands: ["cursor"], metric: "9 s", unit: "to delete the production database and every backup", h: "Nine seconds.", src: "Euronews" },
+// Real documented incidents — each a press clipping: the subject's own logo, the
+// outlet, the article title/date, and a verbatim quote from the reporting.
+const INCIDENT_CLIPS: { rid: string; brand: string; head: string }[] = [
+  { rid: "plus-incidents-3", brand: "cursor", head: "9 seconds: the database and every backup." },
+  { rid: "plus-incidents-1", brand: "replit", head: "Deleted production during a code freeze." },
+  { rid: "plus-incidents-2", brand: "aws", head: "A wiper prompt shipped to ~1M installs." },
+  { rid: "plus-incidents-6", brand: "microsoft", head: "Zero-click Copilot exfiltration · CVSS 9.3." },
 ];
 export function Understand() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Head eyebrow="Understand · 01" title={<>Agents don't ask. <em>They act.</em></>} lead="I started from documented failures, not hypotheticals. Four vendors, one shape: a capable agent, a legitimate task, one action nobody authorized." />
-      <div className="tl" style={{ flex: 1, alignItems: "stretch" }}>
-        {INCIDENTS.map((x, k) => (
-          <Reveal key={x.id} i={k + 2} className="tn">
-            <span className="dot" /><span className="when">{x.when}</span>
-            <div className="card" style={{ padding: "24px 26px" }}>
-              <div className="brand-row">{x.brands.map((b) => <Brand key={b} name={b} size={44} />)}</div>
-              <div className="metric">{x.metric}<small>{x.unit}</small></div>
-              <div className="h3" style={{ fontSize: 24, marginTop: 6 }}>{x.h}<sup className="sup">{k + 1}</sup></div>
-              <div className="small" style={{ fontSize: 15, marginTop: "auto" }}>{x.src} · {fmtDate(claimById(x.id)?.published ?? "")}</div>
-            </div>
-          </Reveal>
-        ))}
+      <Head eyebrow="Understand · 01" title={<>Agents don't ask. <em>They act.</em></>} lead="Not hypotheticals — reported by the press of record and the labs themselves. One shape every time: a capable agent, a real task, one action nobody authorized." />
+      <div className="cols cols-4" style={{ gap: 18, flex: 1, alignItems: "stretch" }}>
+        {INCIDENT_CLIPS.map((x, k) => {
+          const c = RPLUS[x.rid];
+          return c ? <Clip key={x.rid} i={k + 2} tone="block" brand={x.brand} org={c.source_org} title={c.source_title} date={fmtDate(c.published)} quote={c.quote} url={c.source_url} headline={x.head} /> : null;
+        })}
       </div>
-      <Reveal i={6} className="card acc" style={{ marginTop: 22, padding: "18px 26px", display: "flex", alignItems: "center", gap: 18 }}>
+      <Reveal i={6} className="card acc" style={{ marginTop: 20, padding: "18px 26px" }}>
         <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.01em" }}>In every case the “don't” lived in a prompt. Nothing outside the model stood between the agent and the action.</span>
       </Reveal>
-      <Sources ids={INCIDENTS.map((x) => x.id)} />
     </div>
   );
 }
 
-/* ---------- research: the numbers ---------- */
-const NUMBERS = [
-  { id: "adoption-13", v: "15×", l: "growth in active agents inside Microsoft 365, year over year", brand: "microsoft" },
-  { id: "adoption-14", v: "223", l: "genAI data-policy violations per organization, every month", brand: "netskope" },
-  { id: "adoption-6", v: "40%", l: "of enterprises will demote or decommission autonomous agents by 2027", brand: "gartner" },
-];
+/* ---------- research: the hook + the numbers, as clippings ---------- */
+const STAT_CLIPS = ["plus-hook-2", "plus-scale-5", "plus-hook-3", "plus-scale-10"];
 export function Numbers() {
-  const ibm = claimById("adoption-10");
-  const topics = Object.entries(research.topics).map(([k, v]) => ({ k, n: v.claims.length }));
-  const total = topics.reduce((a, t) => a + t.n, 0);
+  const hook = RPLUS["plus-hook-1"];
+  const hookNum = hook?.figure.match(/\d+%|\d[\d,.]*/)?.[0] ?? "97%";
+  const corpus = 53 + Object.values(research.topics).reduce((a, t) => a + t.claims.length, 0);
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Head eyebrow="Research · 02" title={<>Everyone is deploying. <em>Almost no one is authorizing.</em></>} lead="Agents are growing an order of magnitude a year; access control is not keeping up; the breaches have started." />
-      <div className="cols" style={{ gridTemplateColumns: "560px 1fr", gap: 56, flex: 1, alignItems: "center" }}>
-        <Reveal i={2} className="card tint" style={{ display: "flex", alignItems: "center", gap: 28, padding: "26px 30px" }}>
-          <Donut pct={92} size={250} stroke={28} label="92%" />
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.3 }}>of organizations breached through AI lacked proper AI access controls<sup className="sup">1</sup></div>
-            <div className="small" style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}><Brand name="ibm" size={22} />IBM Cost of a Data Breach 2026 · {ibm ? fmtDate(ibm.published) : ""}</div>
-          </div>
-        </Reveal>
-        <div className="stack" style={{ gap: 18 }}>
-          {NUMBERS.map((s, k) => { const c = claimById(s.id); return (
-            <Reveal key={s.id} i={k + 3} className="tile" style={{ display: "grid", gridTemplateColumns: "150px 1fr auto", alignItems: "center", gap: 20, padding: "16px 22px" }}>
-              <span style={{ fontSize: 52, fontWeight: 900, letterSpacing: "-0.04em", color: "var(--acc)", lineHeight: 1 }}>{s.v}<sup className="sup">{k + 2}</sup></span>
-              <span style={{ fontSize: 19, lineHeight: 1.35 }}>{s.l}<span className="small" style={{ display: "block", fontSize: 14, marginTop: 3 }}>{c?.source_org} · {c ? fmtDate(c.published) : ""}</span></span>
-              <Brand name={s.brand} size={40} />
-            </Reveal>
-          ); })}
+      <Head eyebrow="Research · 02" title={<>Everyone is deploying. <em>Almost no one is authorizing.</em></>} lead="Every figure is a real clipping — the source's own words, logo and date. Click any card to open it." />
+      <div className="cols" style={{ gridTemplateColumns: "1fr 1fr", gap: 44, flex: 1, alignItems: "stretch" }}>
+        {hook && (
+          <Reveal i={2}>
+            <a className="card ink" href={hook.source_url} target="_blank" rel="noreferrer" style={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", gap: 18, textDecoration: "none", padding: "34px 38px" }}>
+              <div className="row" style={{ gap: 12 }}><Brand name="ibm" size={40} /><span style={{ fontWeight: 700, fontSize: 16 }}>IBM · Cost of a Data Breach 2025</span></div>
+              <div style={{ fontSize: 168, fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 0.9 }}>{hookNum}</div>
+              <div style={{ fontSize: 24, fontWeight: 600, lineHeight: 1.25, maxWidth: "20ch" }}>of AI-breached organizations had no AI access controls in place.</div>
+              {hook.quote && <div className="body" style={{ fontSize: 15, fontStyle: "italic", opacity: 0.82 }}>“{hook.quote}”</div>}
+            </a>
+          </Reveal>
+        )}
+        <div className="clip-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 16, minHeight: 0 }}>
+          {STAT_CLIPS.map((rid, k) => {
+            const c = RPLUS[rid];
+            return c ? <Clip key={rid} i={k + 3} org={c.source_org} title={c.source_title} date={fmtDate(c.published)} headline={c.figure} quote={c.quote} url={c.source_url} /> : null;
+          })}
         </div>
       </div>
-      <Reveal i={6} className="row" style={{ gap: 18, marginTop: 18 }}>
+      <Reveal i={7} className="row" style={{ gap: 14, marginTop: 16 }}>
         <span className="label">Research corpus</span>
-        <span style={{ fontSize: 16, fontWeight: 600 }}>{total} claims, each re-fetched from its source before use</span>
-        <span className="row" style={{ gap: 6, marginLeft: 8 }}>
-          {topics.map((t) => <span key={t.k} className="row" style={{ gap: 5, fontSize: 14, color: "var(--ink-3)" }}><span style={{ width: Math.max(18, t.n * 3), height: 10, borderRadius: 5, background: "var(--acc)", display: "inline-block", opacity: 0.85 }} />{t.k} {t.n}</span>)}
-        </span>
+        <span style={{ fontSize: 16, fontWeight: 600 }}>{corpus} claims from tier-1 sources — every one re-fetched and verified before it went on a slide.</span>
       </Reveal>
-      <Sources ids={["adoption-10", ...NUMBERS.map((s) => s.id)]} />
     </div>
   );
 }

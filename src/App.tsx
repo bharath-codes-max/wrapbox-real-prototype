@@ -6,7 +6,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useAppState, getState, metrics, switchWorkspace, startFreshWorkspace, type Workspace } from "./state/store";
-import { WrapboxWordmark, WrapboxLogo } from "./ui/logo";
+import { WrapboxWordmark } from "./ui/logo";
 import { Avatar } from "./ui/kit";
 import { ControlRoom } from "./pages/control-room";
 import { LiveActions } from "./pages/live-actions";
@@ -342,9 +342,6 @@ function IconRail({ nav, base, pendingReviews, demoOn }: { nav: (r: string) => v
   const [theme, toggleTheme] = useTheme();
   return (
     <aside className="rail">
-      <button className="rail-brand" onClick={() => nav("control")} aria-label="Wrapbox home">
-        <WrapboxLogo size={26} tone="light" />
-      </button>
       <nav className="rail-nav">
         <RailBtn it={START_ITEM} active={base === "start"} onClick={() => nav("start")} />
         <div className="rail-div" />

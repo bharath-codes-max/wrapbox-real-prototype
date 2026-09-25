@@ -4,6 +4,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion, useInView } from "framer-motion";
 import { logoUrl } from "../ui/logos";
 import { research, type Claim } from "./data/research";
+import rplus from "./data/research-plus.json";
+
+/* Tier-1 research corpus (53 verified claims + the hook), indexed by id. */
+export interface PlusClaim { id: string; statement: string; figure: string; source_org: string; source_title: string; source_url: string; published: string; quote?: string; relevance?: string; hook_score?: number }
+export const RPLUS: Record<string, PlusClaim> = {};
+{
+  const r = rplus as unknown as { hook?: PlusClaim; runnerUpHooks?: PlusClaim[]; byTopic?: Record<string, PlusClaim[]> };
+  for (const arr of Object.values(r.byTopic ?? {})) for (const c of arr) RPLUS[c.id] = c;
+  for (const c of r.runnerUpHooks ?? []) RPLUS[c.id] = c;
+  if (r.hook) RPLUS[r.hook.id] = r.hook;
+}
+export const RHOOK = (rplus as unknown as { hook: PlusClaim }).hook;
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 export const SHOT = typeof document !== "undefined" && document.documentElement.dataset.shot === "1";
@@ -161,6 +173,41 @@ export function Bars({ items, height = 300, fmt = (v: number) => String(v) }: { 
         );
       })}
     </div>
+  );
+}
+
+/* ---------- research clippings (source logo + title + real quote) ---------- */
+const SRC_LOGO: [RegExp, string][] = [
+  [/ibm/i, "ibm"], [/gartner/i, "gartner"], [/microsoft|m365|copilot|entra/i, "microsoft"], [/owasp/i, "owasp"], [/nist/i, "nist"],
+  [/\bwiz\b/i, "wiz"], [/register/i, "theregister"], [/euronews/i, "euronews"], [/anthropic|claude/i, "anthropic"],
+  [/cloud security alliance|\bcsa\b/i, "csa"], [/stack ?overflow/i, "stackoverflow"], [/\bmetr\b/i, "metr"],
+  [/google|\bdora\b/i, "googlecloud"], [/general analysis/i, "generalanalysis"], [/netskope/i, "netskope"],
+  [/palo alto/i, "paloalto"], [/sentinelone/i, "sentinelone"], [/check ?point/i, "checkpoint"], [/cisco/i, "cisco"], [/\bf5\b/i, "f5"],
+  [/replit/i, "replit"], [/cursor/i, "cursor"], [/amazon|aws/i, "aws"], [/kong/i, "kong"], [/cloudflare/i, "cloudflare"],
+];
+export function srcLogo(org: string): string | null { for (const [re, k] of SRC_LOGO) if (re.test(org)) return k; return null; }
+function initials(org: string): string { return org.replace(/[^A-Za-z ]/g, " ").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase(); }
+
+export function Clip({ brand, org, title, headline, quote, date, url, i = 0, tone }: { brand?: string; org: string; title?: string; headline?: React.ReactNode; quote?: string; date?: string; url?: string; i?: number; tone?: "block" | "review" }) {
+  const logo = brand ?? srcLogo(org);
+  const meta = [title, date].filter(Boolean).join(" · ");
+  const inner = (
+    <>
+      <div className="clip-bar">
+        {logo ? <Brand name={logo} size={34} /> : <span className="clip-mono">{initials(org)}</span>}
+        <div className="clip-src"><b>{org}</b>{meta && <small>{meta}</small>}</div>
+        {url && <span className="clip-ext">↗</span>}
+      </div>
+      {headline && <div className="clip-head">{headline}</div>}
+      {quote && <div className="clip-quote">“{quote}”</div>}
+    </>
+  );
+  return (
+    <Reveal i={i}>
+      {url
+        ? <a className={`clip ${tone ? `clip-${tone}` : ""}`} href={url} target="_blank" rel="noreferrer">{inner}</a>
+        : <div className={`clip ${tone ? `clip-${tone}` : ""}`}>{inner}</div>}
+    </Reveal>
   );
 }
 

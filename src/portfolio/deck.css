@@ -54,7 +54,8 @@ body { --acc-soft: color-mix(in oklab, var(--acc) 9%, var(--bg)); --acc-line: co
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body {
-  background: var(--bg);
+  /* Each design-process phase washes the slide in its own accent — green, blue, violet … */
+  background: radial-gradient(1250px 760px at 4% -14%, color-mix(in oklab, var(--acc) 14%, var(--bg)), var(--bg) 56%);
   color: var(--ink); font-family: var(--sans); font-size: 20px; line-height: 1.5;
   -webkit-font-smoothing: antialiased; overflow: hidden; transition: background 0.5s var(--ease);
 }
@@ -335,3 +336,30 @@ html[data-shot] .aterm-line, html[data-shot] .layer { animation: none !important
 .shot-btn { position: relative; border: none; padding: 0; background: none; cursor: zoom-in; text-align: left; border-radius: 14px; }
 
 @media (prefers-reduced-motion: reduce) { .arch .wire.lit, .cursor, .aterm-prompt .caret { animation: none !important; } }
+
+/* Research clippings — a press-clipping card: source logo + title + real quote. */
+.clip { display: flex; flex-direction: column; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; text-decoration: none; color: inherit; transition: border-color 0.14s, transform 0.14s, box-shadow 0.14s; height: 100%; }
+a.clip:hover { border-color: var(--acc-line); transform: translateY(-2px); box-shadow: 0 18px 36px -24px rgba(20,20,25,0.3); }
+.clip-block { border-left: 4px solid var(--block); }
+.clip-review { border-left: 4px solid var(--review); }
+.clip-bar { display: flex; align-items: center; gap: 12px; }
+.clip-src { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.clip-src b { font: 700 15px var(--sans); color: var(--ink); }
+.clip-src small { font-size: 12.5px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clip-ext { font-size: 15px; color: var(--ink-3); }
+.clip-head { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); }
+.clip-quote { font-size: 14.5px; line-height: 1.5; color: var(--ink-2); border-left: 3px solid var(--acc-line); padding-left: 13px; font-style: italic; margin-top: auto; }
+.clip-mono { width: 34px; height: 34px; border-radius: 9px; background: var(--acc); color: var(--acc-ink); display: grid; place-items: center; font: 700 12.5px var(--mono); flex-shrink: 0; }
+
+/* Footer: just the slide dashes — no phase labels. */
+.dashes { flex: 1; display: flex; gap: 6px; align-items: center; }
+.dash { flex: 1; height: 3px; border: none; padding: 0; background: #2a2a2d; border-radius: 2px; cursor: pointer; transition: background 0.2s, transform 0.2s; }
+.dash:hover { transform: scaleY(2.6); }
+.dash.done { background: #7d7d84; }
+.dash.cur { background: #ffffff; box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+.clip-grid { min-width: 0; }
+.clip-grid > * { min-width: 0; }
+.clip-grid .clip { padding: 16px 18px; }
+.clip-grid .clip-head { font-size: 17px; }
+.clip-grid .clip-quote { font-size: 13px; padding-left: 11px; }
+.clip-grid .clip-src small { font-size: 11.5px; }

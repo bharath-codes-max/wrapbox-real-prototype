@@ -1189,9 +1189,7 @@ textarea.input { resize: vertical; line-height: 1.6; }
 .mega-txt small { font-size: 13px; color: var(--fg-3); line-height: 1.35; }
 
 /* Icon rail */
-.rail { width: 68px; flex-shrink: 0; background: var(--sidebar); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 14px 0 16px; gap: 6px; }
-.rail-brand { width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; border: none; background: none; cursor: pointer; margin-bottom: 6px; }
-.rail-brand:hover { background: color-mix(in oklab, var(--fg) 5%, transparent); }
+.rail { width: 66px; flex-shrink: 0; background: var(--sidebar); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 16px 0 16px; gap: 6px; }
 .rail-nav { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; overflow-y: auto; width: 100%; scrollbar-width: none; }
 .rail-nav::-webkit-scrollbar { width: 0; }
 .rail-grp { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 44px; }
@@ -1199,12 +1197,16 @@ textarea.input { resize: vertical; line-height: 1.6; }
 .rail-div { width: 28px; height: 1px; background: var(--line); margin: 3px 0; }
 .rail-btn { position: relative; width: 44px; height: 44px; border-radius: 13px; border: none; background: none; cursor: pointer; display: grid; place-items: center; color: var(--fg-3); transition: background 0.12s, color 0.12s; }
 .rail-btn:hover { background: color-mix(in oklab, var(--fg) 6%, transparent); color: var(--fg); }
-.rail-btn.active { background: var(--accent); color: var(--accent-fg); box-shadow: 0 6px 16px -8px color-mix(in oklab, var(--accent) 85%, transparent); }
+.rail-btn.active { background: var(--fg); color: var(--bg); box-shadow: 0 6px 16px -9px color-mix(in oklab, var(--fg) 70%, transparent); }
+.rail-demo { color: var(--fg-2); }
 .rail-btn .rail-dot { position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--review); box-shadow: 0 0 0 2px var(--sidebar); }
 .rail-tip { position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%); white-space: nowrap; background: var(--fg); color: var(--bg); font: 500 12.5px var(--sans); padding: 5px 10px; border-radius: 7px; opacity: 0; pointer-events: none; transition: opacity 0.12s; z-index: 60; box-shadow: 0 8px 18px -8px rgba(0,0,0,0.3); }
 .rail-btn:hover .rail-tip { opacity: 1; }
 .rail-bottom { display: flex; flex-direction: column; align-items: center; gap: 5px; padding-top: 8px; }
-.rail-demo { color: var(--accent); }
+
+/* Light shell: the rail is collapsed, so the page body fills the freed width. */
+:root[data-theme="light"] .main .page { max-width: none; padding-left: clamp(28px, 3.4vw, 60px); padding-right: clamp(28px, 3.4vw, 60px); }
+:root[data-theme="light"] .main .page.page-wide { max-width: none; }
 
 /* Get-started enforcement-fabric banner (light-theme hero) — on the prism, fixed ink. */
 .govbanner code { color: #1b0f33; }

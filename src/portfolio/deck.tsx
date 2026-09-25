@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, MotionConfig } from "framer-motion";
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Moon, Sun } from "lucide-react";
-import { SLIDES, PHASES, type Phase } from "./slides";
+import { SLIDES, type Phase } from "./slides";
 import "./deck.css";
 
 export interface SlideProps { active: boolean; step: number }
@@ -109,7 +109,6 @@ export function Deck() {
   }, []);
 
   const Cur = slide.Component;
-  const curPhaseIdx = PHASES.findIndex((p) => p.key === slide.phase);
   return (
     <MotionConfig transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }} reducedMotion={shot ? "always" : "user"}>
       <div className="viewport" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
@@ -136,18 +135,18 @@ export function Deck() {
       <footer className="chrome" aria-label="Deck controls">
         <button className="nav" onClick={prev} disabled={idx === 0 && step === 0} aria-label="Previous"><ChevronLeft size={18} /></button>
         <span className="count">{idx + 1} / {SLIDES.length}</span>
-        <div className="rail" role="tablist" aria-label="Slides by phase">
-          {PHASES.map((p, pi) => {
-            const items = SLIDES.map((s, i) => ({ s, i })).filter(({ s }) => s.phase === p.key);
-            return (
-              <div key={p.key} className={`ph ${pi === curPhaseIdx ? "cur" : pi < curPhaseIdx ? "done" : ""}`}>
-                <span className="lbl"><i />{p.label}</span>
-                <span className="segs">
-                  {items.map(({ s, i }) => <button key={s.id} className={`seg ${i < idx ? "done" : ""} ${i === idx ? "cur" : ""}`} title={`${i + 1} · ${s.title}`} onClick={() => go(i)} role="tab" aria-selected={i === idx} aria-label={s.title} />)}
-                </span>
-              </div>
-            );
-          })}
+        <div className="dashes" role="tablist" aria-label="Slides">
+          {SLIDES.map((s, i) => (
+            <button
+              key={s.id}
+              className={`dash ${i < idx ? "done" : ""} ${i === idx ? "cur" : ""}`}
+              title={`${i + 1} · ${s.title}`}
+              onClick={() => go(i)}
+              role="tab"
+              aria-selected={i === idx}
+              aria-label={s.title}
+            />
+          ))}
         </div>
         <button className="nav" onClick={next} disabled={idx === SLIDES.length - 1 && step >= steps - 1} aria-label="Next"><ChevronRight size={18} /></button>
         <button className="ico" onClick={toggleTheme} aria-label={theme === "dark" ? "Switch to light" : "Switch to dark"} title="Theme (T)">{theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}</button>
