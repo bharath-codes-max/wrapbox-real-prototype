@@ -563,3 +563,10 @@ html[data-variant="v3"] .lvbg { display: none; }
 .srcchip span { color: var(--ink-3); font-weight: 400; }
 .srcchip:hover { background: var(--acc-soft); color: var(--ink); }
 :root[data-theme="light"][data-variant="v3"] .srcchip { background: rgba(255, 255, 255, 0.6); border: 1px solid var(--v3-line); }
+
+/* cover: fixed-size live terminal (lines scroll inside) + the four decisions */
+.cover-term { height: 560px; display: flex; flex-direction: column; }
+.cover-term .aterm { flex: 1; min-height: 0; }
+.cover-dec { display: flex; gap: 10px; flex-wrap: wrap; }
+.cover-dec span { font: 700 15px var(--mono); padding: 7px 14px; border-radius: 999px; border: 1.5px solid; opacity: 0.55; transition: opacity .3s, background .3s, color .3s, transform .3s; }
+.cover-dec span.lit { opacity: 1; color: #fff; transform: scale(1.06); }

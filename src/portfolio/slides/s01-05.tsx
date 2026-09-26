@@ -1,5 +1,5 @@
 // Cover · Understand · Research (numbers, the gap)
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SlideProps } from "../deck";
 import { Display, Eyebrow, Lead, Reveal, Head, Stat, Sources, Brand, Clip, RPLUS, claimById, fmtDate } from "../ui";
 import { research } from "../data/research";
@@ -10,37 +10,45 @@ import type { SimulationEvent } from "../../model/types";
 
 /* ---------- cover ---------- */
 const COVER_IDS = ["ep-read-env", "net-pii-approved", "gw-force-main", "ep-run-tests"];
-function AutoTerm({ active }: { active: boolean }) {
+function AutoTerm({ active, onDecision }: { active: boolean; onDecision: (d: string | null) => void }) {
   const [i, setI] = useState(0);
   const [event, setEvent] = useState<SimulationEvent | null>(null);
   const [visible, setVisible] = useState(0);
+  const box = useRef<HTMLDivElement>(null);
   const sc = scenario(COVER_IDS[i % COVER_IDS.length]);
   const stages = useMemo(() => (event ? pipelineFor(sc, event) : []), [sc, event]);
   useEffect(() => { if (!active) return; const t = setTimeout(() => { setEvent(decideOnce(sc, "genesis")); setVisible(0); }, 900); return () => clearTimeout(t); }, [active, sc]);
   useEffect(() => {
-    if (!event) return;
+    if (!event) { onDecision(null); return; }
     if (visible < stages.length) { const t = setTimeout(() => setVisible((v) => v + 1), 480); return () => clearTimeout(t); }
+    onDecision(event.decision); // the engine's own answer, lit once the trace reaches it
     const t = setTimeout(() => { setEvent(null); setI((k) => k + 1); }, 2600); return () => clearTimeout(t);
-  }, [event, visible, stages.length]);
-  return <AgentTerminal scenario={sc} event={event} stages={stages} visible={visible} />;
+  }, [event, visible, stages.length, onDecision]);
+  // Fixed-size window: new lines scroll inside it instead of growing the terminal.
+  useEffect(() => { const b = box.current?.querySelector<HTMLElement>(".aterm-body"); if (b) b.scrollTo({ top: b.scrollHeight, behavior: "smooth" }); }, [visible, event]);
+  return <div ref={box} className="cover-term"><AgentTerminal scenario={sc} event={event} stages={stages} visible={visible} /></div>;
 }
 
+const DECISIONS = ["ALLOW", "CONSTRAIN", "REVIEW", "BLOCK"];
 export function Cover({ active }: SlideProps) {
+  const [dec, setDec] = useState<string | null>(null);
+  const onDecision = useCallback((d: string | null) => setDec(d), []);
   return (
-    <div className="cols cols-53" style={{ height: "100%", alignItems: "stretch", gap: 56 }}>
+    <div className="cols cols-53" style={{ height: "100%", alignItems: "center", gap: 56 }}>
       <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 30 }}>
         <Reveal><Eyebrow>Product portfolio · Bharath Salla</Eyebrow></Reveal>
         <Reveal i={1}><Display>Runtime authorization for <em>AI agents.</em></Display></Reveal>
-        <Reveal i={2}><Lead>Every consequential action an agent takes — checked before it runs.</Lead></Reveal>
-        <Reveal i={3} className="row" style={{ gap: 14, marginTop: 6 }}>
+        <Reveal i={2}><Lead>Wrapbox decides whether each agent action is safe from its action, environment, data, destination and blast radius.</Lead></Reveal>
+        <Reveal i={3} className="dec cover-dec" aria-label="The four decisions">
+          {DECISIONS.map((d) => <span key={d} className={`${d.toLowerCase()} ${dec === d ? "lit" : ""}`}>{d}</span>)}
+        </Reveal>
+        <Reveal i={4} className="row" style={{ gap: 14, marginTop: 6 }}>
           <span className="small">Governs</span>
           <div className="brand-row">{["claudecode", "codex", "cursor", "githubcopilot", "openai", "microsoft", "mcp"].map((l) => <Brand key={l} name={l} size={38} />)}</div>
           <span className="small">and your own agents</span>
         </Reveal>
       </div>
-      <Reveal i={2} style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
-        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}><AutoTerm active={active} /></div>
-      </Reveal>
+      <Reveal i={2}><AutoTerm active={active} onDecision={onDecision} /></Reveal>
     </div>
   );
 }
