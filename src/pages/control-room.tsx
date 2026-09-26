@@ -12,7 +12,7 @@ import { AGENTS, DEVICES, agentById } from "../model/org";
 import { CAPABILITIES } from "../model/registries";
 import { buildCoverageMatrix } from "../engine/coverage";
 import type { CoverageStatus, Decision } from "../model/types";
-import { ShieldCheck, Network, Server, ArrowRight, Link2 } from "lucide-react";
+import { ShieldCheck, Network, Server, ArrowRight, Link2, Globe, Cloud, OctagonX } from "lucide-react";
 
 const DECISIONS = [
   { key: "ALLOW", label: "Allowed", tone: "allow", route: "live", note: "flowed automatically" },
@@ -32,6 +32,8 @@ const PLANES = [
   { key: "ENDPOINT", label: "Endpoint", icon: <Server size={15} strokeWidth={1.75} />, blurb: "file · process · secrets" },
   { key: "NETWORK", label: "Network", icon: <Network size={15} strokeWidth={1.75} />, blurb: "HTTPS · uploads · AI destinations" },
   { key: "GATEWAY", label: "Gateway", icon: <ShieldCheck size={15} strokeWidth={1.75} />, blurb: "GitHub · SQL · cloud · MCP" },
+  { key: "BROWSER", label: "Browser", icon: <Globe size={15} strokeWidth={1.75} />, blurb: "browser agents in managed Chrome / Edge" },
+  { key: "HOSTED", label: "Hosted", icon: <Cloud size={15} strokeWidth={1.75} />, blurb: "AWS AgentCore · Google (pending)" },
 ] as const;
 
 const toneOf = (d: Decision) => DECISIONS.find((x) => x.key === d)?.tone ?? "allow";
@@ -67,6 +69,7 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
   const chainTail = s.events.slice(-16);
   const latest = s.events[s.events.length - 1];
   const governed = AGENTS.filter((a) => !a.discovered);
+  const stoppedNow = s.stops.filter((x) => x.active);
 
   return (
     <div className="page page-wide">
@@ -300,6 +303,11 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
                 );
               })}
             </div>
+            {stoppedNow.length > 0 && (
+              <div className="small" style={{ color: "var(--bad)", display: "flex", gap: 6, alignItems: "center" }}>
+                <OctagonX size={14} /> {stoppedNow.length} agent{stoppedNow.length === 1 ? "" : "s"} stopped everywhere: {stoppedNow.map((x) => AGENTS.find((a) => a.id === x.agent)?.name ?? x.agent).join(", ")}
+              </div>
+            )}
             <span className="ft-title">Enforcement planes <ArrowRight size={18} /></span>
             <div className="ft-sub">{CAPABILITIES.filter((c) => c.status === "ENFORCED").length} of {CAPABILITIES.length} skills fully enforced across all planes</div>
           </button>

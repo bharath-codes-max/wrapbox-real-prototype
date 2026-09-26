@@ -56,7 +56,7 @@ export function EventStream({
           filters={[
             { id: "agent", label: "Agent", options: AGENTS.map((a) => ({ value: a.id, label: a.name })) },
             { id: "user", label: "Person", options: USERS.map((u) => ({ value: u.id, label: u.name })) },
-            { id: "plane", label: "Plane", options: opts(["ENDPOINT", "NETWORK", "GATEWAY"]) },
+            { id: "plane", label: "Plane", options: opts(["ENDPOINT", "NETWORK", "GATEWAY", "BROWSER", "HOSTED"]) },
             { id: "decision", label: "Decision", options: opts(["ALLOW", "CONSTRAIN", "REVIEW", "BLOCK"]) },
             { id: "risk", label: "Risk", options: opts(["low", "moderate", "high", "critical"]) },
           ]}

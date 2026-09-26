@@ -4,14 +4,14 @@
 // and the pipeline trace the Simulation Lab renders step by step.
 // ============================================================================
 
-import { decide, type ActionRequest } from "./brain";
+import { decide, mcpToolName, type ActionRequest } from "./brain";
 import type { Scenario } from "./scenarios";
 import type {
-  Decision, DetectorFinding, Environment, EvidenceRecord, IntentContract, InspectionResult,
-  SimulationEvent, StandingPermission, TaskEnvelope, TransformStep, VaultToken,
+  AgentStop, AgentTaint, Decision, DetectorFinding, Environment, EvidenceRecord, IntentContract, InspectionResult,
+  ResultSeal, SimulationEvent, StandingPermission, TaskEnvelope, TransformStep, VaultToken,
 } from "../model/types";
-import { detectorFor, destById } from "../model/registries";
-import { agentById, deviceOfUser, resourceById, userById } from "../model/org";
+import { detectorFor, destById, mcpServerById, planeLabel } from "../model/registries";
+import { agentById, deviceForAction, resourceById, supplierById, userById } from "../model/org";
 import type { KernelState } from "./kernel";
 
 let tokenCounter = 0;
@@ -24,7 +24,7 @@ function nextToken(dataClass: string): string {
   return `${family}_TOKEN_${String(tokenCounter).padStart(3, "0")}`;
 }
 
-function simpleHash(s: string): string {
+export function simpleHash(s: string): string {
   let h = 0x811c9dc5;
   for (let i = 0; i < s.length; i++) {
     h ^= s.charCodeAt(i);
@@ -122,7 +122,12 @@ export function runScenario(
   sc: Scenario,
   contracts: IntentContract[],
   prevHash: string,
-  opts?: { breakGlass?: { resource: string; environment: Environment }; timestamp?: number; kernel?: KernelState; envelope?: TaskEnvelope; standing?: StandingPermission[] }
+  opts?: {
+    breakGlass?: { resource: string; environment: Environment }; timestamp?: number; kernel?: KernelState;
+    envelope?: TaskEnvelope; standing?: StandingPermission[];
+    stops?: AgentStop[]; // agents stopped everywhere (kill switch)
+    taint?: AgentTaint;  // untrusted content this agent read recently
+  }
 ): SimOutcome {
   seq += 1;
   const id = `evt-${String(seq).padStart(5, "0")}`;
@@ -152,6 +157,11 @@ export function runScenario(
     envelope: opts?.envelope,
     standing: opts?.standing,
     now: opts?.timestamp ?? Date.now(),
+    stops: opts?.stops,
+    mcp: sc.mcp,
+    delegation: sc.delegation,
+    taint: opts?.taint && opts.taint.agent === sc.agent ? opts.taint : undefined,
+    claims: sc.claims,
   };
 
   const result = decide(req, contracts);
@@ -171,12 +181,19 @@ export function runScenario(
   const resN = resourceById(sc.resource)?.name ?? sc.resource;
   const destN = sc.destination ? destById(sc.destination)?.label ?? sc.destination : undefined;
 
+  const supplier = supplierById(agentById(sc.agent)?.operator);
   const chain: EvidenceRecord["chain"] = [
     { label: "User", detail: userN },
-    { label: "Agent", detail: agentN },
+    ...(sc.delegation && sc.delegation.length > 0
+      ? [{ label: "Delegated via", detail: [...sc.delegation.map((h) => `${agentById(h.agent)?.name ?? h.agent} (${h.asked})`), agentN].join(" → ") }]
+      : []),
+    { label: "Agent", detail: supplier ? `${agentN} — operated by ${supplier.name} (supplier)` : agentN },
     ...(sc.application ? [{ label: "Tool", detail: sc.application }] : []),
     { label: "Action", detail: `${sc.action}${sc.actionRaw ? ` — ${sc.actionRaw}` : ""}` },
+    ...(sc.mcp ? [{ label: "MCP tool call", detail: `${mcpToolName(sc.mcp)}(${Object.entries(sc.mcp.args).map(([k, v]) => `${k}: ${v}`).join(", ")}) · ${mcpServerById(sc.mcp.server)?.label ?? sc.mcp.server}` }] : []),
     { label: "Resource", detail: resN },
+    ...(req.taint ? [{ label: "Read before this", detail: `Untrusted: ${req.taint.label}` }] : []),
+    ...(sc.untrustedRead ? [{ label: "Untrusted content read", detail: sc.untrustedRead.label }] : []),
     ...(inspection && inspection.inspectable && inspection.findings.length > 0
       ? [{ label: "Findings", detail: inspection.findings.map((f) => `${f.dataClass}×${f.count}`).join(", ") }]
       : []),
@@ -193,23 +210,36 @@ export function runScenario(
     ...(result.matchedContracts.length > 0
       ? [{ label: "Rules matched", detail: `${result.matchedContracts.length} Intent Contract rule(s)` }]
       : []),
+    ...(result.outputCheck ? [{ label: "Output check", detail: result.outputCheck.claims.map((c) => `${c.field}: agent says ${c.claimed}${c.sealed !== undefined ? `, sealed ${c.sealed}` : ", nothing sealed"} — ${c.ok ? "matches" : "does not match"}`).join(" · ") }] : []),
     { label: "Decided by", detail: result.decidedBy.label },
     { label: "Decision", detail: result.decision },
     ...(transformation && transformation.length > 0
       ? [{ label: "Transform", detail: `${transformation.length} value(s) ${transformation[0].kind.toLowerCase().replaceAll("_", " ")}d` }]
       : []),
-    { label: "Enforcement", detail: `${sc.plane} plane` },
+    { label: "Enforcement", detail: planeLabel(sc.plane) },
   ];
 
   const ts = opts?.timestamp ?? Date.now();
   // The seal covers the facts of the decision (who, which agent, what, where, what
   // was decided and by which layer, what left) plus the previous seal — change any
   // of them and this record, and every one after it, stops matching.
-  const device = deviceOfUser(sc.user)?.id ?? agentById(sc.agent)?.device ?? "unknown-device";
+  const device = deviceForAction(sc.agent, sc.user);
+  // Newer facts are sealed only when present, so older records' seals are unchanged.
+  const extra = [
+    ...(sc.mcp ? [`mcp:${mcpToolName(sc.mcp)}:${JSON.stringify(sc.mcp.args)}`] : []),
+    ...(sc.delegation?.length ? [`via:${sc.delegation.map((h) => h.agent).join(">")}`] : []),
+    ...(supplier ? [`operator:${supplier.id}`] : []),
+    ...(result.outputCheck ? [`output:${result.outputCheck.status}`] : []),
+  ];
   const hash = simpleHash(JSON.stringify([
     prevHash, id, ts, sc.user, device, sc.agent, sc.plane, sc.action, sc.actionRaw ?? "", sc.resource, sc.environment,
-    sc.destination ?? "", result.decision, result.decidedBy.label, payloadAfter ?? sc.payload ?? "",
+    sc.destination ?? "", result.decision, result.decidedBy.label, payloadAfter ?? sc.payload ?? "", ...extra,
   ]));
+  // The system of record's answer is sealed when the action actually ran.
+  const executed = result.decision === "ALLOW" || result.decision === "CONSTRAIN";
+  const resultSeal: ResultSeal | undefined = sc.resultSeal && executed
+    ? { ...sc.resultSeal, hash: simpleHash(`${sc.resultSeal.source}|${sc.resultSeal.field}|${sc.resultSeal.value}`) }
+    : undefined;
 
   const event: SimulationEvent = {
     id,
@@ -260,6 +290,13 @@ export function runScenario(
     // Stamped only when the override actually changed the outcome.
     breakGlass: result.decidedBy.layer === "breakglass" ? true : undefined,
     evidence: { eventId: id, hash, prevHash, chain },
+    mcp: sc.mcp,
+    delegation: sc.delegation,
+    operator: supplier?.id,
+    taint: req.taint,
+    outputCheck: result.outputCheck,
+    untrustedRead: sc.untrustedRead,
+    resultSeal,
   };
 
   return { event, tokens };
@@ -288,16 +325,30 @@ export function pipelineFor(sc: Scenario, ev: SimulationEvent): PipelineStage[] 
 
   stages.push({
     key: "origin",
-    label: sc.plane === "NETWORK" ? "Browser prepares request" : sc.plane === "ENDPOINT" ? "Agent issues local action" : "Agent calls gateway",
+    label: sc.plane === "NETWORK" ? "Browser prepares request"
+      : sc.plane === "ENDPOINT" ? (sc.mcp ? "Agent calls a local MCP tool" : "Agent issues local action")
+      : sc.plane === "BROWSER" ? "Browser agent acts on a page"
+      : sc.plane === "HOSTED" ? "Hosted agent calls a tool"
+      : sc.mcp ? "Agent calls an MCP tool" : "Agent calls gateway",
     detail: sc.actionRaw ?? `${agentN} → ${sc.action}`,
     tone: "neutral",
   });
+  if (sc.delegation && sc.delegation.length > 0) {
+    stages.push({
+      key: "delegation",
+      label: "Delegation chain",
+      detail: `${[...sc.delegation.map((h) => agentById(h.agent)?.name ?? h.agent), agentN].join(" → ")} · every agent in the chain is checked`,
+      tone: "info",
+    });
+  }
   stages.push({
     key: "intercept",
     label:
       sc.plane === "NETWORK" ? "Wrapbox Network plane intercepts traffic"
-      : sc.plane === "ENDPOINT" ? "Wrapbox Endpoint plane holds the action"
-      : "Wrapbox Gateway receives the operation",
+      : sc.plane === "ENDPOINT" ? (sc.mcp ? "Wrapbox endpoint shim holds the stdio tool call" : "Wrapbox Endpoint plane holds the action")
+      : sc.plane === "BROWSER" ? "Wrapbox browser extension holds the page action"
+      : sc.plane === "HOSTED" ? "Wrapbox REQUEST interceptor holds the tool call (AgentCore Gateway)"
+      : sc.mcp ? "Wrapbox MCP gateway holds tools/call" : "Wrapbox Gateway receives the operation",
     detail: "Action normalized before anything executes",
     tone: "info",
   });
@@ -307,6 +358,32 @@ export function pipelineFor(sc: Scenario, ev: SimulationEvent): PipelineStage[] 
       label: "Action normalization",
       detail: `${sc.actionRaw ?? sc.action} → ${sc.action}`,
       tone: "info",
+    });
+  }
+  if (sc.mcp) {
+    stages.push({
+      key: "mcp",
+      label: `MCP tools/call · ${mcpServerById(sc.mcp.server)?.registered ? "registered server" : "UNREGISTERED server"}`,
+      detail: `${mcpToolName(sc.mcp)} · arguments ${Object.entries(sc.mcp.args).map(([k, v]) => `${k}=${v}`).join(", ") || "none"}`,
+      tone: sc.mcp.registered ? "info" : "warn",
+    });
+  }
+  const sup = supplierById(agentById(sc.agent)?.operator);
+  if (sup) {
+    stages.push({ key: "supplier", label: "Supplier agent", detail: `Operated by ${sup.name} · contract until ${sup.contractEnds} · scope: ${sup.scopeActions.join("/")} on ${sup.scopeResources.map((r) => resourceById(r)?.name ?? r).join(", ")}`, tone: "info" });
+  }
+  if (ev.taint) {
+    stages.push({ key: "taint", label: "Untrusted content read earlier", detail: `${ev.taint.label} — this agent is under closer watch for ${Math.max(0, Math.round((ev.taint.expiresAt - ev.timestamp) / 60000))} more min`, tone: "warn" });
+  }
+  if (ev.untrustedRead) {
+    stages.push({ key: "untrusted", label: "Untrusted content", detail: `${ev.untrustedRead.label} — reading is allowed; the agent's next risky action will need a person`, tone: "warn" });
+  }
+  if (ev.outputCheck) {
+    stages.push({
+      key: "output",
+      label: `Output check: ${ev.outputCheck.status}`,
+      detail: ev.outputCheck.claims.map((c) => `${c.field}: agent says ${c.claimed}${c.sealed !== undefined ? ` · sealed ${c.sealed} (${c.source})` : " · nothing sealed to compare"}`).join(" · "),
+      tone: ev.outputCheck.status === "MATCH" ? "good" : "warn",
     });
   }
   if (ev.destinationClass) {
@@ -390,7 +467,7 @@ export function pipelineFor(sc: Scenario, ev: SimulationEvent): PipelineStage[] 
       : "Action proceeds",
     detail:
       ev.decision === "BLOCK"
-        ? (ev.plane === "NETWORK" ? "Destination did NOT receive the data" : "The action never executed")
+        ? (ev.plane === "NETWORK" || ev.plane === "BROWSER" ? "Destination did NOT receive the data" : "The action never executed")
         : ev.decision === "REVIEW" ? "Waiting in Review Center; independent work continues"
         : ev.decision === "CONSTRAIN" ? "Original values never left the device"
         : "Executed within policy",
@@ -399,7 +476,7 @@ export function pipelineFor(sc: Scenario, ev: SimulationEvent): PipelineStage[] 
   stages.push({
     key: "evidence",
     label: "Evidence recorded",
-    detail: `${ev.id} · chain hash ${ev.evidence.hash}`,
+    detail: `${ev.id} · chain hash ${ev.evidence.hash}${ev.resultSeal ? ` · result sealed: ${ev.resultSeal.field} = ${ev.resultSeal.value} (${ev.resultSeal.hash})` : ""}`,
     tone: "neutral",
   });
   return stages;

@@ -6,17 +6,17 @@
 
 import { useSyncExternalStore } from "react";
 import type {
-  AutopilotRecommendation, BreakGlassSession, IntentContract, SimulationEvent,
+  AgentStop, AgentTaint, AutopilotRecommendation, BreakGlassSession, IntentContract, SimulationEvent,
   StandingPermission, TaskEnvelope, VaultToken, Decision, RestoreRecord, Environment,
 } from "../model/types";
-import { SEED_CONTRACTS } from "../model/contracts";
-import { ORG, USERS, AGENTS, deviceOfUser, userById } from "../model/org";
+import { DEMO_CONTRACTS, MCP_TOOL_CONTRACT, SEED_CONTRACTS } from "../model/contracts";
+import { ORG, USERS, AGENTS, deviceForAction, userById } from "../model/org";
 import { ROLLOUT, type AgentKind } from "../model/rollout";
 import { canActivate, contractCoverage } from "../engine/coverage";
 import { BASELINE_KERNEL, enforceRule, installRelease, pendingRelease, type KernelState } from "../engine/kernel";
 import { SCENARIOS, jobById, scenarioById, type Scenario } from "../engine/scenarios";
 import { runScenario, setSeq, getSeq, setTokenCounter, getTokenCounter } from "../engine/simulate";
-import { decide } from "../engine/brain";
+import { decide, INJECTION_WINDOW_MIN } from "../engine/brain";
 
 // ---------------------------------------------------------------------------
 // Workspaces + onboarding
@@ -66,6 +66,8 @@ export interface AppState {
   lastHash: string;
   demoStep: number; // -1 = demo mode off
   kernel: KernelState; // installed Wrapbox Safety Kernel pack
+  stops: AgentStop[]; // kill switch: agents stopped everywhere (history kept)
+  taints: AgentTaint[]; // agents that recently read untrusted content
 }
 
 const STORAGE_KEY = "wrapbox-real-prototype-v1"; // demo workspace (unchanged key — existing data survives)
@@ -105,7 +107,7 @@ function currentWorkspace(): Workspace {
 function seedState(): AppState {
   setSeq(0);
   setTokenCounter(0);
-  const contracts = structuredClone(SEED_CONTRACTS) as IntentContract[];
+  const contracts = structuredClone(DEMO_CONTRACTS) as IntentContract[];
   const events: SimulationEvent[] = [];
   const tokens: VaultToken[] = [];
   let lastHash = "genesis0";
@@ -172,6 +174,8 @@ function seedState(): AppState {
     lastHash,
     demoStep: -1,
     kernel: BASELINE_KERNEL,
+    stops: [],
+    taints: [],
   };
 }
 
@@ -196,6 +200,8 @@ function freshState(): AppState {
     lastHash: "genesis0",
     demoStep: -1,
     kernel: BASELINE_KERNEL,
+    stops: [],
+    taints: [],
   };
 }
 
@@ -310,8 +316,8 @@ function load(ws: Workspace = currentWorkspace()): AppState {
       // Older saved events took the laptop from the agent; re-attach each one to
       // the person's own device so user + device always agree.
       const events = parsed.events.map((e) => {
-        const d = deviceOfUser(e.user);
-        let out = d && e.device !== d.id ? { ...e, device: d.id } : e;
+        const d = deviceForAction(e.agent, e.user);
+        let out = e.device !== d ? { ...e, device: d } : e;
         // Events saved before "decided by" existed: infer it from what was
         // recorded (a clause carrying the final effect, else a safety rule).
         if (!out.decidedBy) {
@@ -332,7 +338,11 @@ function load(ws: Workspace = currentWorkspace()): AppState {
         return out;
       });
       const baseOnboarding = ws === "fresh" ? freshOnboarding() : demoOnboarding();
-      return { ...parsed, workspace: ws, org: parsed.org ?? (ws === "fresh" ? { ...DEMO_ORG, idp: "" } : DEMO_ORG), onboarding: { ...baseOnboarding, ...parsed.onboarding, employee: { ...baseOnboarding.employee, ...parsed.onboarding?.employee } }, events, kernel: parsed.kernel ?? BASELINE_KERNEL, restorations: parsed.restorations ?? [], standing: parsed.standing?.every((p) => p.resource) ? parsed.standing : standingSeed().map((seed) => ({ ...seed, status: parsed.standing?.find((x) => x.id === seed.id)?.status ?? seed.status })), autopilot: autopilotSeed().map((seed) => ({ ...seed, ...(parsed.autopilot ?? []).find((x) => x.id === seed.id), proposes: seed.proposes, recommendation: seed.recommendation })), demoStep: -1 }; // demo mode never persists across reloads
+      // The demo company's MCP tool policy arrived after some browsers saved state.
+      const contracts = ws === "demo" && !parsed.contracts.some((c) => c.id === MCP_TOOL_CONTRACT.id)
+        ? [...parsed.contracts, structuredClone(MCP_TOOL_CONTRACT)]
+        : parsed.contracts;
+      return { ...parsed, contracts, stops: parsed.stops ?? [], taints: parsed.taints ?? [], workspace: ws, org: parsed.org ?? (ws === "fresh" ? { ...DEMO_ORG, idp: "" } : DEMO_ORG), onboarding: { ...baseOnboarding, ...parsed.onboarding, employee: { ...baseOnboarding.employee, ...parsed.onboarding?.employee } }, events, kernel: parsed.kernel ?? BASELINE_KERNEL, restorations: parsed.restorations ?? [], standing: parsed.standing?.every((p) => p.resource) ? parsed.standing : standingSeed().map((seed) => ({ ...seed, status: parsed.standing?.find((x) => x.id === seed.id)?.status ?? seed.status })), autopilot: autopilotSeed().map((seed) => ({ ...seed, ...(parsed.autopilot ?? []).find((x) => x.id === seed.id), proposes: seed.proposes, recommendation: seed.recommendation })), demoStep: -1 }; // demo mode never persists across reloads
     }
   } catch {
     /* corrupted state → reseed */
@@ -495,14 +505,52 @@ export function activeBreakGlass(now = Date.now()): BreakGlassSession | undefine
   return state.breakGlass.find((b) => b.active && b.startedAt + b.durationMin * 60000 > now && b.scopeResource && b.scopeEnvironment);
 }
 
+/** Agents stopped right now (kill switch). */
+export function activeStops(s: AppState = state): AgentStop[] {
+  return s.stops.filter((x) => x.active);
+}
+export function stopOf(agent: string, s: AppState = state): AgentStop | undefined {
+  return s.stops.find((x) => x.active && x.agent === agent);
+}
+
+/** Untrusted content this agent read within the injection window, if any. */
+export function taintOf(agent: string, now = Date.now(), s: AppState = state): AgentTaint | undefined {
+  return s.taints.find((t) => t.agent === agent && t.expiresAt > now);
+}
+
+/** Fill each claim in the agent's output with the result sealed at the gateway
+ *  (the most recent recorded result for that field). Nothing sealed = nothing
+ *  to verify against, which the brain treats as fail-closed. */
+export function withSealedClaims(sc: Scenario, events: SimulationEvent[] = state.events): Scenario {
+  if (!sc.claims?.length) return sc;
+  const claims = sc.claims.map((c) => {
+    const sealed = [...events].reverse().find((e) => e.resultSeal?.field === c.field)?.resultSeal;
+    return { field: c.field, claimed: c.claimed, sealed: sealed?.value, source: sealed?.source };
+  });
+  return { ...sc, claims };
+}
+
+/** After an action that read untrusted content ran, the agent stays under closer watch. */
+function taintsAfter(ev: SimulationEvent, taints: AgentTaint[]): AgentTaint[] {
+  if (!ev.untrustedRead || (ev.decision !== "ALLOW" && ev.decision !== "CONSTRAIN")) return taints;
+  const t: AgentTaint = {
+    agent: ev.agent, kind: ev.untrustedRead.kind, label: ev.untrustedRead.label, eventId: ev.id,
+    at: ev.timestamp, expiresAt: ev.timestamp + INJECTION_WINDOW_MIN * 60_000,
+  };
+  return [...taints.filter((x) => x.agent !== ev.agent), t];
+}
+
 export function simulate(sc: Scenario): SimulationEvent {
   const live = activeBreakGlass();
   const bg = live ? { resource: live.scopeResource!, environment: live.scopeEnvironment! } : undefined;
-  const out = runScenario(sc, state.contracts, state.lastHash, { breakGlass: bg, kernel: state.kernel, standing: state.standing });
+  const out = runScenario(withSealedClaims(sc), state.contracts, state.lastHash, {
+    breakGlass: bg, kernel: state.kernel, standing: state.standing, stops: activeStops(), taint: taintOf(sc.agent),
+  });
   set({
     events: [...state.events, out.event],
     tokens: [...state.tokens, ...out.tokens],
     lastHash: out.event.evidence.hash,
+    taints: taintsAfter(out.event, state.taints),
   });
   return out.event;
 }
@@ -523,10 +571,14 @@ export function shadowEvent(
 ): SimulationEvent {
   const seqBefore = getSeq();
   const tokBefore = getTokenCounter();
-  // "What would Run do right now" must include an active break-glass override, exactly as simulate() does.
+  // "What would Run do right now" must include everything simulate() uses:
+  // an active break-glass override, stopped agents and untrusted reads.
   const live = opts?.withLiveOverride ? activeBreakGlass() : undefined;
   const breakGlass = live ? { resource: live.scopeResource!, environment: live.scopeEnvironment! } : undefined;
-  const out = runScenario(sc, contracts, "shadow", { timestamp: Date.now(), kernel, standing, breakGlass });
+  const out = runScenario(withSealedClaims(sc), contracts, "shadow", {
+    timestamp: Date.now(), kernel, standing, breakGlass,
+    ...(opts?.withLiveOverride ? { stops: activeStops(), taint: taintOf(sc.agent) } : {}),
+  });
   setSeq(seqBefore);
   setTokenCounter(tokBefore);
   return out.event;
@@ -537,16 +589,19 @@ export function shadowEvaluate(sc: Scenario, contracts: IntentContract[], kernel
 }
 
 /** The decision a real Run would return right now — live rules, kernel, standing
- *  permissions and any active break-glass override — without recording anything. */
+ *  permissions, break-glass, stopped agents and untrusted reads — without recording anything. */
 export function decisionNow(sc: Scenario): Decision {
   return shadowEvent(sc, state.contracts, state.kernel, state.standing, { withLiveOverride: true }).decision;
 }
 
-/** Who must decide a review: the job's approver for task steps, otherwise the
- *  Engineering Manager — and never the person who made the request. */
+/** Who must decide a review: the job's approver for task steps; money goes to
+ *  the Finance Controller; otherwise the Engineering Manager — and never the
+ *  person who made the request (the Admin steps in then). */
 export function approverFor(e: SimulationEvent): string {
   if (e.reviewState?.approver) return e.reviewState.approver;
-  return e.user === "u-alex" ? "u-priya" : "u-alex";
+  const money = (e.blastRadius?.spendUsd ?? 0) > 0 || e.resource === "r-stripe";
+  const first = money ? "u-sam" : "u-alex";
+  return e.user === first ? "u-priya" : first;
 }
 
 export function resolveReview(
@@ -560,6 +615,8 @@ export function resolveReview(
   // Separation of duties: the requester can never resolve their own review.
   // Enforced here, not only by approverFor() routing, so no caller can bypass it.
   if (target && reviewer === target.user) return;
+  // A stopped agent's held action can't be approved into running; deny still records.
+  if (target && stopOf(target.agent) && resolution !== "denied") return;
   if (target?.taskId && resolution === "approved_scoped") {
     // For a task step, "scoped" has a precise meaning: this task may use this
     // resource in this environment until it finishes.
@@ -678,7 +735,7 @@ export function advanceTask(taskId: string): void {
     };
     // The task's envelope goes to the brain, so allowed scope, forbidden scope,
     // time window, file budget and scoped grants are genuinely enforced.
-    const out = runScenario(sc, state.contracts, lastHash, { kernel: state.kernel, envelope: updated });
+    const out = runScenario(sc, state.contracts, lastHash, { kernel: state.kernel, envelope: updated, stops: activeStops(), taint: taintOf(t.agent) });
     out.event.taskId = taskId;
     out.event.stepIndex = step.index;
     out.event.dependsOn = step.dependsOn;
@@ -841,6 +898,47 @@ export function grantStandingAgain(id: string, grantedBy: string) {
     standing: state.standing.map((s) =>
       s.id === id ? { ...s, status: "active", grantedBy, expiresAt: Date.now() + 7 * 24 * 3600 * 1000 } : s),
   });
+}
+
+// ---------------------------------------------------------------------------
+// Kill switch — stop one agent everywhere, in one step.
+// ---------------------------------------------------------------------------
+
+/** Stop an agent on every plane. Its held requests are cancelled and its
+ *  running jobs stop; every later action is refused by the Core Brain until a
+ *  person resumes it. Returns false if it is already stopped. */
+export function stopAgent(agent: string, by: string, reason: string): boolean {
+  if (stopOf(agent)) return false;
+  const now = Date.now();
+  const stop: AgentStop = { id: `stop-${now.toString(36)}-${state.stops.length}`, agent, by, reason, at: now, active: true };
+  const byName = userById(by)?.name ?? by;
+  const events = state.events.map((e) => {
+    if (e.agent !== agent || e.reviewState?.status !== "pending") return e;
+    return {
+      ...e,
+      reviewState: { ...e.reviewState, status: "denied" as const, reviewer: by, note: `Cancelled — agent stopped everywhere by ${byName}`, decidedAt: now },
+      status: "blocked" as const,
+      evidence: { ...e.evidence, chain: [...e.evidence.chain, { label: "Kill switch", detail: `Agent stopped by ${byName}: ${reason}` }, { label: "Outcome", detail: "Held request cancelled — action never ran" }] },
+    };
+  });
+  const tasks = state.tasks.map((t) => {
+    if (t.agent !== agent || (t.status !== "active" && t.status !== "parked")) return t;
+    return {
+      ...t, status: "stopped" as const,
+      steps: t.steps.map((st) => (st.state === "parked" ? { ...st, state: "blocked" as const }
+        : st.state === "pending" || st.state === "waiting_dependency" || st.state === "running" ? { ...st, state: "skipped" as const } : st)),
+    };
+  });
+  set({ stops: [...state.stops, stop], events, tasks });
+  return true;
+}
+
+/** Resume a stopped agent. Stopped jobs stay stopped — start them again if needed. */
+export function resumeAgent(agent: string, by: string): boolean {
+  const cur = stopOf(agent);
+  if (!cur) return false;
+  set({ stops: state.stops.map((x) => (x.id === cur.id ? { ...x, active: false, resumedBy: by, resumedAt: Date.now() } : x)) });
+  return true;
 }
 
 // ---------------------------------------------------------------------------

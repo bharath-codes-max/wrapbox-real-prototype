@@ -16,8 +16,8 @@ const c: TourCase = {
       target: { selector: ".rail-item", text: "Agents" },
       action: "click",
       title: "Open the agent list",
-      body: "Priya, the admin, wants every AI agent in one list. Agents combines what Wrapbox observes with Veridian's existing identity and device records: 8 agents, 7 with a registered owner, 1 'shadow' agent nobody registered.",
-      say: "Priya, Veridian's Wrapbox admin, wants one honest list of every AI agent at work. The Agents page combines what Wrapbox observes with the company's existing identity and device records: eight agents, seven with a registered owner, and one shadow agent nobody registered.",
+      body: "Priya, the admin, wants every AI agent in one list. Agents combines what Wrapbox observes with Veridian's existing identity and device records: 12 agents, 11 with a named owner or sponsor, 1 'shadow' agent nobody registered.",
+      say: "Priya, Veridian's Wrapbox admin, wants one honest list of every AI agent at work. The Agents page combines what Wrapbox observes with the company's existing identity and device records: twelve agents, eleven with a named owner or sponsor, and one shadow agent nobody registered.",
       waitFor: { selector: ".card", text: "Agents detected" },
     },
     {

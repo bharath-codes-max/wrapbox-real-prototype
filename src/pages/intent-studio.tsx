@@ -25,6 +25,16 @@ function ClauseFacts({ cl }: { cl: ContractClause }) {
       <dt>Where to</dt><dd>{cl.destinations === "ANY" ? <span className="faint">anywhere</span> : destinationText(cl.destinations)}</dd>
       <dt>Only in</dt>
       <dd>{cl.environments?.length ? <Chip tone="review">{env}</Chip> : <span className="faint">{env}</span>}</dd>
+      {cl.mcp && (
+        <>
+          <dt>MCP tool</dt>
+          <dd className="row" style={{ gap: 4 }}>
+            {cl.mcp.registered === false && <Chip tone="critical">unregistered servers</Chip>}
+            {cl.mcp.tools?.map((t) => <Chip key={t} tone="neutral"><span className="mono">{t}</span></Chip>)}
+            {Object.entries(cl.mcp.args ?? {}).map(([k, v]) => <span key={k} className="mono small">{k} ~ /{v}/</span>)}
+          </dd>
+        </>
+      )}
       {(cl.transform || cl.failClosed) && (
         <>
           <dt>Also</dt>

@@ -3,17 +3,17 @@ import type { TourCase } from "../types";
 // Priya checks where Wrapbox is plugged in and how much it can stop in each place,
 // then sees what Wrapbox knows about every action and how one rule can cover many
 // ways of doing the same thing. Everything shown lives on the Integrations page.
-// Statuses come from the capability registry (4 enforced, 2 degraded, 1 understood
+// Statuses come from the capability registry (5 enforced, 4 degraded, 0 understood
 // only); counts and the replayed action (evt-00020) come from the demo workspace.
-// The ecosystem cards (Okta/Entra, Slack/Teams, OCSF/OTel SIEM) are labelled
-// Simulated on the page and never count toward enforcement.
+// The ecosystem cards never count toward enforcement: identity and chat delivery
+// are simulated, decision export is real and its streaming is simulated.
 const c: TourCase = {
   id: "integrations",
   order: 105,
   persona: { userId: "u-priya", name: "Priya Menon", role: "Admin" },
   title: "See where Wrapbox is plugged in",
   goal: "Priya, the admin, wants to know where Wrapbox sits today, how much it can really stop in each place, what it knows about every action, and how one rule can cover many ways of doing the same thing.",
-  outcome: "Priya knows where Wrapbox can stop actions and where it only watches, how it would fit Veridian's identity, chat and SIEM tools, who is behind each action, and that one rule can cover many ways of doing the same thing.",
+  outcome: "Priya knows where Wrapbox can stop actions fully and where only partly, how it fits Veridian's identity, chat and SIEM tools, who is behind each action, and that one rule can cover many ways of doing the same thing.",
   start: "control",
   poster: 2,
   steps: [
@@ -30,8 +30,8 @@ const c: TourCase = {
       title: "How strong is each connection?",
       // The band's own note for Degraded is "some parts only watched" (AWS governs only IAM,
       // S3 and ECS deploys; everything else there is watched), so no "most" here.
-      body: "Four are enforced: Wrapbox can stop a bad action there before it runs. Two are degraded, stopping some parts and only watching others, and one only watches.",
-      say: "So, how strong is each connection? In four places Wrapbox can stop a bad action before it runs, two stop some parts and only watch the rest, and one only watches.",
+      body: "Five are enforced: Wrapbox can stop a bad action there before it runs. Four are degraded: they stop some parts and only watch others, and each card says which.",
+      say: "So, how strong is each connection? In five places Wrapbox can stop a bad action before it runs, and four stop some parts and only watch the rest. Each card says which parts.",
     },
     {
       // Also resets the page to this tab if an earlier run left another one open.
@@ -57,18 +57,18 @@ const c: TourCase = {
     },
     {
       target: { selector: ".ecard", text: "MCP registry" },
-      title: "Watching, not yet stopping",
+      title: "MCP tools, checked one call at a time",
       // The card's 2 recorded actions are the unregistered server's network sends, which the
       // Network Extension blocked, so don't imply Wrapbox failed to stop that server.
-      body: "MCP servers give AI agents extra tools. “Understood only” means Wrapbox sees and sorts their calls but can't stop them yet, and it has spotted one unregistered server.",
-      say: "M-C-P servers give AI agents extra tools. Here, understood only means Wrapbox sees and sorts their calls but can't stop them yet, and it's spotted one unregistered server.",
+      body: "MCP servers give AI agents extra tools. Each remote tool call is checked, tool and arguments, before it runs. Local servers count only when a governed agent starts them, so it's degraded. One unregistered server was spotted.",
+      say: "M-C-P servers give AI agents extra tools. Each remote tool call is checked, tool and arguments, before it runs. Local servers only count when a governed agent starts them, so it's marked degraded, and one unregistered server was spotted.",
     },
     {
       // The three ecosystem cards; each carries a "Simulated" chip and none counts in the band above.
       target: { selector: ".ecard-grid", text: "Slack · Microsoft Teams" },
       title: "Fits the tools you already run",
-      body: "Three cards marked Simulated show how Wrapbox would connect: Okta or Entra for identity and who approves, Slack or Teams to deliver approvals, and OCSF or OpenTelemetry export to a SIEM like Splunk.",
-      say: "Further down, three cards marked simulated show how Wrapbox would plug into tools Veridian already runs: Okta or Entra for identity and who approves, Slack or Teams to deliver approvals, and a SIEM like Splunk, through O-C-S-F or Open Telemetry.",
+      body: "Three cards show how Wrapbox fits tools Veridian already runs. Okta or Entra for identity and Slack or Teams for approvals are simulated. Export to OCSF or OpenTelemetry works today; only streaming to a SIEM like Splunk is simulated.",
+      say: "Further down, three cards show how Wrapbox fits tools Veridian already runs. Okta or Entra for identity, and Slack or Teams for approvals, are simulated. Export to O-C-S-F or Open Telemetry works today; only streaming it to a SIEM like Splunk is simulated.",
       placement: "top",
     },
     {

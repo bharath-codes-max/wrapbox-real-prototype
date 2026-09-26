@@ -4,7 +4,11 @@ import type { SlideProps } from "../deck";
 import { Display, Eyebrow, Reveal, Head, Pill, Chip, Brand, decisionTone } from "../ui";
 import { ArchFlow, DrafterDemo, LiveDecide, decideOnce } from "../live";
 import { SCENARIOS } from "../../engine/scenarios";
-import { SEED_CONTRACTS } from "../../model/contracts";
+import { DEMO_CONTRACTS } from "../../model/contracts";
+
+// Counted from the test files at build time — never typed in.
+const TEST_SOURCES = import.meta.glob("../../../tests/*.test.ts", { eager: true, query: "?raw", import: "default" }) as Record<string, string>;
+const TEST_COUNT = Object.values(TEST_SOURCES).reduce((n, src) => n + (src.match(/^test\(/gm)?.length ?? 0), 0);
 import { CAPABILITIES, DETECTORS } from "../../model/registries";
 import { KERNEL_RULES } from "../../engine/kernel";
 
@@ -12,7 +16,7 @@ import { KERNEL_RULES } from "../../engine/kernel";
 export function Architecture({ active }: SlideProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Head eyebrow="Prototype · 08" title={<>One engine. <em>Three planes.</em></>} lead="Every action is held where it happens, described with its full identity chain, decided once and chained into evidence. The animation is the real engine deciding real scenarios." />
+      <Head eyebrow="Prototype · 08" title={<>One engine. <em>Five planes.</em></>} lead="Every action is held where it happens, described with its full identity chain, decided once and chained into evidence. The animation is the real engine deciding real scenarios." />
       <Reveal i={3} style={{ flex: 1, minHeight: 0 }}><ArchFlow active={active} /></Reveal>
       <div style={{ height: 36 }} />
     </div>
@@ -40,22 +44,22 @@ export function DecisionLive({ active }: SlideProps) {
 }
 
 /* ---------- test ---------- */
-const PLANE_LABEL: Record<string, string> = { ENDPOINT: "Endpoint", NETWORK: "Network", GATEWAY: "Gateway" };
+const PLANE_LABEL: Record<string, string> = { ENDPOINT: "Endpoint", NETWORK: "Network", GATEWAY: "Gateway", BROWSER: "Browser", HOSTED: "Hosted" };
 export function Tested() {
   // Every scenario in the product, run through the real engine right now.
   const results = useMemo(() => { let h = "genesis"; return SCENARIOS.filter((s) => s.group !== "TASK").map((sc) => { const ev = decideOnce(sc, h); h = ev.evidence.hash; return { sc, ev }; }); }, []);
   const counts = { ALLOW: 0, CONSTRAIN: 0, REVIEW: 0, BLOCK: 0 } as Record<string, number>;
   results.forEach((r) => { counts[r.ev.decision] += 1; });
-  const planes = ["ENDPOINT", "NETWORK", "GATEWAY"];
+  const planes = ["ENDPOINT", "NETWORK", "GATEWAY", "BROWSER", "HOSTED"];
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Head eyebrow="Test · 11" title={<>Tested, <em>not claimed.</em></>} lead={<>Every scenario below was just evaluated by the engine inside this deck — {results.length} scenarios across three planes, {counts.BLOCK} blocked, {counts.REVIEW} held for review, {counts.CONSTRAIN} transformed, {counts.ALLOW} allowed.</>} />
+      <Head eyebrow="Test · 11" title={<>Tested, <em>not claimed.</em></>} lead={<>Every scenario below was just evaluated by the engine inside this deck — {results.length} scenarios across five planes, {counts.BLOCK} blocked, {counts.REVIEW} held for review, {counts.CONSTRAIN} transformed, {counts.ALLOW} allowed.</>} />
       <div className="cols" style={{ gridTemplateColumns: "1fr 380px", gap: 40, flex: 1, minHeight: 0, alignItems: "start" }}>
-        <div className="stack" style={{ gap: 18 }}>
+        <div className="stack" style={{ gap: 10 }}>
           {planes.map((p, k) => (
-            <Reveal key={p} i={2 + k} className="row" style={{ gap: 16, alignItems: "flex-start" }}>
-              <div className="label" style={{ width: 96, paddingTop: 14 }}>{PLANE_LABEL[p]}</div>
-              <div className="smx" style={{ flex: 1 }}>
+            <Reveal key={p} i={2 + k} className="row" style={{ gap: 14, alignItems: "flex-start" }}>
+              <div className="label" style={{ width: 80, paddingTop: 8 }}>{PLANE_LABEL[p]}</div>
+              <div className="smx compact" style={{ flex: 1 }}>
                 {results.filter((r) => r.sc.plane === p).map(({ sc, ev }) => (
                   <div key={sc.id} className={`cell ${decisionTone(ev.decision)}`} title={`${sc.narrative} → ${ev.decision} (decided by ${ev.decidedBy?.layer ?? "default"})`}>
                     <span className="t">{sc.title}</span><span className="d">{ev.decision}</span>
@@ -68,9 +72,9 @@ export function Tested() {
         <div className="stack" style={{ gap: 14 }}>
           <Reveal i={3} className="card tint" style={{ padding: "20px 22px" }}>
             <div className="cols cols-3" style={{ gap: 10 }}>
-              {[["70", "tests"], [String(results.length), "scenarios"], [String(SEED_CONTRACTS.length), "contracts"]].map(([v, l]) => <div key={l}><div style={{ fontSize: 40, fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1, color: "var(--acc)" }}>{v}</div><div className="small" style={{ fontSize: 14 }}>{l}</div></div>)}
+              {[[String(TEST_COUNT), "tests"], [String(results.length), "scenarios"], [String(DEMO_CONTRACTS.length), "contracts"]].map(([v, l]) => <div key={l}><div style={{ fontSize: 40, fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1, color: "var(--acc)" }}>{v}</div><div className="small" style={{ fontSize: 14 }}>{l}</div></div>)}
             </div>
-            <div className="small" style={{ marginTop: 12, fontSize: 14 }}>node:test over the engine, store, onboarding and break-glass · {CAPABILITIES.length} capabilities · {DETECTORS.length} detectors · {KERNEL_RULES.length} kernel rules</div>
+            <div className="small" style={{ marginTop: 12, fontSize: 14 }}>node:test over the engine, store, onboarding, break-glass and the agentic checks · {CAPABILITIES.length} capabilities · {DETECTORS.length} detectors · {KERNEL_RULES.length} kernel rules</div>
           </Reveal>
           <Reveal i={4} className="card" style={{ padding: "18px 22px" }}>
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>What is real</div>

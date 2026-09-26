@@ -7,7 +7,7 @@ import { PageHead, SectionHead, Chip, StatusChip, SimNote, DecisionChip, MetricB
 import { describe } from "../ui/describe";
 import type { DecidedBy } from "../model/types";
 import { DETECTORS, CAPABILITIES, TRANSFORMS } from "../model/registries";
-import { ScanSearch, Shuffle, ShieldCheck, Cpu, Laptop, Network, Server, ArrowRight, ArrowDown, Undo2, Lock } from "lucide-react";
+import { ScanSearch, Shuffle, ShieldCheck, Cpu, Laptop, Network, Server, ArrowRight, ArrowDown, Undo2, Lock, Globe, Cloud } from "lucide-react";
 
 function Block({ title, items, tone }: { title: string; items: string[]; tone?: string }) {
   return (
@@ -26,13 +26,18 @@ function Block({ title, items, tone }: { title: string; items: string[]; tone?: 
 }
 
 const ORDER: { layer: DecidedBy["layer"]; name: string; asks: string; page?: [string, string] }[] = [
+  { layer: "killswitch", name: "Kill switch", asks: "Has someone stopped this agent — or any agent in its delegation chain — everywhere? Then no, before anything else.", page: ["agents", "Agent Inventory"] },
   { layer: "uninspectable", name: "Can we see inside?", asks: "If the content can't be read (e.g. an encrypted zip) and a rule protects that kind of data, stop — fail closed." },
   { layer: "contract", name: "Your rules", asks: "Which of your Intent Contract rules match this action? The strictest one wins.", page: ["intent", "Intent Studio"] },
   { layer: "safety", name: "Safety Kernel", asks: "Does a built-in, always-on rule say no? Your rules can't switch these off.", page: ["safety", "Safety Kernel"] },
+  { layer: "supplier", name: "Supplier contract", asks: "Is this agent run by a supplier? Then only what its contract covers, and nothing once the contract ends.", page: ["agents", "Agent Inventory"] },
   { layer: "blast", name: "Blast radius", asks: "How much could this break — rows, files, services? Too big means it waits for a yes.", page: ["simlab", "Simulation Lab"] },
   { layer: "context", name: "Context", asks: "Is this production, or privileged? Risky verbs there need a yes even without a rule.", page: ["simlab", "Simulation Lab"] },
+  { layer: "injection", name: "Untrusted input", asks: "Did this agent just read untrusted content (a web page, an outside issue or email)? Its next risky action waits for a person.", page: ["simlab/agentic", "Simulation Lab"] },
+  { layer: "output", name: "Output check", asks: "Does what the agent says match the result Wrapbox sealed when the real system answered?", page: ["simlab/agentic", "Simulation Lab"] },
   { layer: "envelope", name: "Task permission slip", asks: "Inside a task: is this within the slip's systems, actions, time and file budget?", page: ["tasks", "Tasks"] },
   { layer: "standing", name: "Standing permission", asks: "Outside a task: does this agent have everyday permission here, within its limits?", page: ["standing", "Standing Permissions"] },
+  { layer: "delegation", name: "Delegation chain", asks: "Was this asked for by another agent? Every agent in the chain is checked — authority can't grow along it.", page: ["simlab/agentic", "Simulation Lab"] },
   { layer: "breakglass", name: "Break Glass", asks: "Is an emergency override on for exactly this system? It can lift a hold — never a Safety Kernel no.", page: ["breakglass", "Break Glass"] },
   { layer: "default", name: "Nothing objected", asks: "No rule restricts this action, so it's allowed and recorded." },
 ];
@@ -40,15 +45,17 @@ const ORDER: { layer: DecidedBy["layer"]; name: string; asks: string; page?: [st
 const PLANES = [
   { icon: <Laptop size={17} />, name: "Endpoint", desc: "local actions on the laptop" },
   { icon: <Network size={17} />, name: "Network", desc: "traffic & data in flight" },
-  { icon: <Server size={17} />, name: "Gateway", desc: "resources & systems" },
+  { icon: <Server size={17} />, name: "Gateway", desc: "resources, systems & MCP tools" },
+  { icon: <Globe size={17} />, name: "Browser", desc: "browser agents' page actions" },
+  { icon: <Cloud size={17} />, name: "Hosted", desc: "agents on hosted platforms" },
 ];
 
 const PLANE_ICON: Record<string, ReactNode> = {
-  ENDPOINT: <Laptop size={16} />, NETWORK: <Network size={16} />, GATEWAY: <Server size={16} />, BRAIN: <Cpu size={16} />,
+  ENDPOINT: <Laptop size={16} />, NETWORK: <Network size={16} />, GATEWAY: <Server size={16} />, BROWSER: <Globe size={16} />, HOSTED: <Cloud size={16} />, BRAIN: <Cpu size={16} />,
 };
 const titleCase = (v: string) => v.charAt(0) + v.slice(1).toLowerCase().replace(/_/g, " ");
 
-const INPUTS = ["WHO", "DEVICE", "AGENT", "ACTION", "RESOURCE", "DATA", "DESTINATION", "CONTEXT", "INTENT CONTRACT", "SAFETY KERNEL", "TASK / STANDING AUTHORITY"];
+const INPUTS = ["WHO", "DEVICE", "AGENT", "DELEGATION CHAIN", "ACTION", "MCP TOOL + ARGUMENTS", "RESOURCE", "DATA", "DESTINATION", "CONTEXT", "RECENT UNTRUSTED INPUT", "INTENT CONTRACT", "SAFETY KERNEL", "SUPPLIER CONTRACT", "TASK / STANDING AUTHORITY"];
 
 export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
   const s = useAppState();
@@ -198,7 +205,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
                 </span>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 700, letterSpacing: "-0.01em" }}>Wrapbox Core Brain</div>
-                  <div className="small dim">One decision engine · three enforcement arms · same order every time</div>
+                  <div className="small dim">One decision engine · five enforcement planes · same order every time</div>
                 </div>
               </div>
 

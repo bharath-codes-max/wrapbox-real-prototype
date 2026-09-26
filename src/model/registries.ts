@@ -4,7 +4,14 @@
 // Everything here is simulation data; the shapes match the product model.
 // ============================================================================
 
-import type { CoverageStatus, DestinationClass } from "./types";
+import type { CoverageStatus, DestinationClass, Plane } from "./types";
+
+/** One wording for each enforcement plane, used by every screen. */
+export const PLANE_LABEL: Record<Plane, string> = {
+  ENDPOINT: "Endpoint plane", NETWORK: "Network Extension", GATEWAY: "Gateway",
+  BROWSER: "Browser extension", HOSTED: "Hosted agent gateway",
+};
+export const planeLabel = (p: Plane) => PLANE_LABEL[p] ?? p;
 
 export interface DataTypeDef {
   id: string;
@@ -73,12 +80,13 @@ export const DESTINATIONS: DestinationDef[] = [
   { id: "dest-partner", label: "Meridian Partners portal", class: "PARTNER", host: "portal.meridianpartners.example" },
   { id: "dest-generic", label: "Generic external site", class: "GENERIC_EXTERNAL", host: "filedrop.example.org" },
   { id: "dest-unknown", label: "Unknown external endpoint", class: "UNKNOWN_EXTERNAL", host: "185.220.101.42" },
+  { id: "dest-shop", label: "Office supplies store", class: "GENERIC_EXTERNAL", host: "shop.officesupply.example" },
 ];
 
 export interface CapabilityDef {
   id: string;
   label: string;
-  plane: "ENDPOINT" | "NETWORK" | "GATEWAY" | "BRAIN";
+  plane: "ENDPOINT" | "NETWORK" | "GATEWAY" | "BROWSER" | "HOSTED" | "BRAIN";
   status: CoverageStatus;
   note: string;
 }
@@ -101,8 +109,36 @@ export const CAPABILITIES: CapabilityDef[] = [
   { id: "cap-gw-sql", label: "SQL gateway", plane: "GATEWAY", status: "ENFORCED", note: "Query preflight + row estimates" },
   { id: "cap-gw-cloud", label: "Cloud (AWS) gateway", plane: "GATEWAY", status: "DEGRADED", note: "IAM, S3 and ECS deploys governed; other AWS services (Lambda, CloudFormation…) understood only" },
   { id: "cap-gw-saas", label: "SaaS API gateway", plane: "GATEWAY", status: "ENFORCED", note: "Stripe refunds and support-desk calls pass through the gateway" },
-  { id: "cap-gw-mcp", label: "MCP gateway", plane: "GATEWAY", status: "UNDERSTOOD_ONLY", note: "MCP calls observed and classified; enforcement rolling out" },
+  { id: "cap-gw-mcp", label: "MCP gateway (remote servers)", plane: "GATEWAY", status: "ENFORCED", note: "Registered remote MCP servers route through the gateway: every tools/call is checked — tool name and arguments — before it runs" },
+  { id: "cap-ep-mcp-stdio", label: "Local (stdio) MCP servers", plane: "ENDPOINT", status: "DEGRADED", note: "stdio servers launched by a governed agent run behind the endpoint runtime's shim; servers started outside a governed agent are discovered only" },
+  { id: "cap-br-extension", label: "Managed browser extension", plane: "BROWSER", status: "DEGRADED", note: "Force-installed in Chrome and Edge (enterprise policy): browser agents' page actions and submissions are checked; Safari and unmanaged browsers are not covered" },
+  { id: "cap-hosted-agentcore", label: "AWS Bedrock AgentCore Gateway", plane: "HOSTED", status: "ENFORCED", note: "Wrapbox runs as the gateway's REQUEST interceptor (Lambda): each tool call is decided before the gateway calls the target" },
+  { id: "cap-hosted-google", label: "Google Gemini Enterprise Agent Platform", plane: "HOSTED", status: "PENDING", note: "Agent Gateway partner screening exists on Google's side; the Wrapbox integration is not built yet" },
 ];
+
+/** MCP servers Wrapbox knows about. Registered = routed through the gateway
+ *  (remote) or the endpoint shim (stdio); unregistered = discovered only. */
+export interface McpServerDef {
+  id: string;
+  short: string;           // prefix used in rules: "github.push_files"
+  label: string;
+  transport: "remote" | "stdio";
+  registered: boolean;
+  tools: string[];
+}
+
+export const MCP_SERVERS: McpServerDef[] = [
+  { id: "mcp-github", short: "github", label: "GitHub MCP server (remote)", transport: "remote", registered: true,
+    tools: ["list_issues", "get_issue", "push_files", "create_pull_request", "merge_pull_request", "delete_file"] },
+  { id: "mcp-filesystem", short: "filesystem", label: "Filesystem MCP server (local, stdio)", transport: "stdio", registered: true,
+    tools: ["read_text_file", "write_file", "list_directory"] },
+  { id: "mcp-unknown-7823", short: "unknown", label: "Unknown MCP server (tcp/7823)", transport: "remote", registered: false,
+    tools: ["list_files", "upload"] },
+];
+
+export function mcpServerById(id: string): McpServerDef | undefined {
+  return MCP_SERVERS.find((m) => m.id === id);
+}
 
 export const TRANSFORMS: { kind: string; label: string; reversible: boolean; example: string }[] = [
   { kind: "REDACT", label: "Redact", reversible: false, example: "alice@example.com → [REDACTED:EMAIL]" },

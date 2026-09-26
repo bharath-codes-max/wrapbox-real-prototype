@@ -2,8 +2,8 @@
 // sees. RIGHT: what Wrapbox sees and does. Scenarios run through the real
 // engine, record real events, and propagate to every other screen.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAppState, simulate, shadowEvaluate, decisionNow, standingSeed } from "../state/store";
-import { SEED_CONTRACTS } from "../model/contracts";
+import { useAppState, simulate, shadowEvaluate, shadowEvent, standingSeed, stopOf, taintOf } from "../state/store";
+import { DEMO_CONTRACTS } from "../model/contracts";
 import { BASELINE_KERNEL } from "../engine/kernel";
 import { PageHead, Chip, DecisionChip, SimNote, Payload, names, Avatar, AgentMark, DestMark, SectionHead } from "../ui/kit";
 import { EventDetail } from "../ui/event-detail";
@@ -12,23 +12,38 @@ import { SCENARIOS, type Scenario } from "../engine/scenarios";
 import { pipelineFor, buildInspection, type PipelineStage } from "../engine/simulate";
 import type { Decision, SimulationEvent } from "../model/types";
 import { agentById, userById } from "../model/org";
-import { destById } from "../model/registries";
-import { Network, Server, ShieldCheck, Layers, Cpu, Play, Pause, StepForward, RotateCcw, ArrowRight } from "lucide-react";
+import { destById, planeLabel } from "../model/registries";
+import { Network, Server, ShieldCheck, Layers, Cpu, Play, Pause, StepForward, RotateCcw, ArrowRight, Plug, Globe, Workflow, OctagonX, Eye } from "lucide-react";
 
 const GROUPS = [
   { key: "NETWORK", label: "Network" },
   { key: "ENDPOINT", label: "Endpoint" },
   { key: "GATEWAY", label: "Gateway" },
+  { key: "MCP", label: "MCP tools" },
+  { key: "BROWSER_HOSTED", label: "Browser & hosted" },
+  { key: "AGENTIC", label: "Agentic risks" },
   { key: "CONTEXT", label: "Context" },
   { key: "SAFETY", label: "Safety Kernel" },
 ] as const;
 
-const GROUP_ICON = {
+const GROUP_ICON: Record<string, JSX.Element> = {
   NETWORK: <Network size={13} />,
   ENDPOINT: <Server size={13} />,
   GATEWAY: <ShieldCheck size={13} />,
+  MCP: <Plug size={13} />,
+  BROWSER_HOSTED: <Globe size={13} />,
+  AGENTIC: <Workflow size={13} />,
   CONTEXT: <Layers size={13} />,
   SAFETY: <Cpu size={13} />,
+  BROWSER: <Globe size={13} />,
+  HOSTED: <Globe size={13} />,
+};
+
+/** Plain notes for groups whose scenarios depend on what ran before. */
+const GROUP_NOTE: Record<string, string> = {
+  MCP: "Rules name the MCP tool and its arguments — the same push_files tool is fine on a feature branch and held on main.",
+  BROWSER_HOSTED: "The same rules reach agents in a managed browser and agents hosted on AWS AgentCore (Wrapbox as the gateway's request interceptor).",
+  AGENTIC: "Order matters here: run “reads an issue from an outside contributor” before “deploys to staging”, and the $18 refund before the replies. Stop an agent in Agent Inventory and every scenario for it turns BLOCK.",
 };
 
 export function SimulationLab({ nav, route }: { nav: (r: string) => void; route: string }) {
@@ -97,14 +112,24 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
   // What each scenario resolves to under the rules active right now, vs the
   // original demo policy — a pure what-if through the same Core Brain.
   const outlook = useMemo(() => {
-    const out: Record<string, { current: Decision; baseline: Decision }> = {};
+    const out: Record<string, { current: Decision; baseline: Decision; why: string }> = {};
     for (const x of SCENARIOS.filter((y) => y.group === group)) {
-      out[x.id] = { current: decisionNow(x), baseline: shadowEvaluate(x, SEED_CONTRACTS, BASELINE_KERNEL, standingSeed()) };
+      const now = shadowEvent(x, s.contracts, s.kernel, s.standing, { withLiveOverride: true });
+      const layer = now.decidedBy?.layer;
+      // Name what changed it: the agent's live state, or the policy itself.
+      const why = layer === "killswitch" ? "agent stopped"
+        : layer === "injection" ? "agent just read untrusted content"
+        : layer === "output" ? "output check against sealed results"
+        : layer === "breakglass" ? "break-glass override active"
+        : "current policy";
+      out[x.id] = { current: now.decision, baseline: shadowEvaluate(x, DEMO_CONTRACTS, BASELINE_KERNEL, standingSeed()), why };
     }
     return out;
-  }, [group, s.contracts, s.kernel, s.standing, s.breakGlass]);
+  }, [group, s.contracts, s.kernel, s.standing, s.breakGlass, s.stops, s.taints, s.events.length]);
 
-  const planeLabel = sc.plane.charAt(0) + sc.plane.slice(1).toLowerCase();
+  const planeName = planeLabel(sc.plane);
+  const stopped = stopOf(sc.agent, s);
+  const watched = taintOf(sc.agent, Date.now(), s);
 
   return (
     <div className="page page-wide">
@@ -137,7 +162,8 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
       <div className="grid" style={{ gridTemplateColumns: "280px 1fr", gap: 16, alignItems: "start" }}>
         {/* Scenario picker */}
         <div className="card">
-          <SectionHead title="Scenarios" sub={`${groupScenarios.length} in the ${groupLabel} plane`} />
+          <SectionHead title="Scenarios" sub={["NETWORK", "ENDPOINT", "GATEWAY"].includes(group) ? `${groupScenarios.length} in the ${groupLabel} plane` : `${groupScenarios.length} in ${groupLabel}`} />
+          {GROUP_NOTE[group] && <div className="small dim" style={{ margin: "-4px 0 10px", lineHeight: 1.5 }}>{GROUP_NOTE[group]}</div>}
           <div style={{ margin: "0 -20px" }}>
             {groupScenarios.map((x) => {
               const selected = x.id === scenarioId;
@@ -164,7 +190,7 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
                           <span className="faint">Right now</span>
                           <DecisionChip d={now.current} small />
                           {changed
-                            ? <span style={{ color: "var(--review)" }}>changed by current policy (was {now.baseline})</span>
+                            ? <span style={{ color: "var(--review)" }}>changed by {now.why} (was {now.baseline})</span>
                             : note && <span className="faint" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{note}</span>}
                         </div>
                       );
@@ -188,7 +214,7 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
             <div className="spread" style={{ alignItems: "flex-start" }}>
               <div style={{ minWidth: 0 }}>
                 <div className="row" style={{ gap: 9 }}>
-                  <Chip tone="neutral"><span className="row" style={{ gap: 4, flexWrap: "nowrap" }}>{GROUP_ICON[sc.plane]} {planeLabel}</span></Chip>
+                  <Chip tone="neutral"><span className="row" style={{ gap: 4, flexWrap: "nowrap" }}>{GROUP_ICON[sc.plane]} {planeName}</span></Chip>
                   <b style={{ fontSize: 15.5, letterSpacing: "-0.01em" }}>{sc.title}</b>
                 </div>
                 <div className="small dim" style={{ marginTop: 7, maxWidth: 640, lineHeight: 1.55 }}>{sc.narrative}</div>
@@ -220,6 +246,12 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
                 {(finished || mode !== "idle") && <button className="btn btn-ghost btn-sm" onClick={reset}><RotateCcw size={13} /> Reset</button>}
               </div>
             </div>
+            {(stopped || watched) && (
+              <div className="row small" style={{ marginTop: 12, gap: 8 }}>
+                {stopped && <Chip tone="block"><OctagonX size={12} /> {agentById(sc.agent)?.name} is stopped everywhere — by {userById(stopped.by)?.name}</Chip>}
+                {watched && <Chip tone="review"><Eye size={12} /> Under closer watch: read {watched.label} {Math.max(0, Math.round((Date.now() - watched.at) / 60000))} min ago</Chip>}
+              </div>
+            )}
             <div className="small faint" style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
               Expected under the brief · {sc.expected}
             </div>
@@ -323,7 +355,7 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
                 <div className="card" style={{ minHeight: 220 }}>
                   {stages.length === 0 && (
                     <div className="empty">
-                      Run the scenario to watch the {sc.plane.toLowerCase()} plane intercept, inspect, decide and enforce.
+                      Run the scenario to watch the {planeName} intercept, inspect, decide and enforce.
                     </div>
                   )}
                   <div className="pipe">
@@ -365,7 +397,7 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
                         <DecisionChip d={liveEvent.decision} />
                         <span className="row" style={{ gap: 6 }}>
                           <AgentMark agentId={liveEvent.agent} size={14} />
-                          <span className="small dim">{names(liveEvent).agent} · {liveEvent.plane}</span>
+                          <span className="small dim">{names(liveEvent).agent} · {planeLabel(liveEvent.plane)}</span>
                         </span>
                       </div>
                       <div className="row">

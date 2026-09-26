@@ -3,11 +3,12 @@ import { Drawer, DecisionChip, Payload, EvidenceChain, names, RiskChip, StatusCh
 import { describe } from "./describe";
 import type { ReactNode } from "react";
 import type { SimulationEvent } from "../model/types";
-import { resolveReview, approverFor } from "../state/store";
-import { deviceById, userById } from "../model/org";
+import { resolveReview, approverFor, stopOf, useAppState } from "../state/store";
+import { agentById, deviceById, supplierById, userById } from "../model/org";
+import { mcpServerById, planeLabel } from "../model/registries";
 import {
   Info, Lightbulb, ScanSearch, FileDiff, ArrowLeftRight, UserCheck,
-  ScrollText, ShieldAlert, Link2, ShieldCheck, Ban, AlertTriangle,
+  ScrollText, ShieldAlert, Link2, ShieldCheck, Ban, AlertTriangle, Workflow, OctagonX,
 } from "lucide-react";
 
 /** Consistent, spacious section label used throughout the drawer. */
@@ -30,13 +31,17 @@ export function EventDetail({ e, onClose, onNavigate }: {
   onClose: () => void;
   onNavigate?: (route: string) => void;
 }) {
+  const s = useAppState();
   const n = names(e);
   const pending = e.reviewState?.status === "pending";
+  const stopped = stopOf(e.agent, s);
+  const supplier = supplierById(e.operator);
+  const agentic = !!(e.mcp || e.delegation?.length || supplier || e.taint || e.untrustedRead || e.outputCheck || e.resultSeal || e.decidedBy?.layer === "killswitch");
   return (
     <Drawer onClose={onClose}>
       <div className="spread" style={{ marginBottom: 12, alignItems: "flex-start" }}>
         <div style={{ minWidth: 0 }}>
-          <div className="eyebrow" style={{ marginBottom: 7 }}>{e.plane} event</div>
+          <div className="eyebrow" style={{ marginBottom: 7 }}>{planeLabel(e.plane)} event</div>
           <h2 style={{ fontSize: 20, fontWeight: 650, margin: 0, letterSpacing: "-0.02em", lineHeight: 1.2 }}>
             {describe(e)}
           </h2>
@@ -58,7 +63,7 @@ export function EventDetail({ e, onClose, onNavigate }: {
         <dt>Device</dt><dd>{deviceById(e.device)?.name ?? e.device}</dd>
         <dt>Agent</dt><dd>{onNavigate ? <a onClick={() => onNavigate("agents")}>{n.agent}</a> : n.agent}</dd>
         {e.application && <><dt>Tool</dt><dd>{e.application}</dd></>}
-        <dt>Plane</dt><dd>{e.plane}</dd>
+        <dt>Plane</dt><dd>{planeLabel(e.plane)}</dd>
         <dt>Action</dt><dd className="mono">{e.actionRaw ?? e.action} <span className="faint">→ {e.action}</span></dd>
         <dt>Environment</dt><dd>{e.environment}</dd>
         {n.destination && <><dt>Destination</dt><dd className="row" style={{ gap: 8 }}>{n.destination} <Chip tone="neutral">{e.destinationClass}</Chip></dd></>}
@@ -68,6 +73,23 @@ export function EventDetail({ e, onClose, onNavigate }: {
         {e.blastRadius && <><dt>Blast radius</dt><dd className="row" style={{ gap: 8 }}>{e.blastRadius.label} <Chip tone={e.blastRadius.severity}>{e.blastRadius.severity}</Chip></dd></>}
         <dt>Capability</dt><dd><StatusChip s={e.capabilityState} /></dd>
       </dl>
+
+      {agentic && (
+        <>
+          <hr className="divider" />
+          <SectionLabel icon={<Workflow size={15} />}>Agent context</SectionLabel>
+          <dl className="kv agent-context">
+            {e.decidedBy?.layer === "killswitch" && <><dt>Kill switch</dt><dd className="row" style={{ gap: 6 }}><OctagonX size={14} style={{ color: "var(--bad)" }} />{e.decidedBy.label.replace(/^Kill switch — /, "")}</dd></>}
+            {e.mcp && <><dt>MCP call</dt><dd><span className="mono">tools/call {e.mcp.tool}</span> <span className="faint">on {mcpServerById(e.mcp.server)?.label ?? e.mcp.server}</span>{!e.mcp.registered && <> <Chip tone="critical">UNREGISTERED</Chip></>}<div className="mono small dim" style={{ marginTop: 4 }}>{Object.entries(e.mcp.args).map(([k, v]) => `${k}: ${v}`).join(" · ")}</div></dd></>}
+            {e.delegation && e.delegation.length > 0 && <><dt>Delegated via</dt><dd>{[...e.delegation.map((h) => `${agentById(h.agent)?.name ?? h.agent} (“${h.asked}”)`), n.agent].join(" → ")}<div className="small faint" style={{ marginTop: 3 }}>Every agent in the chain was checked — the strictest answer wins.</div></dd></>}
+            {supplier && <><dt>Operated by</dt><dd>{supplier.name} <span className="faint">· supplier · contract until {supplier.contractEnds} · scope {supplier.scopeActions.join("/")} only</span></dd></>}
+            {e.taint && <><dt>Read before this</dt><dd>{e.taint.label} <span className="faint">· untrusted, {Math.max(0, Math.round((e.timestamp - e.taint.at) / 60000))} min earlier</span></dd></>}
+            {e.untrustedRead && <><dt>Untrusted input</dt><dd>{e.untrustedRead.label} <span className="faint">· this agent's next risky action goes to a person</span></dd></>}
+            {e.outputCheck && <><dt>Output check</dt><dd><Chip tone={e.outputCheck.status === "MATCH" ? "allow" : "review"}>{e.outputCheck.status}</Chip>{e.outputCheck.claims.map((c, i) => <div key={i} className="small" style={{ marginTop: 4 }}>{c.field}: agent says <b>{c.claimed}</b>{c.sealed !== undefined ? <> · sealed <b>{c.sealed}</b> <span className="faint">({c.source})</span></> : <span className="faint"> · nothing sealed to compare</span>}</div>)}</dd></>}
+            {e.resultSeal && <><dt>Result sealed</dt><dd>{e.resultSeal.field} = <b>{e.resultSeal.value}</b> <span className="faint">· {e.resultSeal.source}</span> <span className="mono faint">{e.resultSeal.hash}</span></dd></>}
+          </dl>
+        </>
+      )}
 
       <hr className="divider" />
       <SectionLabel icon={<Lightbulb size={15} />}>Why this decision</SectionLabel>
@@ -177,10 +199,15 @@ export function EventDetail({ e, onClose, onNavigate }: {
               <div className="small dim" style={{ marginBottom: 14, lineHeight: 1.6 }}>
                 Waiting for <b>{userById(approverFor(e))?.name}</b> ({userById(approverFor(e))?.role}) · expires {new Date(e.reviewState.expiresAt).toLocaleTimeString()} · the person who asked can't approve their own request.
               </div>
+              {stopped && (
+                <div className="small" style={{ marginBottom: 12, color: "var(--bad)" }}>
+                  {n.agent} is stopped everywhere (by {userById(stopped.by)?.name}) — this can only be denied until someone resumes it.
+                </div>
+              )}
               <div className="row">
-                <button className="btn btn-good btn-sm" onClick={() => resolveReview(e.id, "approved", approverFor(e), "Approved once")}>Approve once</button>
-                <button className="btn btn-sm" onClick={() => resolveReview(e.id, "approved_scoped", approverFor(e), "Scoped approval", "This resource only · 4h")}>Approve scoped</button>
-                <button className="btn btn-warn btn-sm" onClick={() => resolveReview(e.id, "constrained", approverFor(e), "Constrained to safe alternative")}>Constrain</button>
+                <button className="btn btn-good btn-sm" disabled={!!stopped} onClick={() => resolveReview(e.id, "approved", approverFor(e), "Approved once")}>Approve once</button>
+                <button className="btn btn-sm" disabled={!!stopped} onClick={() => resolveReview(e.id, "approved_scoped", approverFor(e), "Scoped approval", "This resource only · 4h")}>Approve scoped</button>
+                <button className="btn btn-warn btn-sm" disabled={!!stopped} onClick={() => resolveReview(e.id, "constrained", approverFor(e), "Constrained to safe alternative")}>Constrain</button>
                 <button className="btn btn-danger btn-sm" onClick={() => resolveReview(e.id, "denied", approverFor(e), "Denied")}>Deny</button>
               </div>
             </>

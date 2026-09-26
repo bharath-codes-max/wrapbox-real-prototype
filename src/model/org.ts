@@ -20,9 +20,13 @@ export interface OrgAgent {
   id: string;
   name: string;
   provider: string;
-  kind: "coding" | "chat" | "internal" | "copilot" | "unknown";
-  owner?: string;
-  device?: string;
+  kind: "coding" | "chat" | "internal" | "copilot" | "browser" | "hosted" | "supplier" | "unknown";
+  owner?: string; // Veridian person accountable for it (for a supplier agent: its sponsor)
+  device?: string; // a laptop in DEVICES, or a host in HOSTS for agents that don't run on one
+  /** Where it runs: a Veridian laptop, a hosted agent platform, or a supplier's own systems. */
+  location?: "laptop" | "cloud" | "supplier";
+  /** Supplier that operates it (SUPPLIERS id). Absent = Veridian's own agent. */
+  operator?: string;
   environment: string;
   tools: string[];
   destinations: string[];
@@ -40,6 +44,48 @@ export interface OrgResource {
 }
 
 export const ORG = { name: "Veridian Systems", domain: "veridian.example" };
+
+/** A third party whose agents act inside Veridian's systems (supplier agents).
+ *  The contract scope is what Veridian's vendor review approved — the agent
+ *  gets no more than this, and nothing at all once the contract ends. */
+export interface Supplier {
+  id: string;
+  name: string;
+  service: string;
+  contractEnds: string;        // ISO date; after it, the supplier's agents hold no authority
+  scopeResources: string[];    // RESOURCES ids the contract covers
+  scopeActions: string[];      // action verbs the contract covers
+  dpa: boolean;                // data processing agreement signed (personal/financial data allowed)
+  sponsor: string;             // Veridian person accountable for the relationship
+  reviewedBy: string;          // who approved the vendor review
+}
+
+export const SUPPLIERS: Supplier[] = [
+  {
+    id: "sup-meridian", name: "Meridian Partners", service: "Payment reconciliation",
+    contractEnds: "2027-03-31", scopeResources: ["r-stripe"], scopeActions: ["READ"],
+    dpa: true, sponsor: "u-sam", reviewedBy: "u-maya",
+  },
+  {
+    id: "sup-northwind", name: "Northwind BPO", service: "Tier-1 support outsourcing",
+    contractEnds: "2026-09-01", scopeResources: ["r-support-saas"], scopeActions: ["READ", "WRITE"],
+    dpa: true, sponsor: "u-jordan", reviewedBy: "u-maya",
+  },
+];
+
+export function supplierById(id?: string) { return id ? SUPPLIERS.find((x) => x.id === id) : undefined; }
+/** A supplier contract is live until the end of its last day. */
+export function supplierActive(sp: Supplier, now = Date.now()): boolean {
+  return now < new Date(`${sp.contractEnds}T23:59:59Z`).getTime();
+}
+
+/** Non-laptop places agents run (hosted platforms, supplier systems). Kept apart
+ *  from DEVICES so laptop counts and enrolment stay about laptops. */
+export const HOSTS: OrgDevice[] = [
+  { id: "host-agentcore", name: "AWS AgentCore runtime · us-east-1", owner: "u-sam", os: "Hosted agent platform", enrolled: true },
+  { id: "host-meridian", name: "Meridian Partners systems", owner: "u-sam", os: "Supplier-operated", enrolled: false },
+  { id: "host-northwind", name: "Northwind BPO systems", owner: "u-jordan", os: "Supplier-operated", enrolled: false },
+];
 
 export const USERS: OrgUser[] = [
   { id: "u-priya", name: "Priya Menon", role: "Admin", email: "priya.menon@veridian.example" },
@@ -108,6 +154,30 @@ export const AGENTS: OrgAgent[] = [
     tools: ["unknown MCP server (tcp/7823)"], destinations: ["dest-unknown"],
     discovered: true, trust: "unknown", risk: "critical",
   },
+  {
+    id: "a-claude-chrome", name: "Claude in Chrome", provider: "Anthropic", kind: "browser",
+    owner: "u-jordan", device: "d-jordan-mbp", location: "laptop", environment: "local",
+    tools: ["managed Chrome", "page actions (click, fill, submit)"], destinations: ["dest-salesforce", "dest-unapproved-ai"],
+    discovered: false, trust: "conditional", risk: "moderate",
+  },
+  {
+    id: "a-billing-hosted", name: "Billing Agent", provider: "Veridian · hosted on AWS AgentCore", kind: "hosted",
+    owner: "u-sam", device: "host-agentcore", location: "cloud", environment: "production",
+    tools: ["AgentCore Gateway", "Stripe refund tool", "SQL tool"], destinations: ["dest-internal"],
+    discovered: false, trust: "conditional", risk: "high",
+  },
+  {
+    id: "a-meridian-recon", name: "Meridian Recon Agent", provider: "Meridian Partners (supplier)", kind: "supplier",
+    owner: "u-sam", device: "host-meridian", location: "supplier", operator: "sup-meridian", environment: "production",
+    tools: ["Stripe API (read)"], destinations: ["dest-partner"],
+    discovered: false, trust: "conditional", risk: "moderate",
+  },
+  {
+    id: "a-northwind-desk", name: "Northwind Helpdesk Agent", provider: "Northwind BPO (supplier)", kind: "supplier",
+    owner: "u-jordan", device: "host-northwind", location: "supplier", operator: "sup-northwind", environment: "production",
+    tools: ["Support SaaS API"], destinations: ["dest-salesforce"],
+    discovered: false, trust: "untrusted", risk: "high",
+  },
 ];
 
 export const RESOURCES: OrgResource[] = [
@@ -126,8 +196,15 @@ export const RESOURCES: OrgResource[] = [
 ];
 
 export function userById(id: string) { return USERS.find((u) => u.id === id); }
-export function deviceById(id: string) { return DEVICES.find((d) => d.id === id); }
+export function deviceById(id: string) { return DEVICES.find((d) => d.id === id) ?? HOSTS.find((h) => h.id === id); }
 /** The laptop a person works on — actions happen on the user's device, not the agent's. */
 export function deviceOfUser(userId: string) { return DEVICES.find((d) => d.owner === userId); }
 export function agentById(id: string) { return AGENTS.find((a) => a.id === id); }
+/** Where an action by this agent physically happens: the person's own laptop for
+ *  laptop agents, the agent's host for hosted and supplier-operated agents. */
+export function deviceForAction(agentId: string, userId: string): string {
+  const a = agentById(agentId);
+  if (a && a.location && a.location !== "laptop" && a.device) return a.device;
+  return deviceOfUser(userId)?.id ?? a?.device ?? "unknown-device";
+}
 export function resourceById(id: string) { return RESOURCES.find((r) => r.id === id); }

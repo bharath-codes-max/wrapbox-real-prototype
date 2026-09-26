@@ -235,6 +235,9 @@ textarea.ta:focus { border-color: var(--acc); box-shadow: 0 0 0 3px color-mix(in
 /* layer list (decision order) */
 .layers { display: flex; flex-direction: column; gap: 6px; }
 .layer { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 11px; border: 1px solid var(--line); background: var(--surface); font-size: 15px; transition: background 0.2s, border-color 0.2s; }
+.layers.compact { gap: 3px; }
+.layers.compact .layer { padding: 3px 10px; font-size: 13.5px; border-radius: 9px; }
+.layers.compact .layer em { width: 20px; height: 20px; font-size: 11px; }
 .layer em { font: 700 12px var(--mono); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--ink-2); font-style: normal; }
 .layer .cap { font: 400 12.5px var(--mono); color: var(--ink-3); }
 .layer.lit { border-color: var(--acc); background: var(--acc-soft); }
@@ -570,3 +573,9 @@ html[data-variant="v3"] .lvbg { display: none; }
 .cover-dec { display: flex; gap: 10px; flex-wrap: wrap; }
 .cover-dec span { font: 700 15px var(--mono); padding: 7px 14px; border-radius: 999px; border: 1.5px solid; opacity: 0.55; transition: opacity .3s, background .3s, color .3s, transform .3s; }
 .cover-dec span.lit { opacity: 1; color: #fff; transform: scale(1.06); }
+
+/* Test slide: 40+ scenarios as compact tiles (full text in each tile's tooltip) */
+.smx.compact { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 6px; }
+.smx.compact .cell { min-height: 0; padding: 6px 9px; border-radius: 9px; gap: 2px; }
+.smx.compact .cell .t { font-size: 12px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.smx.compact .cell .d { font-size: 10.5px; }

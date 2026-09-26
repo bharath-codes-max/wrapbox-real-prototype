@@ -12,7 +12,7 @@ export interface RolloutTarget {
   id: string;
   name: string;
   logo: string;            // bundled vendor mark (see ui/logos)
-  plane: "ENDPOINT" | "NETWORK" | "GATEWAY";
+  plane: "ENDPOINT" | "NETWORK" | "GATEWAY" | "BROWSER" | "HOSTED";
   caps: string[];          // capability ids this target provides
   governs: AgentKind[];    // agent kinds this target puts a guard on
   method: string;          // how an admin deploys it
@@ -59,17 +59,31 @@ export const ROLLOUT: RolloutTarget[] = [
   },
   {
     id: "gw-saas", name: "Stripe & support-desk gateway", logo: "stripe", plane: "GATEWAY",
-    caps: ["cap-gw-saas"], governs: ["internal"],
+    caps: ["cap-gw-saas"], governs: ["internal", "supplier"],
     method: "Swap the agents' API keys for gateway keys", detail: "Refunds, tickets and customer replies",
     phases: ["Minting gateway-scoped API keys", "Swapping keys in the agents' config", "First API call proxied", "Connected — refunds governed"],
     checkIn: "First proxied SaaS call",
   },
   {
     id: "gw-mcp", name: "MCP gateway", logo: "mcp", plane: "GATEWAY",
-    caps: ["cap-gw-mcp"], governs: ["unknown", "internal"],
-    method: "Point MCP clients at the gateway", detail: "MCP tool calls observed and classified",
-    phases: ["Deploying the MCP gateway", "Registering known MCP servers", "First tool call observed", "Connected — observing only"],
-    checkIn: "First observed MCP tool call",
+    caps: ["cap-gw-mcp", "cap-ep-mcp-stdio"], governs: ["unknown", "internal", "coding"],
+    method: "Point MCP clients at the gateway; register local servers", detail: "Each MCP tools/call checked — tool and arguments — before it runs; local stdio servers only when a governed agent starts them",
+    phases: ["Deploying the MCP gateway", "Registering known MCP servers", "First tool call decided", "Connected — remote calls enforced, local servers partly"],
+    checkIn: "First decided MCP tool call",
+  },
+  {
+    id: "browser-ext", name: "Managed browser extension", logo: "chrome", plane: "BROWSER",
+    caps: ["cap-br-extension"], governs: ["browser"],
+    method: "Force-install via Chrome / Edge enterprise policy", detail: "Browser agents' page actions and submissions, in managed Chrome and Edge",
+    phases: ["Publishing the extension to the managed store", "Force-installing via browser policy", "Browsers checking in", "Connected — Chrome and Edge covered"],
+    checkIn: "First decided page action from a managed browser",
+  },
+  {
+    id: "hosted-agentcore", name: "AWS AgentCore Gateway", logo: "aws", plane: "HOSTED",
+    caps: ["cap-hosted-agentcore"], governs: ["hosted"],
+    method: "Attach Wrapbox as the gateway's REQUEST interceptor (Lambda)", detail: "Tool calls of agents hosted on AgentCore, decided before the gateway calls the target",
+    phases: ["Deploying the interceptor Lambda", "Attaching it to the AgentCore gateway", "First tool call intercepted", "Connected — hosted tool calls governed"],
+    checkIn: "First intercepted AgentCore tool call",
   },
 ];
 

@@ -58,7 +58,8 @@ const ESCALATE: { value: AlertPrefs["escalateMin"]; label: ReactNode }[] = ([5, 
 
 const REGION: Record<Region, string> = { us: "US", eu: "EU", in: "India" };
 const KIND: Record<AgentKind, string> = {
-  coding: "coding agents", chat: "AI chat", copilot: "copilots", internal: "internal agents", unknown: "unregistered agents",
+  coding: "coding agents", chat: "AI chat", copilot: "copilots", internal: "internal agents",
+  browser: "browser agents", hosted: "hosted agents", supplier: "supplier agents", unknown: "unregistered agents",
 };
 
 /** Step card on the left, preview column on the right; stacks on narrow screens. */

@@ -24,8 +24,8 @@ const c: TourCase = {
     {
       target: ".metricband",
       title: "The numbers at a glance",
-      body: "Six people, eight AI agents, and twelve systems, files and addresses the agents tried to reach. One agent is a stranger nobody registered; seven connections carried high-risk activity.",
-      say: "Up top, there are six people, eight AI agents, and twelve systems, files and addresses they tried to reach. One agent is a stranger nobody registered, and seven connections carried high-risk activity.",
+      body: "Six people, twelve AI agents, and twelve systems, files and addresses the agents tried to reach. One agent is a stranger nobody registered; seven connections carried high-risk activity.",
+      say: "Up top, there are six people, twelve AI agents, and twelve systems, files and addresses they tried to reach. One agent is a stranger nobody registered, and seven connections carried high-risk activity.",
     },
     {
       target: ".tg-canvas",

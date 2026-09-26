@@ -1,13 +1,73 @@
 // Agent Inventory — every detected agent with identity, tools, destinations,
 // risk and per-agent activity derived from the shared event store.
 import { useState } from "react";
-import { useAppState } from "../state/store";
+import { useAppState, stopAgent, resumeAgent, stopOf, taintOf } from "../state/store";
 import { PageHead, SectionHead, MetricBar, Chip, RiskChip, SimNote, Drawer, DecisionChip, timeAgo, AgentMark, DestMark, Avatar, PageTabs, usePaged, Pager, EntityCard, CardGrid, FilterBar, useCardFilters } from "../ui/kit";
 import { EventStream } from "../ui/event-stream";
 import { describe } from "../ui/describe";
-import { AGENTS, deviceById, userById, type OrgAgent } from "../model/org";
+import { AGENTS, SUPPLIERS, deviceById, resourceById, supplierActive, supplierById, userById, type OrgAgent } from "../model/org";
 import { destById } from "../model/registries";
-import { ShieldAlert, ShieldCheck, Activity, ArrowRight } from "lucide-react";
+import { ShieldAlert, ShieldCheck, Activity, ArrowRight, OctagonX, Play, Eye, Building2 } from "lucide-react";
+
+/** People who may stop or resume an agent in this workspace. */
+const STOPPERS = ["u-priya", "u-maya", "u-alex"];
+
+/** Stop one agent everywhere — or resume it — with who and why on record. */
+function KillSwitch({ agent }: { agent: OrgAgent }) {
+  const s = useAppState();
+  const cur = stopOf(agent.id, s);
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [by, setBy] = useState(STOPPERS[0]);
+  const history = s.stops.filter((x) => x.agent === agent.id).slice().reverse();
+  const held = s.events.filter((e) => e.agent === agent.id && e.reviewState?.status === "pending").length;
+  const running = s.tasks.filter((t) => t.agent === agent.id && (t.status === "active" || t.status === "parked")).length;
+  return (
+    <div className="card killswitch" style={{ marginBottom: 14, borderColor: cur ? "var(--bad)" : "var(--line)", background: cur ? "var(--bad-soft)" : undefined }}>
+      {cur ? (
+        <>
+          <div className="row" style={{ gap: 8 }}><OctagonX size={16} style={{ color: "var(--bad)" }} /><b className="small">Stopped everywhere</b></div>
+          <div className="small dim" style={{ marginTop: 6, lineHeight: 1.55 }}>
+            By {userById(cur.by)?.name} · {timeAgo(cur.at)} · “{cur.reason}”. Every action by {agent.name} is refused on every plane, and its held requests were cancelled. Nothing else can lift this — not an approval, not break-glass.
+          </div>
+          <div className="row" style={{ marginTop: 10, gap: 8 }}>
+            <select className="select" style={{ width: "auto" }} value={by} onChange={(e) => setBy(e.target.value)} aria-label="Resumed by">
+              {STOPPERS.map((u) => <option key={u} value={u}>{userById(u)?.name}</option>)}
+            </select>
+            <button className="btn btn-sm" onClick={() => resumeAgent(agent.id, by)}><Play size={13} /> Resume agent</button>
+          </div>
+        </>
+      ) : open ? (
+        <>
+          <b className="small">Stop {agent.name} everywhere</b>
+          <div className="small dim" style={{ marginTop: 4, lineHeight: 1.55 }}>
+            Refuses every action on the laptop, network, gateways, browser and hosted planes at once. {held > 0 ? `${held} held request${held === 1 ? "" : "s"} will be cancelled. ` : ""}{running > 0 ? `${running} running job${running === 1 ? "" : "s"} will stop. ` : ""}Recorded with your name and reason.
+          </div>
+          <input className="input" style={{ marginTop: 10, width: "100%" }} placeholder="Why — e.g. suspicious pushes to main, investigating" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Reason for stopping" />
+          <div className="row" style={{ marginTop: 10, gap: 8 }}>
+            <select className="select" style={{ width: "auto" }} value={by} onChange={(e) => setBy(e.target.value)} aria-label="Stopped by">
+              {STOPPERS.map((u) => <option key={u} value={u}>{userById(u)?.name}</option>)}
+            </select>
+            <button className="btn btn-danger btn-sm" disabled={reason.trim().length < 3} onClick={() => { stopAgent(agent.id, by, reason.trim()); setOpen(false); setReason(""); }}><OctagonX size={13} /> Stop everywhere</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>Cancel</button>
+          </div>
+        </>
+      ) : (
+        <div className="spread" style={{ gap: 10 }}>
+          <span className="small dim">Kill switch — one step stops this agent on every plane.</span>
+          <button className="btn btn-danger btn-sm" onClick={() => setOpen(true)}><OctagonX size={13} /> Stop this agent everywhere</button>
+        </div>
+      )}
+      {history.filter((x) => !x.active).length > 0 && (
+        <div className="small faint" style={{ marginTop: 10 }}>
+          {history.filter((x) => !x.active).map((x) => (
+            <div key={x.id}>Stopped by {userById(x.by)?.name} ({timeAgo(x.at)}, “{x.reason}”) · resumed by {userById(x.resumedBy ?? "")?.name ?? "—"}{x.resumedAt ? ` ${timeAgo(x.resumedAt)}` : ""}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function AgentsPage({ nav }: { nav: (r: string) => void; route: string }) {
   const s = useAppState();
@@ -43,6 +103,7 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
   };
 
   const registered = AGENTS.filter((a) => !a.discovered).length;
+  const stoppedNow = AGENTS.filter((a) => stopOf(a.id, s)).length;
   const discovered = AGENTS.filter((a) => a.discovered).length;
   const trusted = AGENTS.filter((a) => a.trust === "trusted").length;
   const totalEvents = s.events.length;
@@ -112,7 +173,7 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
       {/* Refined KPI strip — small numbers in one carded band, not big boxes. */}
       <div className="card" style={{ marginTop: shadow.length ? 16 : 0 }}>
         <MetricBar band items={[
-          { label: "Agents detected", value: AGENTS.length, note: `${registered} registered` },
+          { label: "Agents detected", value: AGENTS.length, note: `${registered} registered${stoppedNow > 0 ? ` · ${stoppedNow} stopped` : ""}` },
           { label: "Shadow agents", value: discovered, tone: discovered > 0 ? "bad" : "good", note: discovered > 0 ? "discovered, unregistered" : "none observed" },
           { label: "Trusted", value: trusted, tone: "good", note: "full trust posture" },
           { label: "Decisions evaluated", value: totalEvents, note: "across every plane", onClick: () => nav("live") },
@@ -151,17 +212,23 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
                       status={
                         <>
                           {a.discovered && <Chip tone="critical">UNREGISTERED</Chip>}
+                          {stopOf(a.id, s) && <Chip tone="block"><OctagonX size={12} /> STOPPED</Chip>}
+                          {a.operator && <Chip tone="neutral"><Building2 size={12} /> supplier</Chip>}
                           <Chip tone={trustTone(a.trust)}><TrustIcon size={12} strokeWidth={1.9} style={{ color: trustColor }} /> {a.trust}</Chip>
                           <RiskChip r={a.risk} />
                         </>
                       }
                       fields={[
                         {
-                          label: "Owner",
+                          label: a.operator ? "Sponsor" : "Owner",
                           value: a.owner ? (
                             <><Avatar userId={a.owner} size={16} />{userById(a.owner)?.name}<span className="faint">· {a.device ? deviceById(a.device)?.name : "—"}</span></>
                           ) : <span className="faint">unknown</span>,
                         },
+                        ...(a.operator ? [{
+                          label: "Operated by",
+                          value: (() => { const sp = supplierById(a.operator)!; const live = supplierActive(sp); return <>{sp.name}<span className="faint">· {live ? `contract until ${sp.contractEnds}` : `contract ended ${sp.contractEnds}`}</span></>; })(),
+                        }] : []),
                         {
                           label: "Used by",
                           value: seen.length === 0 ? <span className="faint">nobody yet</span> : seen.map((u) => (
@@ -201,6 +268,40 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
           ),
         },
         {
+          id: "suppliers",
+          label: "Suppliers",
+          count: SUPPLIERS.length,
+          content: (
+            <>
+              <SectionHead title="Supplier agents" sub="Third parties whose agents act inside Veridian's systems. The contract is their authority: nothing outside its scope, and nothing at all once it ends." />
+              <CardGrid>
+                {SUPPLIERS.map((sp) => {
+                  const theirs = AGENTS.filter((a) => a.operator === sp.id);
+                  const evs = s.events.filter((e) => e.operator === sp.id);
+                  const live = supplierActive(sp);
+                  return (
+                    <EntityCard
+                      key={sp.id}
+                      icon={<Building2 size={20} />}
+                      eyebrow={sp.service}
+                      title={sp.name}
+                      tone={live ? undefined : "block"}
+                      status={<Chip tone={live ? "allow" : "block"}>{live ? `contract until ${sp.contractEnds}` : `contract ended ${sp.contractEnds}`}</Chip>}
+                      fields={[
+                        { label: "Agents", value: theirs.map((a) => <span key={a.id} className="row" style={{ gap: 5, flexWrap: "nowrap" }}><AgentMark agentId={a.id} size={14} />{a.name}</span>) },
+                        { label: "Contracted scope", value: <>{sp.scopeActions.join(", ")} on {sp.scopeResources.map((r) => resourceById(r)?.name ?? r).join(", ")}</> },
+                        { label: "Data agreement", value: sp.dpa ? "DPA signed — personal and financial data allowed in scope" : "No DPA — no personal or financial data" },
+                        { label: "Sponsor", value: <><Avatar userId={sp.sponsor} size={16} />{userById(sp.sponsor)?.name}<span className="faint">· vendor review by {userById(sp.reviewedBy)?.name}</span></> },
+                        { label: "Recorded actions", value: <span className="tnum">{evs.length} · {evs.filter((e) => e.decision === "BLOCK").length} blocked</span> },
+                      ]}
+                    />
+                  );
+                })}
+              </CardGrid>
+            </>
+          ),
+        },
+        {
           id: "activity",
           label: "Agent activity",
           count: streamShown,
@@ -226,9 +327,15 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
             {open.provider} · {open.kind}
             {open.discovered && <Chip tone="critical">SHADOW AGENT — discovered by traffic analysis</Chip>}
           </div>
+          {!open.discovered && <KillSwitch agent={open} />}
+          {(() => { const t = taintOf(open.id, Date.now(), s); return t ? (
+            <div className="small" style={{ marginBottom: 12, color: "var(--review)", display: "flex", gap: 6, alignItems: "center" }}>
+              <Eye size={14} /> Under closer watch: read {t.label} {timeAgo(t.at)} — its risky actions go to a person until {new Date(t.expiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.
+            </div>) : null; })()}
           <dl className="kv">
-            <dt>Owner</dt><dd>{open.owner ? `${userById(open.owner)?.name} (registered it, accountable)` : "unknown — no registered owner"}</dd>
-            <dt>{open.discovered ? "Seen on" : "Registered on"}</dt><dd>{open.device ? deviceById(open.device)?.name : "—"}</dd>
+            <dt>{open.operator ? "Sponsor" : "Owner"}</dt><dd>{open.owner ? `${userById(open.owner)?.name} (${open.operator ? "Veridian sponsor, accountable" : "registered it, accountable"})` : "unknown — no registered owner"}</dd>
+            {open.operator && (() => { const sp = supplierById(open.operator)!; return <><dt>Operated by</dt><dd>{sp.name} · {sp.service} · {supplierActive(sp) ? `contract until ${sp.contractEnds}` : `contract ended ${sp.contractEnds} — no authority`} · scope {sp.scopeActions.join("/")} on {sp.scopeResources.map((r) => resourceById(r)?.name ?? r).join(", ")}</dd></>; })()}
+            <dt>{open.discovered ? "Seen on" : open.location && open.location !== "laptop" ? "Runs on" : "Registered on"}</dt><dd>{open.device ? deviceById(open.device)?.name : "—"}</dd>
             <dt>Used by</dt>
             <dd>
               {usersOf(open.id).length === 0 ? "nobody yet" : usersOf(open.id).map((u) => (

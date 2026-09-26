@@ -10,7 +10,7 @@ import {
   type AppState, type Region,
 } from "../state/store";
 import { AGENTS, DEVICES, agentById, userById } from "../model/org";
-import { CAPABILITIES } from "../model/registries";
+import { CAPABILITIES, PLANE_LABEL } from "../model/registries";
 import { ROLLOUT } from "../model/rollout";
 import { pendingRelease } from "../engine/kernel";
 import type { DecidedBy, Plane, SimulationEvent } from "../model/types";
@@ -60,6 +60,11 @@ const depth = (px: number): CSSProperties => ({
 /** Core Brain layer that produced a decision — the "model" label of the composer.
  *  Names match the labels the engine writes into `decidedBy.label`. */
 const LAYER: Record<DecidedBy["layer"], string> = {
+  killswitch: "Kill switch",
+  supplier: "Supplier contract",
+  delegation: "Delegation chain",
+  injection: "Injection-aware",
+  output: "Output check",
   contract: "Intent Contract",
   safety: "Safety Kernel",
   blast: "Blast-Radius Governor",
@@ -72,7 +77,7 @@ const LAYER: Record<DecidedBy["layer"], string> = {
 };
 
 /** Same plane wording the agent terminal uses. */
-const PLANE: Record<Plane, string> = { ENDPOINT: "Endpoint plane", NETWORK: "Network Extension", GATEWAY: "Gateway" };
+const PLANE: Record<Plane, string> = PLANE_LABEL;
 
 /** Text on the .glow composer, which keeps its dark gradient in both themes —
  *  derived from --accent-fg (white in both) rather than the theme's --fg. */

@@ -9,7 +9,7 @@ import {
   EntityCard, CardGrid, FilterBar, Pager, useCardFilters, usePaged,
 } from "../ui/kit";
 import { RESOURCES, DEVICES, USERS, AGENTS, deviceById, userById, resourceById, agentById } from "../model/org";
-import { ACTION_NORMALIZATION, CAPABILITIES } from "../model/registries";
+import { ACTION_NORMALIZATION, CAPABILITIES, MCP_SERVERS } from "../model/registries";
 import { logoUrl } from "../ui/logos";
 import { describe } from "../ui/describe";
 import { AgentTerminal } from "../ui/agent-terminal";
@@ -46,15 +46,21 @@ const CONNECTIONS: Connection[] = [
   { name: "Network Extension", logo: "wrapbox-icon", kind: "Network plane", caps: ["cap-net-https", "cap-net-quic", "cap-net-websocket", "cap-net-file"],
     detail: "What leaves each device for AI tools and other sites",
     uses: (e) => e.plane === "NETWORK" },
-  { name: "MCP registry", logo: "mcp", kind: "Gateway connector", caps: ["cap-gw-mcp"],
-    detail: `${discovered} unknown MCP server${discovered === 1 ? "" : "s"} discovered, not registered`,
-    uses: (e) => !!AGENTS.find((a) => a.id === e.agent)?.discovered },
+  { name: "MCP registry", logo: "mcp", kind: "Gateway connector", caps: ["cap-gw-mcp", "cap-ep-mcp-stdio"],
+    detail: `${MCP_SERVERS.filter((m) => m.registered).length} registered MCP servers · ${MCP_SERVERS.filter((m) => !m.registered).length} unknown server discovered, not registered`,
+    uses: (e) => !!e.mcp || !!AGENTS.find((a) => a.id === e.agent)?.discovered },
+  { name: "Managed browser extension", logo: "chrome", kind: "Browser plane", caps: ["cap-br-extension"],
+    detail: "Chrome and Edge, force-installed by policy · browser agents' page actions",
+    uses: (e) => e.plane === "BROWSER" },
+  { name: "AWS AgentCore Gateway", logo: "aws", kind: "Hosted agent plane", caps: ["cap-hosted-agentcore"],
+    detail: "Wrapbox as the gateway's REQUEST interceptor · hosted agents' tool calls",
+    uses: (e) => e.plane === "HOSTED" },
 ];
 
 /** Ecosystem integrations — simulated representations only (no live APIs in the
  *  prototype). Each card says what the production integration would do; none of
  *  them participates in enforcement status or capability truth. */
-const ECOSYSTEM: { name: string; logos?: string[]; icon?: "siem"; role: string; would: string; feeds: string }[] = [
+const ECOSYSTEM: { name: string; logos?: string[]; icon?: "siem"; role: string; would: string; feeds: string; live?: string }[] = [
   { name: "Okta · Microsoft Entra", logos: ["okta", "microsoft"], role: "Identity & approver routing",
     would: "Users, devices and roles resolve from the IdP; approver routing (e.g. Finance Controller) follows directory group membership.",
     feeds: "Identity chain · Review Center routing" },
@@ -62,8 +68,8 @@ const ECOSYSTEM: { name: string; logos?: string[]; icon?: "siem"; role: string; 
     would: "REVIEW requests arrive as actionable messages; an approve or deny writes back to the Review Center with the responder's identity.",
     feeds: "Review Center · Tasks (park / resume)" },
   { name: "SIEM export — OCSF / OpenTelemetry", icon: "siem", role: "Evidence export (e.g. Splunk)",
-    would: "Every decision record exports as OCSF findings / OTel log records, so existing SIEM detections and dashboards see agent activity.",
-    feeds: "Evidence ledger · Live Actions" },
+    would: "Export works today: Evidence downloads the records shown as OCSF 1.3.0 events or OTLP/JSON logs. Streaming them to a SIEM such as Splunk (HTTP Event Collector) is the part still simulated.",
+    feeds: "Evidence ledger · Live Actions", live: "Export live · streaming simulated" },
 ];
 
 const RANK: Record<string, number> = { ENFORCED: 0, DEGRADED: 1, UNDERSTOOD_ONLY: 2, UNINSPECTABLE: 3 };
@@ -280,8 +286,8 @@ export function IntegrationsPage({ nav }: { nav: (r: string) => void }) {
                   {/* Simulated ecosystem cards — clearly labelled; they never count toward enforcement. */}
                   <SectionHead
                     title="Ecosystem integrations"
-                    sub="How Wrapbox would plug into the identity, chat and SIEM tooling you already run. Simulated representations — nothing here is a live integration."
-                    right={<SimNote>Simulated — no live APIs in this prototype</SimNote>}
+                    sub="How Wrapbox plugs into the identity, chat and SIEM tooling you already run. Identity and chat delivery are simulated; decision export is real, streaming is simulated."
+                    right={<SimNote>No live third-party APIs in this prototype</SimNote>}
                   />
                   <CardGrid>
                     {ECOSYSTEM.map((x) => (
@@ -292,7 +298,7 @@ export function IntegrationsPage({ nav }: { nav: (r: string) => void }) {
                           : <span className="row" style={{ gap: 4 }}>{x.logos!.map((l) => <img key={l} src={logoUrl(l)} alt="" className="logo-img" style={{ width: 20, height: 20, objectFit: "contain" }} />)}</span>}
                         eyebrow={x.role}
                         title={x.name}
-                        status={<Chip tone="neutral">Simulated</Chip>}
+                        status={<Chip tone={x.live ? "allow" : "neutral"}>{x.live ?? "Simulated"}</Chip>}
                         fields={[
                           { label: "Would provide", value: <span className="dim">{x.would}</span> },
                           { label: "Feeds", value: <span className="faint">{x.feeds}</span> },

@@ -25,6 +25,19 @@ function verbFor(e: SimulationEvent): Verb {
   const raw = e.actionRaw ?? "";
   const rows = e.blastRadius?.rows;
 
+  if (e.mcp) {
+    const detail = e.mcp.args.branch ? ` to ${e.mcp.args.branch}` : e.mcp.args.path ? ` on ${e.mcp.args.path}` : e.mcp.args.issue_number ? ` #${e.mcp.args.issue_number}` : "";
+    const server = e.mcp.server === "mcp-github" ? "GitHub" : e.mcp.server === "mcp-filesystem" ? "the local filesystem server" : "an unregistered server";
+    return { base: "call", past: "Called", object: `MCP ${e.mcp.tool}${detail} (${server})` };
+  }
+  if (/refunds|stripe_refund/.test(raw)) {
+    const amount = raw.match(/\$[\d,.]+|amount=([\d,.]+)/);
+    const amt = amount ? (amount[0].startsWith("$") ? amount[0] : `$${Number(amount[1]).toLocaleString("en-US")}`) : "";
+    return { base: "issue a", past: "Issued a", object: `refund${amt ? ` of ${amt}` : ""} via ${res}` };
+  }
+  if (/place order/i.test(raw)) return { base: "place an order on", past: "Placed an order on", object: to ?? res };
+  if (e.action === "NETWORK_SEND" && /\breply\b/.test(raw)) return { base: "send a reply via", past: "Sent a reply via", object: to ?? res };
+
   switch (e.action) {
     case "NETWORK_SEND":
       return { base: "send", past: "Sent", object: to ? `${res} to ${to}` : `${res} out` };

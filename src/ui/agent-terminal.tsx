@@ -7,8 +7,8 @@ import { useState } from "react";
 import type { SimulationEvent } from "../model/types";
 import type { Scenario } from "../engine/scenarios";
 import type { PipelineStage } from "../engine/simulate";
-import { agentById, deviceOfUser, userById } from "../model/org";
-import { destById } from "../model/registries";
+import { agentById, deviceById, deviceForAction, userById } from "../model/org";
+import { destById, planeLabel } from "../model/registries";
 import { logoUrl } from "./logos";
 import { Copy, Check } from "lucide-react";
 
@@ -18,11 +18,13 @@ const TABS: { id: string; name: string; logo: string; color: string }[] = [
   { id: "cursor", name: "cursor", logo: "cursor", color: "#8b8bff" },
   { id: "a-codex", name: "codex", logo: "codex", color: "#10a37f" },
 ];
-const AGENT_COLOR: Record<string, string> = { "a-claude-code": "#ff8a4c", "a-claude": "#ff8a4c", "a-codex": "#10a37f", "a-chatgpt": "#10a37f", "a-copilot": "#4f8ef7", "a-finance": "#2fd1c0", "a-support": "#2fd1c0", "a-unknown-mcp": "#ff4d4f" };
+const AGENT_COLOR: Record<string, string> = { "a-claude-code": "#ff8a4c", "a-claude": "#ff8a4c", "a-codex": "#10a37f", "a-chatgpt": "#10a37f", "a-copilot": "#4f8ef7", "a-finance": "#2fd1c0", "a-support": "#2fd1c0", "a-unknown-mcp": "#ff4d4f", "a-claude-chrome": "#ff8a4c", "a-billing-hosted": "#f5a524", "a-meridian-recon": "#8b8bff", "a-northwind-desk": "#8b8bff" };
 
 /** The tool call the agent issued, in the `Tool(args)` idiom of agent traces. */
 function toolCall(sc: Scenario): { tool: string; args: string } {
   const args = sc.actionRaw ?? sc.action.toLowerCase();
+  if (sc.mcp) return { tool: `mcp__${sc.mcp.server.replace(/^mcp-/, "")}__${sc.mcp.tool}`, args: Object.entries(sc.mcp.args).map(([k, v]) => `${k}: "${v}"`).join(", ") };
+  if (sc.plane === "BROWSER") return { tool: "Browser", args };
   if (sc.plane === "ENDPOINT") return { tool: "Bash", args };
   if (sc.plane === "NETWORK") return { tool: "Upload", args: `${sc.fileName ?? sc.resource} → ${sc.destination ? destById(sc.destination)?.host ?? sc.destination : "network"}` };
   return { tool: (sc.application ?? "Tool").replace(/\s+/g, ""), args };
@@ -37,12 +39,20 @@ function linesFor(sc: Scenario, ev: SimulationEvent, stages: PipelineStage[], vi
     switch (st.key) {
       case "origin": {
         const { tool, args } = toolCall(sc);
-        const dev = deviceOfUser(sc.user)?.name;
+        const dev = deviceById(deviceForAction(sc.agent, sc.user))?.name;
         out.push({ tone: "neutral", head: <><b>{tool}</b>({args})</>, subs: [{ text: `${userById(sc.user)?.name ?? sc.user}${dev ? " · " + dev : ""} · ${agentById(sc.agent)?.name ?? sc.agent}` }] });
         break;
       }
       case "intercept":
-        out.push({ tone: "info", head: <><b>Wrapbox</b>(intercept)</>, subs: [{ text: st.label.replace(/^Wrapbox /, "") }, { text: `${sc.plane.toLowerCase()} plane · held before execution` }] });
+        out.push({ tone: "info", head: <><b>Wrapbox</b>(intercept)</>, subs: [{ text: st.label.replace(/^Wrapbox /, "") }, { text: `${planeLabel(sc.plane)} · held before execution` }] });
+        break;
+      case "delegation":
+      case "mcp":
+      case "supplier":
+      case "taint":
+      case "untrusted":
+      case "output":
+        out.push({ tone: st.tone === "warn" ? "warn" : st.tone === "good" ? "good" : "info", head: <><b>Wrapbox</b>({st.key === "taint" || st.key === "untrusted" ? "untrusted-input" : st.key === "output" ? "output-check" : st.key})</>, subs: [{ text: st.label }, { text: st.detail, cls: st.tone === "warn" ? "warn" : st.tone === "good" ? "good" : undefined }] });
         break;
       case "normalize":
         out.push({ tone: "info", head: <><b>Wrapbox</b>(normalize)</>, subs: [{ text: st.detail }] });
@@ -97,7 +107,7 @@ export function AgentTerminal({
   const tabs = isCodingTab ? TABS : [{ id: sc.agent, name: (agent?.name ?? sc.agent).toLowerCase(), logo: "", color }, ...TABS.slice(0, 2)];
   const lines = event ? linesFor(sc, event, stages, visible) : [];
   const done = event !== null && visible >= stages.length;
-  const dev = deviceOfUser(sc.user);
+  const dev = deviceById(deviceForAction(sc.agent, sc.user));
 
   const copyTrace = async () => {
     // Plain-text trace from the same stages the rendered lines come from.
@@ -125,7 +135,7 @@ export function AgentTerminal({
       <div className="aterm-body">
         <div className="aterm-box">
           <span className="lbl">Wrapbox runtime v1.4.2</span>
-          {agent?.name ?? sc.agent} · {sc.plane === "ENDPOINT" ? "Endpoint plane" : sc.plane === "NETWORK" ? "Network Extension" : "Gateway"} · {dev?.name ?? userById(sc.user)?.name}
+          {agent?.name ?? sc.agent} · {planeLabel(sc.plane)} · {dev?.name ?? userById(sc.user)?.name}
         </div>
         <div className="aterm-prompt">{sc.narrative}{!event && <span className="caret" />}</div>
         {lines.map((l, i) => (

@@ -243,3 +243,52 @@ export const SEED_CONTRACTS: IntentContract[] = [
     coverage: "PENDING",
   },
 ];
+
+/** Veridian wrote this one after a month of watching MCP traffic — it is part
+ *  of the demo company's history, not the day-one recommended pack. Each clause
+ *  names MCP tools (server.tool) and argument patterns; the Core Brain matches
+ *  them in the same clauseMatches() as every other rule. */
+export const MCP_TOOL_CONTRACT: IntentContract = {
+  id: "ic-mcp-tools",
+  name: "MCP tool policy",
+  author: "u-priya",
+  createdAt: now - 12 * d,
+  version: 2,
+  status: "ACTIVE",
+  sourceText:
+    "Tool calls to unregistered MCP servers are blocked. Agents may not delete files through the GitHub MCP server. MCP pushes straight to main require engineering review. MCP file tools may not write secrets files.",
+  clauses: [
+    {
+      id: "cl-mcp-1",
+      text: "Tool calls to unregistered MCP servers are blocked",
+      dataClasses: [], destinations: "ANY", actions: "ANY",
+      effect: "BLOCK", requiredCapabilities: ["cap-gw-mcp"], failClosed: true,
+      mcp: { registered: false },
+    },
+    {
+      id: "cl-mcp-2",
+      text: "Agents may not delete files through the GitHub MCP server",
+      dataClasses: [], destinations: "ANY", actions: "ANY",
+      effect: "BLOCK", requiredCapabilities: ["cap-gw-mcp"], failClosed: true,
+      mcp: { tools: ["github.delete_file"] },
+    },
+    {
+      id: "cl-mcp-3",
+      text: "MCP pushes straight to main require engineering review",
+      dataClasses: [], destinations: "ANY", actions: "ANY",
+      effect: "REVIEW", requiredCapabilities: ["cap-gw-mcp"], failClosed: true,
+      mcp: { tools: ["github.push_files"], args: { branch: "^main$" } },
+    },
+    {
+      id: "cl-mcp-4",
+      text: "MCP file tools may not write secrets files",
+      dataClasses: [], destinations: "ANY", actions: "ANY",
+      effect: "BLOCK", requiredCapabilities: ["cap-ep-mcp-stdio"], failClosed: true,
+      mcp: { tools: ["filesystem.write_file"], args: { path: "(^|/)\\.env$|credentials" } },
+    },
+  ],
+  coverage: "DEGRADED",
+};
+
+/** Everything the seeded Veridian workspace runs with. */
+export const DEMO_CONTRACTS: IntentContract[] = [...SEED_CONTRACTS, MCP_TOOL_CONTRACT];

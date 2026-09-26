@@ -55,6 +55,27 @@ export function draftClauses(text: string): ContractClause[] {
       : s.includes("delete") || s.includes("destructive") ? ["DELETE"]
       : "ANY";
 
+    // MCP: "MCP" in the sentence makes it a tool-call rule. Tool names are the
+    // snake_case words (optionally server.tool); "unregistered" targets unknown
+    // servers; "main" / ".env" become argument patterns.
+    let mcp: ContractClause["mcp"];
+    if (/\bmcp\b/.test(s)) {
+      const tools = [...new Set((sRaw.match(/\b(?:[a-z]+\.)?[a-z]+_[a-z_]+\b/g) ?? []))];
+      const server = s.includes("github") ? "github" : s.includes("filesystem") || s.includes("file tool") ? "filesystem" : undefined;
+      const qualified = tools.map((t) => (t.includes(".") || !server ? t : `${server}.${t}`));
+      const args: Record<string, string> = {};
+      if (/\bto main\b|\bmain branch\b|straight to main/.test(s)) args.branch = "^main$";
+      if (s.includes("secrets file") || s.includes(".env")) args.path = "(^|/)\\.env$|credentials";
+      mcp = {
+        ...(s.includes("unregistered") ? { registered: false } : {}),
+        ...(qualified.length ? { tools: qualified }
+          : /\bpush/.test(s) ? { tools: [`${server ?? "github"}.push_files`] }
+          : /\bwrit/.test(s) && /\bfiles?\b/.test(s) ? { tools: [`${server ?? "filesystem"}.write_file`] }
+          : /\bdelet/.test(s) && server ? { tools: [`${server}.delete_file`] } : {}),
+        ...(Object.keys(args).length ? { args } : {}),
+      };
+    }
+
     clauses.push({
       id: `cl-draft-${i}`,
       text: sRaw.trim().replace(/\.$/, ""),
@@ -63,7 +84,9 @@ export function draftClauses(text: string): ContractClause[] {
       actions,
       effect,
       transform,
-      requiredCapabilities: dataClasses.some((d) => d.startsWith("HEALTH.")) ? ["cap-ocr", "cap-net-file"]
+      ...(mcp ? { mcp, actions: "ANY" as const, destinations: "ANY" as const, dataClasses: [] } : {}),
+      requiredCapabilities: mcp ? [mcp.args?.path ? "cap-ep-mcp-stdio" : "cap-gw-mcp"]
+        : dataClasses.some((d) => d.startsWith("HEALTH.")) ? ["cap-ocr", "cap-net-file"]
         : dataClasses.some((d) => d.startsWith("HR.") || d.startsWith("LEGAL.")) ? ["cap-semantic", "cap-net-file"]
         : ["cap-net-file"],
       failClosed: effect !== "ALLOW",

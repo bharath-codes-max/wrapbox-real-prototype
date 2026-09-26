@@ -7,14 +7,14 @@ import { runScenario, pipelineFor } from "../engine/simulate";
 import { draftClauses } from "../engine/drafter";
 import { clauseCoverage, capability } from "../engine/coverage";
 import { BASELINE_KERNEL } from "../engine/kernel";
-import { SEED_CONTRACTS } from "../model/contracts";
+import { DEMO_CONTRACTS } from "../model/contracts";
 import { agentById, userById, deviceOfUser } from "../model/org";
 import { AgentTerminal } from "../ui/agent-terminal";
 import { logoUrl, AGENT_LOGOS } from "../ui/logos";
 import type { SimulationEvent, ContractClause } from "../model/types";
 import { Chip, decisionTone } from "./ui";
 
-const ACTIVE = SEED_CONTRACTS.filter((c) => c.status === "ACTIVE");
+const ACTIVE = DEMO_CONTRACTS.filter((c) => c.status === "ACTIVE");
 export const DEMO_IDS = ["ep-read-env", "net-pii-approved", "gw-force-main", "net-unknown-dest", "gw-export-500k", "gw-iam-admin", "ep-run-tests"];
 export const scenario = (id: string) => SCENARIOS.find((s) => s.id === id)!;
 
@@ -23,15 +23,22 @@ export function decideOnce(sc: Scenario, prevHash: string): SimulationEvent {
   return runScenario(sc, ACTIVE, prevHash, { timestamp: Date.now(), kernel: BASELINE_KERNEL }).event;
 }
 
+// The real order in engine/brain.ts: kill switch, then one agent's checks,
+// then every agent in a delegation chain, then break-glass.
 export const LAYERS: { key: string; label: string; cap: string }[] = [
+  { key: "killswitch", label: "Kill switch", cap: "agent stopped everywhere" },
   { key: "uninspectable", label: "Fail closed", cap: "uninspectable content" },
-  { key: "contract", label: "Intent Contracts", cap: "strictest wins" },
+  { key: "contract", label: "Intent Contracts", cap: "strictest wins · MCP tools" },
   { key: "safety", label: "Safety Kernel", cap: "vendor-managed" },
+  { key: "supplier", label: "Supplier contract", cap: "third-party scope" },
   { key: "blast", label: "Blast-Radius Governor", cap: "thresholds" },
   { key: "context", label: "Context", cap: "production · privileged" },
+  { key: "injection", label: "Untrusted input", cap: "read it → review" },
+  { key: "output", label: "Output check", cap: "vs sealed result" },
   { key: "envelope", label: "Task envelope", cap: "scoped authority" },
   { key: "standing", label: "Standing permission", cap: "everyday budgets" },
   { key: "default", label: "Default", cap: "allow & record" },
+  { key: "delegation", label: "Delegation chain", cap: "every agent checked" },
   { key: "breakglass", label: "Break-glass", cap: "never over the Kernel" },
 ];
 
@@ -65,7 +72,7 @@ export function LiveDecide({ active, autoplay = true }: { active: boolean; autop
   const scanPos = scanning ? Math.min(LAYERS.findIndex((l) => l.key === decidedLayer), Math.floor((visible - brainIdx) * 3)) : -1;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 400px", gap: 28, height: "100%", minHeight: 0 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 400px", gridTemplateRows: "minmax(0, 1fr)", gap: 28, height: "100%", minHeight: 0 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14, minHeight: 0 }}>
         <div className="seg-btns">
           {DEMO_IDS.map((d) => { const s = scenario(d); return <button key={d} type="button" className={`btn sm ${d === id ? "on" : ""}`} onClick={() => { setId(d); run(d); }}><img src={logoUrl(AGENT_LOGOS[s.agent] ?? "mcp")} alt="" width={14} height={14} style={{ borderRadius: 3, background: "#fff", padding: 1 }} />{s.title}</button>; })}
@@ -78,7 +85,7 @@ export function LiveDecide({ active, autoplay = true }: { active: boolean; autop
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
         <div className="label">brain.ts · decide() — in this order</div>
-        <div className="layers">
+        <div className="layers compact">
           {LAYERS.map((l, i) => (
             <div key={l.key} className={`layer ${litLayer === l.key ? "decided" : scanPos === i ? "lit" : ""}`}>
               <em>{i + 1}</em><span>{l.label}</span><span className="cap">{l.cap}</span>
@@ -162,8 +169,8 @@ export function DrafterDemo({ active }: { active: boolean }) {
 /* ---------------- ArchFlow: the pipeline, animated with real decisions ---------------- */
 type NodeId = string;
 const EDGES: [NodeId, NodeId][] = [
-  ["a-claude-code", "endpoint"], ["a-codex", "endpoint"], ["a-copilot", "network"], ["a-chatgpt", "network"], ["a-finance", "gateway"], ["a-unknown-mcp", "network"],
-  ["endpoint", "brain"], ["network", "brain"], ["gateway", "brain"],
+  ["a-claude-code", "endpoint"], ["a-codex", "endpoint"], ["a-copilot", "network"], ["a-chatgpt", "network"], ["a-finance", "gateway"], ["a-unknown-mcp", "network"], ["a-browser-hosted", "browser-hosted"],
+  ["endpoint", "brain"], ["network", "brain"], ["gateway", "brain"], ["browser-hosted", "brain"],
   ["brain", "d-github"], ["brain", "d-db"], ["brain", "d-aws"], ["brain", "d-extai"], ["brain", "d-unknown"], ["brain", "d-evidence"],
 ];
 const DEST_FOR: Record<string, string> = { "ep-read-env": "", "net-pii-approved": "d-extai", "gw-force-main": "d-github", "net-unknown-dest": "d-unknown", "gw-export-500k": "d-db", "gw-iam-admin": "d-aws", "ep-run-tests": "" };
@@ -226,19 +233,21 @@ export function ArchFlow({ active }: { active: boolean }) {
         <N id="a-chatgpt" title="ChatGPT · Claude" sub="in the browser" logo="openai" />
         <N id="a-finance" title="Internal agents" sub="finance · support" />
         <N id="a-unknown-mcp" title="Unknown MCP agent" sub="discovered" logo="mcp" cls="dashed" />
+        <N id="a-browser-hosted" title="Browser · hosted · supplier" sub="Claude in Chrome · AgentCore · partners" />
       </div>
       <div className="col">
         <div className="col-title">Enforcement planes</div>
         <N id="endpoint" title="Endpoint runtime" sub="file · process · secrets" cap="plane: ENDPOINT" />
         <N id="network" title="Network Extension" sub="uploads · AI destinations" cap="plane: NETWORK" />
         <N id="gateway" title="Gateways" sub="GitHub · SQL · AWS · SaaS · MCP" cap="plane: GATEWAY" />
+        <N id="browser-hosted" title="Browser + hosted" sub="managed extension · AgentCore gateway" cap="plane: BROWSER · HOSTED" />
       </div>
       <div data-n="brain" className={`brain ${lit.has("brain") ? "lit" : ""}`}>
         <div className="bstages">
           {[
             ["Request", "identity chain: user · device · agent · app · resource · destination"],
             ["Normalize + inspect", "one verb per mechanism · detectors classify content · encrypted = uninspectable"],
-            ["Decide", "9 ordered checks · strictest wins · records which layer decided"],
+            ["Decide", "14 ordered checks · strictest wins · records which layer decided"],
             ["Transform", "tokenize / redact in flight · originals sealed in the vault"],
             ["Enforce + evidence", "ALLOW · CONSTRAIN · REVIEW · BLOCK · hash-chained record"],
           ].map(([t, p], i) => (

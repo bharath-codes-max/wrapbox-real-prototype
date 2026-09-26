@@ -9,7 +9,7 @@ const c: TourCase = {
   persona: { userId: "u-daniel", name: "Daniel Kim", role: "Developer" },
   title: "How Wrapbox makes a decision",
   goal: "Daniel wants to see how Wrapbox decides what coding agents like Claude Code may do.",
-  outcome: "Daniel knows the nine checks and how they decide, why Claude Code's test run was allowed, what catches a leaked password, and the gaps Wrapbox openly admits.",
+  outcome: "Daniel knows the fourteen checks and how they decide, why Claude Code's test run was allowed, what catches a leaked password, and the gaps Wrapbox openly admits.",
   start: "control",
   poster: 3,
   steps: [
@@ -33,12 +33,12 @@ const c: TourCase = {
       // Clicking the tab also resets a tab remembered from an earlier visit.
       // engine/brain.ts decide() runs every check in order and keeps the strictest answer
       // (a later check never loosens it); only Break Glass can lift a hold, never a Safety
-      // Kernel no. The spotlight stays on the tab (its count is the nine checks).
+      // Kernel no. The spotlight stays on the tab (its count is the fourteen checks).
       target: { selector: ".tab", text: "How it decides" },
       action: "click",
-      title: "Nine checks, strictest answer wins",
-      body: "Every action goes through the same nine checks, in the same order, and the strictest answer wins. Only an emergency override can loosen it.",
-      say: "Every action goes through the same nine checks, in the same order, and the strictest answer wins. Only an emergency override can loosen that.",
+      title: "Fourteen checks, strictest answer wins",
+      body: "Every action goes through the same fourteen checks, in the same order, and the strictest answer wins. Only an emergency override can loosen it — never the kill switch or the Safety Kernel.",
+      say: "Every action goes through the same fourteen checks, in the same order, and the strictest answer wins. Only an emergency override can loosen that, and never the kill switch or the Safety Kernel.",
     },
     {
       target: { selector: ".card", text: "Latest action on your checkout code" },

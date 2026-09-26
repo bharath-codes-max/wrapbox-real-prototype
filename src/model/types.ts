@@ -5,7 +5,11 @@
 // ============================================================================
 
 export type Decision = "ALLOW" | "CONSTRAIN" | "REVIEW" | "BLOCK";
-export type Plane = "ENDPOINT" | "NETWORK" | "GATEWAY";
+// ENDPOINT / NETWORK / GATEWAY cover the laptop, its traffic and integrations;
+// BROWSER (managed browser extension) and HOSTED (hosted agent platforms such
+// as AWS Bedrock AgentCore Gateway) extend the same decisions to agents that
+// never run on a governed laptop.
+export type Plane = "ENDPOINT" | "NETWORK" | "GATEWAY" | "BROWSER" | "HOSTED";
 
 export type ActionVerb =
   | "READ"
@@ -102,7 +106,7 @@ export interface MatchedClause {
 
 /** Which layer of the Core Brain produced the final decision. */
 export interface DecidedBy {
-  layer: "contract" | "safety" | "blast" | "context" | "envelope" | "standing" | "uninspectable" | "breakglass" | "default";
+  layer: "killswitch" | "contract" | "safety" | "supplier" | "delegation" | "blast" | "context" | "injection" | "output" | "envelope" | "standing" | "uninspectable" | "breakglass" | "default";
   clauseId?: string; // set when layer === "contract"
   ruleId?: string; // set when layer === "safety"
   label: string; // human-readable, e.g. the clause text or rule name
@@ -172,6 +176,68 @@ export interface SimulationEvent {
   risk: "low" | "moderate" | "high" | "critical";
   evidence: EvidenceRecord;
   breakGlass?: boolean;
+  /** MCP tools/call as the gateway saw it (tool name + arguments). */
+  mcp?: McpCall;
+  /** Agent-to-agent delegation: who asked whom, starting from the originating agent. */
+  delegation?: DelegationHop[];
+  /** Supplier that operates the agent, when it isn't Veridian's own. */
+  operator?: string;
+  /** Untrusted content the agent read shortly before this action (injection-aware decisions). */
+  taint?: AgentTaint;
+  /** Claims in the agent's output checked against results sealed at the gateway. */
+  outputCheck?: OutputCheck;
+  /** Untrusted content this action itself read (sets a taint on the agent). */
+  untrustedRead?: { kind: UntrustedKind; label: string };
+  /** A result sealed at the gateway when this action ran (for later output checks). */
+  resultSeal?: ResultSeal;
+}
+
+export interface McpCall {
+  server: string;          // MCP server id (see MCP_SERVERS)
+  registered: boolean;     // registered with the gateway, or merely discovered
+  transport: "remote" | "stdio";
+  tool: string;            // params.name of tools/call
+  args: Record<string, string>; // params.arguments (string-valued in this prototype)
+}
+
+export interface DelegationHop {
+  agent: string;           // agent id
+  asked: string;           // plain words: what this agent asked the next one to do
+}
+
+export type UntrustedKind = "web" | "email" | "issue" | "document";
+
+export interface AgentTaint {
+  agent: string;
+  kind: UntrustedKind;
+  label: string;           // e.g. "GitHub issue #482 (external contributor)"
+  eventId: string;         // the read that set it
+  at: number;
+  expiresAt: number;
+}
+
+export interface ResultSeal {
+  source: string;          // e.g. "Stripe API · refund re_3QxR2"
+  field: string;           // e.g. "refund.amount"
+  value: string;           // e.g. "$18.00"
+  hash: string;            // seal over source + field + value
+}
+
+export interface OutputCheck {
+  status: "MATCH" | "MISMATCH" | "UNVERIFIABLE";
+  claims: { field: string; claimed: string; sealed?: string; source?: string; ok: boolean }[];
+}
+
+/** One stop of an agent everywhere (kill switch). */
+export interface AgentStop {
+  id: string;
+  agent: string;
+  by: string;              // who stopped it
+  reason: string;
+  at: number;
+  active: boolean;
+  resumedBy?: string;
+  resumedAt?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -189,6 +255,8 @@ export interface ContractClause {
   transform?: TransformKind;
   requiredCapabilities: string[]; // capability registry ids
   failClosed: boolean;
+  /** Per-tool MCP control: which server/tool, and argument patterns (regex). */
+  mcp?: { tools?: string[]; registered?: boolean; args?: Record<string, string> };
 }
 
 export interface IntentContract {

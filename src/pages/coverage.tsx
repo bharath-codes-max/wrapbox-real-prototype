@@ -10,7 +10,7 @@ import { CAPABILITIES, DATA_TYPES } from "../model/registries";
 import { buildCoverageMatrix, type CoverageRow } from "../engine/coverage";
 import type { CoverageStatus } from "../model/types";
 import type { ReactNode } from "react";
-import { ShieldCheck, ShieldAlert, Eye, Clock, Lock, ArrowRight, X, Laptop, Network, DoorOpen, Cpu, Fingerprint } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Eye, Clock, Lock, ArrowRight, X, Laptop, Network, DoorOpen, Cpu, Fingerprint, Globe, Cloud } from "lucide-react";
 
 const STATUS_META: Record<CoverageStatus, { icon: ReactNode; tone?: string; note: string }> = {
   ENFORCED: { icon: <ShieldCheck size={17} />, tone: "good", note: "can see it and stop it" },
@@ -36,6 +36,8 @@ const PLANE_ICON: Record<string, ReactNode> = {
   ENDPOINT: <Laptop size={15} />,
   NETWORK: <Network size={15} />,
   GATEWAY: <DoorOpen size={15} />,
+  BROWSER: <Globe size={15} />,
+  HOSTED: <Cloud size={15} />,
   BRAIN: <Cpu size={15} />,
 };
 const CAP_LOGO: Record<string, string> = {
@@ -43,6 +45,10 @@ const CAP_LOGO: Record<string, string> = {
   "cap-gw-cloud": INTEGRATION_LOGOS.AWS,
   "cap-gw-sql": INTEGRATION_LOGOS.PostgreSQL,
   "cap-gw-mcp": INTEGRATION_LOGOS.MCP,
+  "cap-ep-mcp-stdio": INTEGRATION_LOGOS.MCP,
+  "cap-br-extension": "chrome",
+  "cap-hosted-agentcore": INTEGRATION_LOGOS.AWS,
+  "cap-hosted-google": "google",
 };
 
 type Tab = "rules" | "safety" | "gaps" | "inactive" | "skills" | "data";

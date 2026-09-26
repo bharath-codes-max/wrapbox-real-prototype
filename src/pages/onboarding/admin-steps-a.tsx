@@ -83,9 +83,12 @@ const KIND_META: Record<AgentKind, { label: string; sub: string }> = {
   chat: { label: "AI chat & assistants", sub: "Chat apps people paste work into" },
   copilot: { label: "Enterprise copilots", sub: "Copilots inside your productivity suite" },
   internal: { label: "Your own agents", sub: "Agents your teams built and run" },
+  browser: { label: "Browser agents", sub: "Agents that click, fill and submit in the browser" },
+  hosted: { label: "Hosted agents", sub: "Agents running on AWS AgentCore and similar platforms" },
+  supplier: { label: "Supplier agents", sub: "Agents your suppliers run inside your systems" },
   unknown: { label: "Unregistered & MCP", sub: "Agents and MCP servers nobody registered" },
 };
-const KIND_ORDER: AgentKind[] = ["coding", "chat", "copilot", "internal", "unknown"];
+const KIND_ORDER: AgentKind[] = ["coding", "chat", "copilot", "internal", "browser", "hosted", "supplier", "unknown"];
 const KINDS_PRESENT: AgentKind[] = KIND_ORDER.filter((k) => AGENTS.some((a) => a.kind === k));
 const sortKinds = (ks: AgentKind[]) => KIND_ORDER.filter((k) => ks.includes(k));
 

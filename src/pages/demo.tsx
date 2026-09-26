@@ -13,7 +13,7 @@ interface DemoStep {
 const STEPS: DemoStep[] = [
   {
     title: "Welcome to Wrapbox",
-    text: "One brain, three enforcement planes. Every number on this Control Room derives from live event state — nothing is a static mock. This is Veridian Systems, three days into a pilot.",
+    text: "One brain, five enforcement planes. Every number on this Control Room derives from live event state — nothing is a static mock. This is Veridian Systems, three days into a pilot.",
     route: "control",
   },
   {
@@ -84,7 +84,7 @@ const STEPS: DemoStep[] = [
   },
   {
     title: "Back to the Control Room",
-    text: "Every event this demo generated is now reflected here — blocked secrets, transformed transfers, the pending or resumed deploy. One brain. Three planes. Every decision proven.",
+    text: "Every event this demo generated is now reflected here — blocked secrets, transformed transfers, the pending or resumed deploy. One brain. Five planes. Every decision proven.",
     route: "control",
   },
 ];

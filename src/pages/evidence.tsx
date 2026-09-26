@@ -6,8 +6,21 @@ import { PageHead, SectionHead, MetricBar, DecisionChip, Chip, SimNote, names, E
 import { describe } from "../ui/describe";
 import { EventDetail } from "../ui/event-detail";
 import type { SimulationEvent } from "../model/types";
-import { userById, AGENTS, USERS } from "../model/org";
-import { FileClock, LayoutGrid, GitBranch } from "lucide-react";
+import { userById, AGENTS, USERS, SUPPLIERS } from "../model/org";
+import { planeLabel } from "../model/registries";
+import { toOcsfBatch, toOtlpLogs, OCSF_VERSION } from "../engine/export";
+import { FileClock, LayoutGrid, GitBranch, Download } from "lucide-react";
+
+/** Save decision records as a file — the same records the ledger shows. */
+function download(name: string, data: unknown) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+const stamp = () => new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");
 
 // The human's answer to a REVIEW, kept separate from Wrapbox's own decision.
 const REVIEW_OUTCOME: Record<string, [string, string]> = {
@@ -39,12 +52,15 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
   const sorted = useMemo(() => [...s.events].sort((a, b) => b.timestamp - a.timestamp), [s.events]);
   const f = useCardFilters(sorted, {
     search: (e) => [e.id, describe(e), e.action, e.actionRaw, e.resource, e.decision, ...e.dataClasses,
-      ...e.matchedContracts.map((m) => m.clauseText), ...e.safetyRules.map((r) => r.name)].join(" "),
+      ...e.matchedContracts.map((m) => m.clauseText), ...e.safetyRules.map((r) => r.name),
+      e.mcp ? `${e.mcp.tool} mcp` : "", e.decidedBy?.label ?? ""].join(" "),
     filters: [
       { id: "decision", label: "Decision", get: (e) => e.decision, options: ["ALLOW", "CONSTRAIN", "REVIEW", "BLOCK"].map((v) => ({ value: v, label: v })) },
       { id: "agent", label: "Agent", get: (e) => e.agent, format: (v) => AGENTS.find((a) => a.id === v)?.name ?? v },
       { id: "user", label: "Person", get: (e) => e.user, format: (v) => USERS.find((u) => u.id === v)?.name ?? v },
       { id: "risk", label: "Risk", get: (e) => e.risk, options: ["low", "moderate", "high", "critical"].map((v) => ({ value: v, label: v })) },
+      { id: "plane", label: "Plane", get: (e) => e.plane, format: (v) => planeLabel(v as SimulationEvent["plane"]) },
+      { id: "operator", label: "Operated by", get: (e) => e.operator ?? "veridian", format: (v) => v === "veridian" ? "Veridian's own agents" : SUPPLIERS.find((x) => x.id === v)?.name ?? v },
       { id: "review", label: "Human review", get: (e) => e.reviewState?.status ?? "none",
         options: [...Object.entries(REVIEW_OUTCOME).map(([v, [, label]]) => ({ value: v, label })), { value: "none", label: "No review" }] },
     ],
@@ -97,9 +113,15 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
           title="Evidence ledger"
           sub={`${list.length} of ${s.events.length} events, newest first`}
           right={
+            <div className="row" style={{ gap: 10 }}>
+            <div className="row" style={{ gap: 6 }} aria-label="Export the records shown">
+              <button className="btn btn-sm" disabled={list.length === 0} title={`OCSF ${OCSF_VERSION} — File System, Process, HTTP and API Activity classes`} onClick={() => download(`wrapbox-decisions-${stamp()}.ocsf.json`, toOcsfBatch(list))}><Download size={13} /> OCSF</button>
+              <button className="btn btn-sm" disabled={list.length === 0} title="OpenTelemetry OTLP/JSON logs — POST to a collector's /v1/logs" onClick={() => download(`wrapbox-decisions-${stamp()}.otlp.json`, toOtlpLogs(list))}><Download size={13} /> OTLP</button>
+            </div>
             <div className="row" style={{ gap: 0 }}>
               <button className={`btn btn-sm ${view === "cards" ? "btn-primary" : ""}`} style={{ borderRadius: "8px 0 0 8px" }} onClick={() => setView("cards")}><LayoutGrid size={13} /> Cards</button>
               <button className={`btn btn-sm ${view === "graph" ? "btn-primary" : ""}`} style={{ borderRadius: "0 8px 8px 0" }} onClick={() => setView("graph")}><GitBranch size={13} /> Causal graph</button>
+            </div>
             </div>
           }
         />
