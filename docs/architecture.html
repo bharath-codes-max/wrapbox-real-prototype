@@ -305,7 +305,7 @@
         <button class="box g" id="store" data-info="store"><b>One store</b><small>useSyncExternalStore · localStorage per workspace (demo · fresh)</small>
           <div class="chips"><span>events</span><span>contracts</span><span>tasks</span><span>tokens</span><span>standing</span><span>breakGlass</span><span>autopilot</span><span>kernel</span><span>onboarding</span></div>
           <span class="cap">state/store.ts · simulate() · resolveReview() · startTask() · setContractStatus()</span></button>
-        <button class="box g" id="screens" data-info="screens"><b>17 screens read the one store</b><small>no screen keeps its own copy of events, rules or reviews</small>
+        <button class="box g" id="screens" data-info="screens"><b>20 screens read the one store</b><small>no screen keeps its own copy of events, rules or reviews</small>
           <div class="chips"><span>Control Room</span><span>Live Actions</span><span>Agents</span><span>Tasks</span><span>Intent Studio</span><span>Safety Kernel</span><span>Policy Simulator</span><span>Review Center</span><span>Standing</span><span>Break Glass</span><span>Coverage</span><span>Trust Graph</span><span>Evidence</span><span>Simulation Lab</span><span>Integrations</span><span>Token Vault</span><span>Core Brain</span><span>Settings</span><span>Get started</span><span>Onboarding</span></div>
           <span class="cap">pages/*.tsx · ui/kit.tsx · ui/agent-terminal.tsx · ui/describe.ts</span></button>
       </div>
@@ -355,7 +355,7 @@
 │  └─ scenarios.ts    SCENARIOS · TASK_JOBS
 ├─ <b>state/store.ts</b>  <i>one store</i> · seeded through the real engine
 ├─ <b>ui/</b>            kit · event-stream · agent-terminal · setup
-└─ <b>pages/</b>         17 screens, all derived from the store</pre>
+└─ <b>pages/</b>         20 screens, all derived from the store</pre>
     </div>
   </div>
 </div>
@@ -424,7 +424,7 @@
     "review": { t: "g", h: "Review Center", f: "state/store.ts · resolveReview() · approverFor()", p: "REVIEW decisions arrive as bundles with blast radius, expiry and a safer alternative. Approver is routed by team; the requester can never approve their own action.", real: "yes", d: { "Actions": "approve · approve_scoped · constrain · deny", "Tasks": "advanceTask() resumes automatically" } },
     "security": { t: "g", h: "Break Glass + Kernel updates", f: "store.startBreakGlass() · kernel.ts installRelease() / enforceRule()", p: "A scoped, time-boxed override for one resource in one environment, loudly recorded and notified. Kernel releases install in observe mode and switch to enforce after 7 days or by hand.", real: "yes", d: { "Never yields": "the Safety Kernel" } },
     "store": { t: "g", h: "One store", f: "state/store.ts · useSyncExternalStore · localStorage (wrapbox-real-prototype-v1 / -fresh-v1)", p: "Single source of truth. The demo workspace is seeded through the real engine (never hand-written decisions); the fresh workspace starts at day one. Every screen derives from it; no screen keeps its own copy.", real: "yes", d: { "Actions": "simulate · resolveReview · startTask/advanceTask · upsertContract · setContractStatus · installKernelUpdate · startBreakGlass · restoreToken · acceptAutopilot" } },
-    "screens": { t: "g", h: "17 screens", f: "src/pages/*.tsx · src/ui/*", p: "Every page reads the store through useAppState(); counts, decisions and evidence are computed, never typed in. Shared UI: EntityCard grids, MetricBar, PageTabs, FilterBar, the agent terminal.", real: "yes", d: {} },
+    "screens": { t: "g", h: "20 screens", f: "src/pages/*.tsx · src/ui/*", p: "Every page reads the store through useAppState(); counts, decisions and evidence are computed, never typed in. Shared UI: EntityCard grids, MetricBar, PageTabs, FilterBar, the agent terminal.", real: "yes", d: {} },
     "contracts": { t: "g", h: "Intent Contracts", f: "model/contracts.ts · SEED_CONTRACTS · model/types.ts · IntentContract / ContractClause", p: "Five seed contracts (External AI usage, Customer data protection, Engineering guardrails, HR & privileged, PHI draft). Each clause lists requiredCapabilities, so coverage is claimed truthfully.", real: "yes", d: {} },
     "registry": { t: "g", h: "Registries", f: "model/registries.ts", p: "Destinations (9 classes), data types (16), detectors (12), capabilities (17 across ENDPOINT / NETWORK / GATEWAY / BRAIN), transforms (10), action normalization (9).", real: "yes", d: {} },
     "kernel": { t: "g", h: "Safety Kernel pack", f: "engine/kernel.ts · KERNEL_RULES · KERNEL_RELEASES · kernelHits()", p: "Wrapbox-managed, versioned protections that company rules cannot switch off: credential exfiltration, destructive production mutation, dangerous permission change, mass export, unknown transfers, history rewrite.", real: "yes (releases bundled in-app)", d: { "Lifecycle": "observe 7 days → enforce" } },
