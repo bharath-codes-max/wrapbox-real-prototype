@@ -273,12 +273,12 @@
           <button class="stage" id="s-inspect" data-info="inspect"><h3><em>2</em>Normalize + inspect</h3><ul><li>ACTION_NORMALIZATION (9) → 10 verbs</li><li>buildInspection() · DETECTORS (12)</li><li>encrypted → UNINSPECTABLE</li></ul><span class="cap">registries.ts · simulate.ts</span></button>
           <button class="stage" id="s-decide" data-info="decide"><h3><em>3</em>Decide — in this order</h3><ul>
             <li data-layer="uninspectable">1 fail-closed (uninspectable + protected clause)</li>
-            <li data-layer="contract">2 Intent Contracts · checkRule() · strictest wins</li>
+            <li data-layer="contract">2 Intent Contracts · clauseMatches() · strictest wins</li>
             <li data-layer="safety">3 Safety Kernel · kernelHits()</li>
             <li data-layer="blast">4 Blast-Radius Governor · BLAST_LIMITS</li>
             <li data-layer="context">5 Context · production / privileged</li>
-            <li data-layer="envelope">6 Task envelope</li>
-            <li data-layer="standing">7 Standing permission</li>
+            <li data-layer="envelope">6 Task envelope · startTask()</li>
+            <li data-layer="standing">7 Standing permission · outside a task</li>
             <li data-layer="default">8 Default — allow &amp; record</li>
             <li data-layer="breakglass">9 Break-glass · scoped · never over the Kernel</li>
           </ul><span class="cap">engine/brain.ts · decide() → BrainResult</span></button>
@@ -378,7 +378,7 @@
 
   // ---------- wires ----------
   const EDGES = [
-    ["claude-code","endpoint"],["codex","endpoint"],["copilot","network"],["chat","network"],["finance","gateway"],["support","gateway"],["unknown","network"],
+    ["claude-code","endpoint"],["claude-code","gateway"],["codex","endpoint"],["copilot","network"],["chat","network"],["finance","gateway"],["support","gateway"],["unknown","network"],
     ["endpoint","s-request"],["network","s-request"],["gateway","s-request"],
     ["s-enforce","github"],["s-enforce","postgres"],["s-enforce","aws"],["s-enforce","saas"],["s-enforce","extai"],["s-enforce","unknown-dest"],
     ["intent","s-decide","down"],["review","s-decide","down"],["security","s-decide","down"],
@@ -417,10 +417,10 @@
     "gateway": { t: "g", h: "Gateways", f: "Scenario.plane = GATEWAY · cap-gw-github / sql / cloud / saas / mcp", p: "Agents reach external systems through gateways: GitHub App, SQL proxy with row estimates, AWS broker role, SaaS key swap, MCP gateway.", real: "sim", d: { "GitHub · SQL · SaaS": "ENFORCED", "AWS": "DEGRADED", "MCP": "UNDERSTOOD ONLY" } },
     "request": { t: "g", h: "1 · Request", f: "engine/simulate.ts · runScenario() → mkEvt()", p: "Builds the ActionRequest with the full identity chain — user, device (deviceOfUser), agent, application, resource, destination — and hands it to the engine. Every run is a real recorded event.", real: "yes", d: { "Output": "SimulationEvent (model/types.ts)" } },
     "inspect": { t: "g", h: "2 · Normalize + inspect", f: "registries.ts · ACTION_NORMALIZATION · simulate.ts · buildInspection()", p: "Different mechanisms become one verb (rm, os.remove, fs.unlink → DELETE). Content is parsed and classified into typed findings by the detector registry; encrypted archives are marked UNINSPECTABLE.", real: "yes (detector results are registry-shaped fixtures)", d: { "Verbs": "10 (ActionVerb)", "Detectors": "12 · DATA_TYPES 16" } },
-    "decide": { t: "g", h: "3 · Decide", f: "engine/brain.ts · decide(req, contracts) → BrainResult", p: "One matcher for every surface: the rule tester, the YAML view and runtime all call the same checkRule(). Checks run in the order shown; the strictest answer wins and decidedBy records which layer produced it.", real: "yes", d: { "Precedence": "explicit BLOCK > safety > constrain > review", "Break-glass": "lifts REVIEW/BLOCK from company rules only — never a Safety Kernel hit" } },
+    "decide": { t: "g", h: "3 · Decide", f: "engine/brain.ts · decide(req, contracts) → BrainResult", p: "One matcher for every surface: the Policy Simulator (shadowEvaluate), task steps and live runs all go through runScenario() → decide(), which matches contract clauses with clauseMatches(). Checks run in the order shown; the strictest answer wins and decidedBy records which layer produced it.", real: "yes", d: { "Inputs": "ActionRequest + contracts · kernel · TaskEnvelope (task steps, from startTask) · StandingPermission[] (actions outside a task) · break-glass scope", "Precedence": "explicit BLOCK > safety > constrain > review", "Break-glass": "lifts REVIEW/BLOCK from company rules only — never a Safety Kernel hit" } },
     "transform": { t: "g", h: "4 · Transform", f: "engine/simulate.ts · TRANSFORMS · store.restoreToken()", p: "A CONSTRAIN decision rewrites the payload: emails and phones become reversible tokens, secrets are redacted, exports limited. Originals are sealed as VaultToken; restore is scoped and logged (RestoreRecord).", real: "yes", d: { "In the app": "Token Vault" } },
     "enforce": { t: "g", h: "5 · Enforce + evidence", f: "engine/simulate.ts · simpleHash() · pipelineFor()", p: "ALLOW proceeds, CONSTRAIN proceeds with the safer payload, REVIEW parks the step (ReviewState), BLOCK stops it. Each event is appended to a hash chain: hash = simpleHash(prevHash + id + decision + ts).", real: "yes (FNV-style hash, illustrative — not a cryptographic signature)", d: { "In the app": "Evidence · Live Actions" } },
-    "intent": { t: "g", h: "Intent Studio", f: "engine/drafter.ts · draftClauses() · store.upsertContract() · setContractStatus()", p: "Authors describe rules in plain English; the drafter compiles clauses into one normalized IntentContract shared by Build, YAML, the tester and runtime. Activation is refused when a needed capability is missing (canActivate).", real: "yes", d: { "Guarantee": "one normalized Rule, one matcher" } },
+    "intent": { t: "g", h: "Intent Studio", f: "engine/drafter.ts · draftClauses() · store.upsertContract() · setContractStatus()", p: "Authors describe rules in plain English; the drafter compiles clauses into one normalized IntentContract shared by the Studio, the Policy Simulator and runtime. Activation is refused when a needed capability is missing (canActivate).", real: "yes", d: { "Guarantee": "one normalized Rule, one matcher" } },
     "review": { t: "g", h: "Review Center", f: "state/store.ts · resolveReview() · approverFor()", p: "REVIEW decisions arrive as bundles with blast radius, expiry and a safer alternative. Approver is routed by team; the requester can never approve their own action.", real: "yes", d: { "Actions": "approve · approve_scoped · constrain · deny", "Tasks": "advanceTask() resumes automatically" } },
     "security": { t: "g", h: "Break Glass + Kernel updates", f: "store.startBreakGlass() · kernel.ts installRelease() / enforceRule()", p: "A scoped, time-boxed override for one resource in one environment, loudly recorded and notified. Kernel releases install in observe mode and switch to enforce after 7 days or by hand.", real: "yes", d: { "Never yields": "the Safety Kernel" } },
     "store": { t: "g", h: "One store", f: "state/store.ts · useSyncExternalStore · localStorage (wrapbox-real-prototype-v1 / -fresh-v1)", p: "Single source of truth. The demo workspace is seeded through the real engine (never hand-written decisions); the fresh workspace starts at day one. Every screen derives from it; no screen keeps its own copy.", real: "yes", d: { "Actions": "simulate · resolveReview · startTask/advanceTask · upsertContract · setContractStatus · installKernelUpdate · startBreakGlass · restoreToken · acceptAutopilot" } },
@@ -461,13 +461,14 @@
     { id: "export", name: "Internal Finance Agent exports 500,000 customer rows", agent: "finance", tab: "finance", plane: "gateway", person: "Alex Morgan · Finance-Laptop-07", tool: "SQLMCP", args: "COPY (SELECT * FROM customers) TO 'filedrop.example.org'", verb: "DATA_EXPORT", findings: "PII · 500,000 rows · GENERIC_EXTERNAL", layer: "safety", why: "Safety Kernel — Mass data export", decision: "BLOCK", dest: "postgres" },
     { id: "iam", name: "Claude Code attaches AdministratorAccess in AWS", agent: "claude-code", tab: "claude", plane: "gateway", person: "Daniel Kim · Daniel-MBP", tool: "AWSAPI", args: "iam:AttachRolePolicy AdministratorAccess → role/ci-runner", verb: "PERMISSION_CHANGE", findings: "privileged · production · full admin authority", layer: "safety", why: "Safety Kernel — Dangerous permission change", decision: "BLOCK", dest: "aws" },
     { id: "tests", name: "Claude Code runs npm test", agent: "claude-code", tab: "claude", plane: "endpoint", person: "Daniel Kim · Daniel-MBP", tool: "Bash", args: "npm test", verb: "EXECUTE", findings: "none — no sensitive data", layer: "default", why: "No rule restricts this action", decision: "ALLOW", dest: null },
+    { id: "refund", name: "Support Agent refunds $1,240 in Stripe (task step)", agent: "support", tab: "support", plane: "gateway", person: "Jordan Lee · Jordan-MBP", tool: "StripeAPI", args: "refund $1,240 on order 88142", verb: "WRITE", findings: "spend $1,240 · budget $20 · task job-sup-refund", layer: "blast", why: "Blast-Radius Governor — Money / spend exceeds budget: $1,240 > $20", decision: "REVIEW", review: "parked · approver Sam Rivera (Finance Controller) · Review Center", dest: "saas" },
   ];
   const sel = $("scenario"), speedSel = $("speed"), outcome = $("outcome"), tlines = $("tlines"), tpending = $("tpending");
   S.forEach((s) => { const o = document.createElement("option"); o.value = s.id; o.textContent = s.name; sel.appendChild(o); });
   try { const v = localStorage.getItem("wb-arch-scenario"); if (v && S.some((s) => s.id === v)) sel.value = v; } catch {}
   sel.addEventListener("change", () => { try { localStorage.setItem("wb-arch-scenario", sel.value); } catch {} prime(); });
-  const AGENT_COLOR = { claude: "#ff8a4c", codex: "#10a37f", cursor: "#8b8bff", chatgpt: "#10a37f", finance: "#2fd1c0", mcp: "#ff4d4f" };
-  const AGENT_NAME = { "claude-code": "Claude Code", chat: "ChatGPT", unknown: "Unknown MCP agent", finance: "Internal Finance Agent", codex: "Codex" };
+  const AGENT_COLOR = { claude: "#ff8a4c", codex: "#10a37f", cursor: "#8b8bff", chatgpt: "#10a37f", finance: "#2fd1c0", mcp: "#ff4d4f", support: "#f5a524" };
+  const AGENT_NAME = { "claude-code": "Claude Code", chat: "ChatGPT", unknown: "Unknown MCP agent", finance: "Internal Finance Agent", codex: "Codex", support: "Support Agent" };
   function prime() {
     const s = S.find((x) => x.id === sel.value);
     const base = [["claude", "claude"], ["cursor", "cursor"], ["codex", "codex"]];
