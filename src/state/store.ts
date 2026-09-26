@@ -557,6 +557,9 @@ export function resolveReview(
   scope?: string
 ) {
   const target = state.events.find((e) => e.id === eventId);
+  // Separation of duties: the requester can never resolve their own review.
+  // Enforced here, not only by approverFor() routing, so no caller can bypass it.
+  if (target && reviewer === target.user) return;
   if (target?.taskId && resolution === "approved_scoped") {
     // For a task step, "scoped" has a precise meaning: this task may use this
     // resource in this environment until it finishes.
