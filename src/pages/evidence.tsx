@@ -64,18 +64,18 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
       <PageHead
         eyebrow="Visibility"
         title="Evidence Explorer"
-        sub="Every consequential decision leaves signed, chained evidence: who, which agent, which tool, what action, what data, which policy, what decision, what actually happened."
+        sub="One complete record per decision: user, agent, tool, action, resource, environment, data, destination, policy, decision reason, approver and outcome — the whole story of the action in one place."
         right={<SimNote>Hash chain simulated — evidence model real</SimNote>}
       />
 
-      {/* Ledger integrity hero — the tamper-evident chain, with the key counts woven in */}
+      {/* Ledger hero — the complete decision record first; tamper-evident chaining is the integrity layer beneath it */}
       <div className="card overview-card">
         <div className="spread" style={{ alignItems: "flex-start", gap: 20 }}>
           <div className="row" style={{ gap: 12, minWidth: 0 }}>
             <span className="stat-icon" style={{ color: "var(--accent)", background: "var(--accent-soft)", flexShrink: 0 }}><FileClock size={17} /></span>
             <div style={{ minWidth: 0 }}>
-              <div className="section-title">Tamper-evident ledger</div>
-              <div className="section-sub">Every record is hash-linked to the one before it — altering any entry breaks the chain and shows up on inspection.</div>
+              <div className="section-title">Complete decision records</div>
+              <div className="section-sub">Every record captures the user, agent, tool, action, resource, environment, data, destination, policy, decision reason, approver and outcome. Integrity: each record is hash-linked to the one before it, so alterations show up on inspection.</div>
             </div>
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -85,7 +85,7 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
         </div>
         <div className="overview-sep" />
         <MetricBar band items={[
-          { label: "Chained events", value: tally.total, note: "sealed & hash-linked" },
+          { label: "Decision records", value: tally.total, note: "complete & hash-linked" },
           { label: "Blocked", value: tally.blocked, tone: tally.blocked > 0 ? "bad" : "good", note: "stopped before execution" },
           { label: "Reviewed", value: tally.reviewed, tone: tally.reviewed > 0 ? "warn" : "good", note: "escalated to a human" },
           { label: "Break-glass", value: tally.breakGlass, tone: tally.breakGlass > 0 ? "bad" : "good", note: "emergency overrides logged" },

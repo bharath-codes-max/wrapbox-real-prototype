@@ -17,7 +17,7 @@ import { EventDetail } from "../ui/event-detail";
 import { pipelineFor } from "../engine/simulate";
 import { scenarioById } from "../engine/scenarios";
 import type { SimulationEvent } from "../model/types";
-import { Plug, Laptop, Fingerprint, Shuffle, ArrowRight, TerminalSquare } from "lucide-react";
+import { Plug, Laptop, Fingerprint, Shuffle, ArrowRight, TerminalSquare, Share2 } from "lucide-react";
 
 interface Connection {
   name: string; logo: string; kind: string; caps: string[]; detail: string;
@@ -49,6 +49,21 @@ const CONNECTIONS: Connection[] = [
   { name: "MCP registry", logo: "mcp", kind: "Gateway connector", caps: ["cap-gw-mcp"],
     detail: `${discovered} unknown MCP server${discovered === 1 ? "" : "s"} discovered, not registered`,
     uses: (e) => !!AGENTS.find((a) => a.id === e.agent)?.discovered },
+];
+
+/** Ecosystem integrations — simulated representations only (no live APIs in the
+ *  prototype). Each card says what the production integration would do; none of
+ *  them participates in enforcement status or capability truth. */
+const ECOSYSTEM: { name: string; logos?: string[]; icon?: "siem"; role: string; would: string; feeds: string }[] = [
+  { name: "Okta · Microsoft Entra", logos: ["okta", "microsoft"], role: "Identity & approver routing",
+    would: "Users, devices and roles resolve from the IdP; approver routing (e.g. Finance Controller) follows directory group membership.",
+    feeds: "Identity chain · Review Center routing" },
+  { name: "Slack · Microsoft Teams", logos: ["slack", "teams"], role: "Approval delivery",
+    would: "REVIEW requests arrive as actionable messages; an approve or deny writes back to the Review Center with the responder's identity.",
+    feeds: "Review Center · Tasks (park / resume)" },
+  { name: "SIEM export — OCSF / OpenTelemetry", icon: "siem", role: "Evidence export (e.g. Splunk)",
+    would: "Every decision record exports as OCSF findings / OTel log records, so existing SIEM detections and dashboards see agent activity.",
+    feeds: "Evidence ledger · Live Actions" },
 ];
 
 const RANK: Record<string, number> = { ENFORCED: 0, DEGRADED: 1, UNDERSTOOD_ONLY: 2, UNINSPECTABLE: 3 };
@@ -257,6 +272,30 @@ export function IntegrationsPage({ nav }: { nav: (r: string) => void }) {
                             value: <><StatusChip s={cap.status} /> <span className="faint">{cap.note}</span></>,
                           })),
                           { label: "Recorded actions", value: <span className="mono tnum" style={{ fontWeight: 700 }}>{used(c)}</span> },
+                        ]}
+                      />
+                    ))}
+                  </CardGrid>
+
+                  {/* Simulated ecosystem cards — clearly labelled; they never count toward enforcement. */}
+                  <SectionHead
+                    title="Ecosystem integrations"
+                    sub="How Wrapbox would plug into the identity, chat and SIEM tooling you already run. Simulated representations — nothing here is a live integration."
+                    right={<SimNote>Simulated — no live APIs in this prototype</SimNote>}
+                  />
+                  <CardGrid>
+                    {ECOSYSTEM.map((x) => (
+                      <EntityCard
+                        key={x.name}
+                        icon={x.icon === "siem"
+                          ? <Share2 size={20} />
+                          : <span className="row" style={{ gap: 4 }}>{x.logos!.map((l) => <img key={l} src={logoUrl(l)} alt="" className="logo-img" style={{ width: 20, height: 20, objectFit: "contain" }} />)}</span>}
+                        eyebrow={x.role}
+                        title={x.name}
+                        status={<Chip tone="neutral">Simulated</Chip>}
+                        fields={[
+                          { label: "Would provide", value: <span className="dim">{x.would}</span> },
+                          { label: "Feeds", value: <span className="faint">{x.feeds}</span> },
                         ]}
                       />
                     ))}

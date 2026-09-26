@@ -94,7 +94,7 @@ export function TrustGraph({ nav }: { nav: (r: string) => void }) {
       <PageHead
         eyebrow="Visibility"
         title="Trust Graph"
-        sub="Who talks to what: users → agents → tools → resources and destinations, built from observed events. Red lines carry high-risk activity; red dots are strangers (unregistered agents or unknown addresses)."
+        sub="Who talks to what: users → agents → tools → resources and destinations, built from observed events and joined with the identity and device inventory you already have. Red lines carry high-risk activity; red dots are strangers (unregistered agents or unknown addresses)."
         right={<SimNote />}
       />
 

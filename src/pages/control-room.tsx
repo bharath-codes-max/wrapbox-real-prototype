@@ -260,7 +260,7 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
               <div style={{ display: "flex", gap: 28, alignItems: "flex-start", flexWrap: "wrap" }}>
                 <div>
                   <div className="tnum" style={{ fontSize: 40, fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1 }}><CountUp value={s.events.length} /></div>
-                  <div className="small faint" style={{ marginTop: 5 }}>chained records</div>
+                  <div className="small faint" style={{ marginTop: 5 }}>decision records</div>
                 </div>
                 <div style={{ flex: 1, minWidth: 220 }}>
                   <div className="eyebrow" style={{ display: "flex", alignItems: "center", gap: 6 }}><Link2 size={12} /> Latest seal</div>
@@ -280,7 +280,7 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
               )}
             </div>
             <span className="ft-title">Evidence <ArrowRight size={18} /></span>
-            <div className="ft-sub">{m.highRisk} high-risk · {m.secretsProtected} secrets protected · every record hash-linked to the one before it (chain simulated)</div>
+            <div className="ft-sub">{m.highRisk} high-risk · {m.secretsProtected} secrets protected · one complete record per decision — user, agent, action, data, policy, approver, outcome · hash-linked (chain simulated)</div>
           </button>
 
           {/* Enforcement planes — one Core Brain, three arms; skills enforced per plane. */}

@@ -403,7 +403,7 @@ export function TasksPage({ nav }: { nav: (r: string) => void }) {
       <PageHead
         eyebrow="Activity"
         title="Tasks"
-        sub="Each agent task runs inside a short-lived Task Envelope: allowed scope, forbidden scope, time window and file budget. Unsafe steps park; safe work continues."
+        sub="Every task gets a short-lived, least-privilege scope: allowed resources, forbidden paths, a time window and a file budget — authority that expires when the task ends. If a step needs a human, it parks while safe work continues."
         right={<SimNote>Task execution simulated through the real decision engine</SimNote>}
       />
 

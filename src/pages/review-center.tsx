@@ -1,5 +1,6 @@
-// Review Center — only exceptional items; impact, blast radius, safer
-// alternative, expiry, requester separation, transaction bundling.
+// Review Center — only exceptional items; action, environment, data and
+// destination, blast radius, requester vs. approver (separation of duties),
+// expiry and a safer alternative. Related steps also arrive bundled.
 import { useState } from "react";
 import { useAppState, resolveReview, approverFor } from "../state/store";
 import { PageHead, SectionHead, MetricBar, DecisionChip, Chip, RiskChip, SimNote, names, timeAgo, StatusChip, Avatar, AgentMark, DestMark, PageTabs, usePaged, Pager, EntityCard, CardGrid, FilterBar, useCardFilters } from "../ui/kit";
@@ -7,7 +8,7 @@ import { describe } from "../ui/describe";
 import { userById } from "../model/org";
 import { EventDetail } from "../ui/event-detail";
 import type { SimulationEvent } from "../model/types";
-import { Hand, Layers, CheckCircle2, XCircle, ArrowRight } from "lucide-react";
+import { Hand, Layers, CheckCircle2, XCircle, ArrowRight, UserCheck } from "lucide-react";
 
 export function ReviewCenter({ nav }: { nav: (r: string) => void }) {
   const s = useAppState();
@@ -45,7 +46,7 @@ export function ReviewCenter({ nav }: { nav: (r: string) => void }) {
       <PageHead
         eyebrow="Authorization"
         title="Review Center"
-        sub="Humans review exceptions, not every action. Related actions arrive as one coherent bundle with purpose, blast radius, risk, expiry and a safer alternative. Requester and approver are separated."
+        sub="Humans review exceptions, not every action. Each pending request shows the action, environment, data and destination, blast radius, requester, required approver, expiry and a safer alternative — and the requester can never approve their own action."
         right={<SimNote>Each request goes to the right approver — never the requester</SimNote>}
       />
 
@@ -55,7 +56,7 @@ export function ReviewCenter({ nav }: { nav: (r: string) => void }) {
         { id: "pending", label: "Awaiting your decision", count: pending.length, content: (<>
           <SectionHead
             title="Awaiting your decision"
-            sub="Each bundle shows purpose, blast radius, risk, expiry and a safer alternative before you act"
+            sub="Each request shows the action, environment, data and destination, blast radius, expiry and a safer alternative before you act — related steps arrive together"
             right={
               <div className="row" style={{ gap: 8 }}>
                 <Chip tone={pending.length > 0 ? "review" : "allow"}>
@@ -91,6 +92,8 @@ export function ReviewCenter({ nav }: { nav: (r: string) => void }) {
                       status={<>
                         <RiskChip r={first.risk} />
                         <Chip tone="review">expires {new Date(first.reviewState!.expiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Chip>
+                        {/* Separation of duties, made visible — resolveReview() enforces it. */}
+                        {approverFor(first) !== first.user && <Chip tone="allow"><UserCheck size={12} /> requester ≠ approver</Chip>}
                       </>}
                       fields={[
                         { label: "Requested by", value: <><Avatar userId={first.user} size={16} />{n.user}<span className="faint">via {n.agent}{first.application ? ` (${first.application})` : ""} · {timeAgo(first.timestamp)}</span></> },

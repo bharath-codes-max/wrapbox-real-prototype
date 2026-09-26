@@ -198,8 +198,8 @@ function GovernedBanner({ s, nav }: { s: AppState; nav: (r: string) => void }) {
             {total === 0
               ? <>Nothing is connected in this workspace yet. Connect a runtime during setup and Wrapbox discovers the agents on each machine — then every tool call they make is decided before it runs.</>
               : <>
-                  {total} agent{total === 1 ? " was" : "s were"} discovered across {devices} device{devices === 1 ? "" : "s"} by one Runtime per machine. {governed} {governed === 1 ? "is" : "are"} governed — wrapped or carrying a Wrapbox hook, so every tool call is decided before it runs.
-                  {discovered > 0 && <> The other {discovered} {discovered === 1 ? "is" : "are"} inventory only, not covered until <code style={{ fontFamily: "var(--mono)", fontSize: 13, background: "rgba(27,15,51,0.08)", padding: "1px 5px", borderRadius: 5 }}>wrapboxd wrap</code> covers {discovered === 1 ? "it" : "them"}.</>}
+                  {total} agent{total === 1 ? " was" : "s were"} discovered across {devices} device{devices === 1 ? "" : "s"} by one Runtime per machine. {governed} {governed === 1 ? "is" : "are"} governed through a Wrapbox enforcement plane, so every tool call is decided before it runs.
+                  {discovered > 0 && <> The other {discovered} {discovered === 1 ? "is" : "are"} inventory only — the Coverage Map shows where enforcement is ENFORCED, DEGRADED or still PENDING.</>}
                   {" "}So far {decided} action{decided === 1 ? "" : "s"} from governed agents {decided === 1 ? "was" : "were"} decided and {refused} refused.
                 </>}
           </p>
@@ -309,7 +309,7 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
             Runtime authorization for every AI agent, from laptop to cloud.
           </h1>
           <p style={{ margin: "18px 0 0", fontSize: 16.5, lineHeight: 1.5, color: "var(--fg-2)", maxWidth: "62ch" }}>
-            Claude Code, Codex, ChatGPT, your own agents — every consequential action checked before it runs.
+            Claude Code, Codex, ChatGPT, your own agents — Wrapbox decides whether each action is safe from its action, environment, data, destination and blast radius, and returns ALLOW, CONSTRAIN, REVIEW or BLOCK.
           </p>
         </div>
         )}

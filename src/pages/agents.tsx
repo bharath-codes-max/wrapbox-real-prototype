@@ -61,7 +61,7 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
       <PageHead
         eyebrow="Activity"
         title="Agent Inventory"
-        sub="Automatically discovered agents, applications and tools — including shadow agents nobody registered. Identity: user + device + agent + tool feeds every decision."
+        sub="Agents observed at runtime and drawn from the identity, MDM and inventory systems you already run — including shadow agents nobody registered. Identity: user + device + agent + tool feeds every decision."
         right={<SimNote>Discovery simulated · inventory model real</SimNote>}
       />
 
