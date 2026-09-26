@@ -45,7 +45,7 @@ export function Cover({ active }: SlideProps) {
         <Reveal i={4} className="row" style={{ gap: 14, marginTop: 6 }}>
           <span className="small">Governs</span>
           <div className="brand-row">{["claudecode", "codex", "cursor", "githubcopilot", "openai", "microsoft", "mcp"].map((l) => <Brand key={l} name={l} size={38} />)}</div>
-          <span className="small">and your own agents</span>
+          <span className="small">plus your own, browser, hosted and supplier agents</span>
         </Reveal>
       </div>
       <Reveal i={2}><AutoTerm active={active} onDecision={onDecision} /></Reveal>

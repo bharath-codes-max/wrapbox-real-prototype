@@ -142,11 +142,12 @@ export function Synthesize() {
 
 /* ---------- ideate: insight → principle → feature ---------- */
 const MAP = [
-  { i: "The prompt is not the control", p: "Decide outside the model, at the moment of action", f: "Three enforcement planes + one decision engine" },
+  { i: "The prompt is not the control", p: "Decide outside the model, at the moment of action", f: "Five enforcement planes + one decision engine" },
   { i: "Binary governance fails", p: "Four graded decisions, not a switch", f: "ALLOW · CONSTRAIN · REVIEW · BLOCK, with in-flight transforms" },
-  { i: "Approvals must be cheap and targeted", p: "Humans only where judgement adds value", f: "Review Center: blast radius, safer path, expiry, scoped approval" },
-  { i: "Security leaders think in sentences", p: "Intent in plain English, one normalized rule", f: "Intent Studio + a single matcher for tester, YAML and runtime" },
-  { i: "Trust needs proof, not claims", p: "Evidence for every decision; claim only real coverage", f: "Hash-chained evidence · Coverage Map · vendor-managed Safety Kernel" },
+  { i: "Approvals must be cheap and targeted", p: "Humans only where judgement adds value", f: "Review Center: blast radius, safer path, expiry — requester ≠ approver" },
+  { i: "Security leaders think in sentences", p: "Intent in plain English, one normalized rule", f: "Intent Studio + one matcher for simulator, tasks and runtime (MCP tools too)" },
+  { i: "Trust needs proof, not claims", p: "Evidence for every decision; claim only real coverage", f: "One complete record per decision, OCSF/OTLP export · Coverage Map · Safety Kernel" },
+  { i: "Agents delegate, read untrusted input, outlive trust", p: "Authority never grows; one control stops it all", f: "Kill switch · delegation chains · supplier contracts · injection-aware · output check" },
 ];
 export function Ideate() {
   const root = useRef<HTMLDivElement>(null);

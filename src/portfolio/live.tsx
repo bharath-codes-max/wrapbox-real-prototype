@@ -15,7 +15,7 @@ import type { SimulationEvent, ContractClause } from "../model/types";
 import { Chip, decisionTone } from "./ui";
 
 const ACTIVE = DEMO_CONTRACTS.filter((c) => c.status === "ACTIVE");
-export const DEMO_IDS = ["ep-read-env", "net-pii-approved", "gw-force-main", "net-unknown-dest", "gw-export-500k", "gw-iam-admin", "ep-run-tests"];
+export const DEMO_IDS = ["ep-read-env", "net-pii-approved", "gw-force-main", "net-unknown-dest", "gw-export-500k", "gw-iam-admin", "ep-run-tests", "mcp-push-main", "sup-meridian-export", "a2a-unknown-hop", "hosted-export"];
 export const scenario = (id: string) => SCENARIOS.find((s) => s.id === id)!;
 
 /** Runs one scenario through the real engine, chained on a local evidence hash. */
@@ -102,7 +102,7 @@ export function LiveDecide({ active, autoplay = true }: { active: boolean; autop
 }
 
 /* ---------------- DrafterDemo: plain English → normalized clauses ---------------- */
-export const DEFAULT_INTENT = "Customer email addresses and phone numbers must be reversibly tokenized before transmission to external AI. Credentials must never be transmitted externally.";
+export const DEFAULT_INTENT = "Customer email addresses and phone numbers must be reversibly tokenized before transmission to external AI. Credentials must never be transmitted externally. MCP pushes straight to main require engineering review.";
 
 function clauseYaml(c: ContractClause, i: number): string {
   const list = (v: string[] | "ANY") => (v === "ANY" ? "ANY" : `[${v.join(", ")}]`);
@@ -112,6 +112,7 @@ function clauseYaml(c: ContractClause, i: number): string {
     `  data: ${list(c.dataClasses)}`,
     `  destinations: ${list(c.destinations)}`,
     `  actions: ${list(c.actions)}`,
+    ...(c.mcp ? [`  mcp: {${[c.mcp.registered === false ? "registered: false" : "", c.mcp.tools?.length ? `tools: [${c.mcp.tools.join(", ")}]` : "", c.mcp.args ? `args: {${Object.entries(c.mcp.args).map(([k, v]) => `${k}: /${v}/`).join(", ")}}` : ""].filter(Boolean).join(", ")}}`] : []),
     `  effect: ${c.effect}${c.transform ? `\n  transform: ${c.transform}` : ""}`,
     `  requires: ${list(c.requiredCapabilities)}`,
     `  failClosed: ${c.failClosed}`,
@@ -158,7 +159,7 @@ export function DrafterDemo({ active }: { active: boolean }) {
       </div>
       <div style={{ minHeight: 0, display: "flex", flexDirection: "column" }}>
         <div className="code" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-          <div className="cbar"><span className="lights"><i /><i /><i /></span><span>contract.yaml — normalized rule (draftClauses())</span></div>
+          <div className="cbar"><span className="lights"><i /><i /><i /></span><span>normalized rule — draftClauses() output, shown as YAML</span></div>
           <pre style={{ flex: 1, minHeight: 0, overflow: "auto", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{yaml ? yaml.split("\n").map((l, k) => <span key={k}>{l}{"\n"}</span>) : <span className="c"># waiting for intent…</span>}</pre>
         </div>
       </div>
@@ -169,12 +170,15 @@ export function DrafterDemo({ active }: { active: boolean }) {
 /* ---------------- ArchFlow: the pipeline, animated with real decisions ---------------- */
 type NodeId = string;
 const EDGES: [NodeId, NodeId][] = [
-  ["a-claude-code", "endpoint"], ["a-codex", "endpoint"], ["a-copilot", "network"], ["a-chatgpt", "network"], ["a-finance", "gateway"], ["a-unknown-mcp", "network"], ["a-browser-hosted", "browser-hosted"],
+  ["a-claude-code", "endpoint"], ["a-claude-code", "gateway"], ["a-codex", "endpoint"], ["a-copilot", "network"], ["a-chatgpt", "network"], ["a-finance", "gateway"], ["a-unknown-mcp", "network"], ["a-browser-hosted", "browser-hosted"],
   ["endpoint", "brain"], ["network", "brain"], ["gateway", "brain"], ["browser-hosted", "brain"],
   ["brain", "d-github"], ["brain", "d-db"], ["brain", "d-aws"], ["brain", "d-extai"], ["brain", "d-unknown"], ["brain", "d-evidence"],
 ];
-const DEST_FOR: Record<string, string> = { "ep-read-env": "", "net-pii-approved": "d-extai", "gw-force-main": "d-github", "net-unknown-dest": "d-unknown", "gw-export-500k": "d-db", "gw-iam-admin": "d-aws", "ep-run-tests": "" };
-const FLOW_IDS = ["net-pii-approved", "gw-force-main", "net-unknown-dest", "ep-read-env", "ep-run-tests"];
+const DEST_FOR: Record<string, string> = { "ep-read-env": "", "net-pii-approved": "d-extai", "gw-force-main": "d-github", "net-unknown-dest": "d-unknown", "gw-export-500k": "d-db", "gw-iam-admin": "d-aws", "ep-run-tests": "", "mcp-push-main": "d-github", "br-form-pii": "d-extai", "hosted-export": "d-db" };
+const FLOW_IDS = ["net-pii-approved", "gw-force-main", "net-unknown-dest", "ep-read-env", "mcp-push-main", "br-form-pii", "hosted-export", "ep-run-tests"];
+// Browser, hosted and supplier agents share one node on the diagram, as do their planes.
+const AGENT_NODE = (agent: string) => (["a-claude-chrome", "a-billing-hosted", "a-meridian-recon", "a-northwind-desk"].includes(agent) ? "a-browser-hosted" : agent);
+const PLANE_NODE = (plane: string) => (plane === "BROWSER" || plane === "HOSTED" ? "browser-hosted" : plane.toLowerCase());
 
 export function ArchFlow({ active }: { active: boolean }) {
   const root = useRef<HTMLDivElement>(null);
@@ -203,9 +207,10 @@ export function ArchFlow({ active }: { active: boolean }) {
       while (alive) {
         const { sc, ev } = results[i % results.length]; i += 1;
         setCurrent({ sc, ev }); setLit(new Set()); setLitWires(new Set()); setStage(-1);
-        const plane = sc.plane.toLowerCase();
-        setLit(new Set([sc.agent])); await sleep(700); if (!alive) return;
-        setLitWires(new Set([`${sc.agent}>${plane}`])); setLit(new Set([sc.agent, plane])); await sleep(800); if (!alive) return;
+        const plane = PLANE_NODE(sc.plane);
+        const agentNode = AGENT_NODE(sc.agent);
+        setLit(new Set([agentNode])); await sleep(700); if (!alive) return;
+        setLitWires(new Set([`${agentNode}>${plane}`])); setLit(new Set([agentNode, plane])); await sleep(800); if (!alive) return;
         setLitWires(new Set([`${plane}>brain`])); setLit(new Set([plane, "brain"]));
         for (let s = 0; s < 5; s++) { setStage(s); await sleep(s === 2 ? 900 : 520); if (!alive) return; }
         const dest = DEST_FOR[sc.id];

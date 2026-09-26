@@ -293,7 +293,7 @@ export class Runner {
       await this.act(step, el, true);
       await this.settle();
       if (step.waitFor) {
-        const w = await this.find(step.waitFor, 4000);
+        const w = await this.find(step.waitFor, 12000);
         res.waitFor = !!w;
         if (!w) throw new Error(`waitFor not found: ${describe(step.waitFor)}`);
         ensureVisible(w, false);
@@ -337,7 +337,7 @@ export class Runner {
       try { await this.act(step, el, false); } catch (e) { overlay.set({ error: (e as Error).message }); this.post(); }
       await this.settle();
       if (step.waitFor) {
-        const w = await this.find(step.waitFor, 6000);
+        const w = await this.find(step.waitFor, 12000);
         if (w) {
           if (ensureVisible(w, true)) await this.wait(500);
           this.railHover(null, false);
@@ -375,7 +375,7 @@ export class Runner {
       if (this.opt.shotAfter) {
         try { await this.act(step, el, true); } catch (e) { overlay.set({ error: (e as Error).message }); }
         await this.settle();
-        if (step.waitFor) { const w = await this.find(step.waitFor, 4000); if (w) { ensureVisible(w, false); spot = w; } }
+        if (step.waitFor) { const w = await this.find(step.waitFor, 12000); if (w) { ensureVisible(w, false); spot = w; } }
         this.railHover(null, false); // the action is done — the rail folds away, as in play
       }
       await this.settle();

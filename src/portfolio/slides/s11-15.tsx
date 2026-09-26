@@ -37,7 +37,7 @@ export function IntentLive({ active }: SlideProps) {
 export function DecisionLive({ active }: SlideProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Head eyebrow="Prototype · 10" title={<>The decision, <em>live.</em></>} lead="Pick a scenario. The terminal is what the developer sees; the list is the order the engine checks and which layer decided. Strictest wins; break-glass never overrides the Safety Kernel." />
+      <Head eyebrow="Prototype · 10" title={<>The decision, <em>live.</em></>} lead="Pick a scenario. The terminal is what the developer sees; the list is the order the engine checks and which layer decided. The kill switch comes first, strictest wins, and break-glass never overrides the Safety Kernel." />
       <Reveal i={3} style={{ flex: 1, minHeight: 0 }}><LiveDecide active={active} /></Reveal>
     </div>
   );
@@ -78,9 +78,9 @@ export function Tested() {
           </Reveal>
           <Reveal i={4} className="card" style={{ padding: "18px 22px" }}>
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>What is real</div>
-            <div className="body" style={{ fontSize: 15 }}>Every decision, transform, review, coverage figure, kernel lifecycle and evidence hash.</div>
+            <div className="body" style={{ fontSize: 15 }}>Every decision, transform, review, coverage figure and evidence hash — kill switch, MCP rules, supplier and delegation checks, output checks, OCSF/OTLP export.</div>
             <div style={{ fontSize: 17, fontWeight: 700, margin: "12px 0 6px" }}>What is simulated</div>
-            <div className="body" style={{ fontSize: 15 }}>Vendor integrations — GitHub App, MDM push, SSO, SQL/AWS/Stripe gateways, detector fixtures — built as realistic flows, never as fake results.</div>
+            <div className="body" style={{ fontSize: 15 }}>Vendor integrations — GitHub, MDM, SSO, SQL/AWS/Stripe gateways, browser extension, AgentCore, suppliers, SIEM streaming — realistic flows, never fake results.</div>
           </Reveal>
           <Reveal i={5} className="honest" style={{ fontSize: 15 }}>“Prototype the infrastructure. Never prototype the correctness.” — the bar every screen is held to.</Reveal>
           <Reveal i={6} className="row" style={{ gap: 8, flexWrap: "wrap" }}>
@@ -96,8 +96,8 @@ export function Tested() {
 const ROADMAP = [
   { h: "Endpoint runtime", p: "macOS Endpoint Security + Windows minifilter behind the same ActionRequest; pushed by Jamf / Intune." },
   { h: "Network Extension", p: "System extension + content filter for HTTPS/WebSocket; detectors move from fixtures to live parsers." },
-  { h: "Gateways", p: "GitHub App, SQL proxy with row estimates, AWS broker role, SaaS key swap, MCP gateway (2025-06 auth spec)." },
-  { h: "Identity & evidence", p: "SSO / SCIM for approvers, signed evidence export to SIEM, retention — the audit trail as a product surface." },
+  { h: "Gateways & hosted", p: "GitHub App, SQL proxy, AWS broker role, SaaS key swap, MCP gateway + stdio shim, AgentCore interceptor, managed browser extension." },
+  { h: "Identity & evidence", p: "SSO / SCIM for approvers, signed records streamed to the SIEM (OCSF / OTLP export already works), retention." },
 ];
 export function Close() {
   return (
