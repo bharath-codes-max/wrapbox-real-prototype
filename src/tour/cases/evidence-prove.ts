@@ -8,14 +8,15 @@ import type { TourCase } from "../types";
 // detector found, proof it was never transmitted, the company rule that
 // decided it, the Safety Kernel rules that back it up as a second lock, and
 // the seal — computed over the decision's facts plus the previous record's
-// seal. Everything shown is the seeded company's own history.
+// seal. The complete record is the answer; the seal is its integrity layer.
+// Everything shown is the seeded company's own history.
 const c: TourCase = {
   id: "evidence-prove",
   order: 110,
   persona: { userId: "u-maya", name: "Maya Chen", role: "Security Analyst" },
   title: "Prove what happened",
   goal: "An auditor asks Maya to prove that no passwords or keys have left the company through an AI agent.",
-  outcome: "Maya shows that every record involving a password or key was blocked, and shows the auditor a sealed record proving Alex Morgan's private key never left the laptop.",
+  outcome: "Maya shows that every record involving a password or key was blocked, and gives the auditor the complete record proving Alex Morgan's private key never left the laptop, sealed so any edit would show.",
   start: "control",
   poster: 6,
   steps: [
@@ -25,13 +26,13 @@ const c: TourCase = {
       title: "Open the Evidence Explorer",
       body: "An auditor wants proof that no passwords or keys have left the company through an AI agent. Maya opens Evidence, where every Wrapbox decision is recorded.",
       say: "So, an auditor asks Maya to prove that no passwords or keys have left the company through an AI agent. Maya opens Evidence, where every Wrapbox decision gets recorded.",
-      waitFor: { selector: ".overview-card", text: "Tamper-evident ledger" },
+      waitFor: { selector: ".overview-card", text: "Complete decision records" },
     },
     {
-      target: { selector: ".overview-card", text: "Tamper-evident ledger" },
-      title: "A record nobody can quietly edit",
-      body: "All 20 records are sealed and chained in order, like pages in a bound book: change one and the chain breaks. Sealing is simulated in this demo.",
-      say: "All twenty records are sealed and chained in order, like pages in a bound book, so if you change one, the chain breaks. In this demo, the sealing is simulated.",
+      target: { selector: ".overview-card", text: "Complete decision records" },
+      title: "One complete record per decision",
+      body: "All 20 decisions have one complete record: who, which agent and tool, the action, data and destination, the rule and reason, any approver, and the outcome. Each is also sealed to the one before (simulated here).",
+      say: "All twenty decisions have one complete record: who asked, which agent and tool, the action, the data and where it was going, the rule and reason, any approver, and the outcome. And each one is sealed to the one before, which is simulated in this demo.",
     },
     {
       target: ".fsearch",
@@ -82,9 +83,9 @@ const c: TourCase = {
     },
     {
       target: { within: ".drawer", selector: ".row", text: "Evidence chain" },
-      title: "Sealed proof for the auditor",
-      body: "This record is Maya's answer. Its first code seals who, which agent, what, where and the decision, plus the previous record's seal. Change one and it stops matching.",
-      say: "Yeah, this sealed record is Maya's answer: the first code here locks in who, which agent, what, where and the decision, plus the previous record's seal. Change anything and it stops matching.",
+      title: "The complete record, sealed",
+      body: "This complete record is Maya's answer, and its seal keeps it honest: the first code covers who, which agent, what, where and the decision, plus the previous record's seal. Change one and it stops matching.",
+      say: "So this complete record is Maya's answer, and its seal keeps it honest. The first code here locks in who, which agent, what, where and the decision, plus the previous record's seal, so change anything and it stops matching.",
       pad: 10,
     },
   ],

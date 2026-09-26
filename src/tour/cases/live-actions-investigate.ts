@@ -7,7 +7,7 @@ const c: TourCase = {
   persona: { userId: "u-maya", name: "Maya Chen", role: "Security Analyst" },
   title: "Investigate a blocked action",
   goal: "Maya wants to understand exactly why an AI agent was stopped from moving customer data out of the company.",
-  outcome: "Maya knows who asked, what the agent tried, which rule stopped it and the safer path. The decision's key facts are sealed in the evidence chain.",
+  outcome: "Maya knows who asked, what the agent tried, which rule stopped it and the safer path, all in one complete record, sealed so any edit shows.",
   start: "control",
   poster: 5,
   steps: [

@@ -20,9 +20,9 @@ const c: TourCase = {
     {
       target: { within: ".ecard", selector: "button", text: "Start" },
       action: "click",
-      title: "Start the job inside a box",
-      body: "One click starts the agent inside a permission slip: what it may use on its own. Anything on the Forbidden list, like production, needs a person's yes.",
-      say: "One click starts the agent with a permission slip, listing what it can use on its own. Anything on the Forbidden list, like production, needs a person's yes.",
+      title: "Start with least privilege",
+      body: "One click gives the agent a short-lived, least-privilege permission slip: only what this job needs, for 30 minutes. Anything on the Forbidden list, like production, needs a person's yes.",
+      say: "One click starts the agent with a short-lived, least-privilege permission slip: only what this job needs, for thirty minutes. Anything on the Forbidden list, like production, needs a person's yes.",
       waitFor: { selector: ".grid.g2", text: "Forbidden" },
       placement: "top",
     },

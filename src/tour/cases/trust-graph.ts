@@ -17,8 +17,8 @@ const c: TourCase = {
       target: { selector: ".rail-item", text: "Trust Graph" },
       action: "click",
       title: "Open the Trust Graph",
-      body: "Maya, a security analyst, needs one picture of who uses which AI agents and what those agents try to reach. Wrapbox builds it from every action agents attempted.",
-      say: "Okay, Maya, a security analyst, needs one picture of who uses which AI agents and what those agents try to reach. Wrapbox builds it from every action they attempted.",
+      body: "Maya, a security analyst, needs one picture of who uses which AI agents and what they try to reach. Wrapbox builds it from every attempted action, joined with Veridian's existing identity and device records.",
+      say: "Okay, Maya, a security analyst, needs one picture of who uses which AI agents and what those agents try to reach. Wrapbox builds it from every action they attempted, joined with the identity and device records Veridian already has.",
       waitFor: { selector: ".page-head", text: "Trust Graph" },
     },
     {

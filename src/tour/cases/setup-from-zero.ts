@@ -92,8 +92,8 @@ const c: TourCase = {
       route: "start",
       target: ".govbanner",
       title: "2 of 3 agents now governed",
-      body: "Earlier, this page said “No agents governed yet.” Now Wrapbox checks Claude Code and Codex before they act. One unregistered agent is only listed, not yet covered.",
-      say: "Day one ends with fourteen live rules and connected laptops. This page said no agents governed, and now it's two of three, Claude Code and Codex, with one unregistered agent only listed.",
+      body: "Earlier, this page said “No agents governed yet.” Now Claude Code and Codex are governed through the laptop enforcement plane. One unregistered agent is only listed; the Coverage Map shows what is enforced.",
+      say: "Day one ends with fourteen live rules and connected laptops. This page said no agents governed, and now it's two of three: Claude Code and Codex, governed through the laptop enforcement plane, with one unregistered agent only listed. The Coverage Map shows exactly what's enforced.",
     },
   ],
 };

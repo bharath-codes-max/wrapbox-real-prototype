@@ -30,10 +30,11 @@ const c: TourCase = {
       waitFor: { selector: ".rc-bundle .ecard", text: "force-push" },
     },
     {
-      target: { selector: ".ecard-fields", text: "Requested by" },
+      // The whole request card, so the header's expiry and "requester ≠ approver" tags are in view.
+      target: { selector: ".rc-bundle .ecard", text: "force-push" },
       title: "Who asked, and who decides",
-      body: "Daniel asked, through the Claude Code agent. Alex, the engineering manager, decides. Wrapbox never lets the person who asked approve their own request.",
-      say: "Daniel asked, through the Claude Code agent, and Alex, the engineering manager, decides. Wrapbox never lets the person who asked approve their own request.",
+      body: "Daniel asked, through Claude Code; Alex, the engineering manager, decides before the request expires. The green requester ≠ approver tag is separation of duties, and Wrapbox enforces it.",
+      say: "Daniel asked, through the Claude Code agent, and Alex, the engineering manager, decides before the request expires. See the green tag, requester is not the approver: Wrapbox enforces that, so nobody can approve their own request.",
     },
     {
       target: { selector: ".card .spread", text: "git push --force origin main" },

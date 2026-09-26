@@ -49,12 +49,13 @@ const c: TourCase = {
       waitFor: { selector: ".sim-note", text: "never the requester" },
     },
     {
-      // The Review Center opens on "Awaiting your decision"; point straight at
-      // the request's who-asked / who-decides / progress rows.
-      target: { selector: ".ecard-fields", text: "Finance Controller" },
+      // The Review Center opens on "Awaiting your decision"; point at the whole
+      // request card: who asked / who decides / progress, plus the header's
+      // "requester ≠ approver" tag.
+      target: { selector: ".rc-bundle .ecard", text: "Finance Controller" },
       title: "Waiting for Sam, not Jordan",
-      body: "The request arrives with its context: Jordan asked, Sam in Finance decides, and three of the job's six steps are already done.",
-      say: "The request comes with its context: Jordan asked, Sam in Finance decides, and three of the job's six steps are already done.",
+      body: "The request arrives with its context: Jordan asked, Sam in Finance decides, and three of the job's six steps are already done. The requester ≠ approver tag makes the split plain.",
+      say: "The request comes with its context: Jordan asked, Sam in Finance decides, and three of the job's six steps are already done. The green tag makes it plain: the requester isn't the approver.",
       pad: 12,
     },
     {

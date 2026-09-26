@@ -5,13 +5,15 @@ import type { TourCase } from "../types";
 // ways of doing the same thing. Everything shown lives on the Integrations page.
 // Statuses come from the capability registry (4 enforced, 2 degraded, 1 understood
 // only); counts and the replayed action (evt-00020) come from the demo workspace.
+// The ecosystem cards (Okta/Entra, Slack/Teams, OCSF/OTel SIEM) are labelled
+// Simulated on the page and never count toward enforcement.
 const c: TourCase = {
   id: "integrations",
   order: 105,
   persona: { userId: "u-priya", name: "Priya Menon", role: "Admin" },
   title: "See where Wrapbox is plugged in",
   goal: "Priya, the admin, wants to know where Wrapbox sits today, how much it can really stop in each place, what it knows about every action, and how one rule can cover many ways of doing the same thing.",
-  outcome: "Priya knows where Wrapbox can stop actions and where it only watches, who is behind each action, and that one rule can cover many ways of doing the same thing.",
+  outcome: "Priya knows where Wrapbox can stop actions and where it only watches, how it would fit Veridian's identity, chat and SIEM tools, who is behind each action, and that one rule can cover many ways of doing the same thing.",
   start: "control",
   poster: 2,
   steps: [
@@ -60,6 +62,14 @@ const c: TourCase = {
       // Network Extension blocked, so don't imply Wrapbox failed to stop that server.
       body: "MCP servers give AI agents extra tools. “Understood only” means Wrapbox sees and sorts their calls but can't stop them yet, and it has spotted one unregistered server.",
       say: "M-C-P servers give AI agents extra tools. Here, understood only means Wrapbox sees and sorts their calls but can't stop them yet, and it's spotted one unregistered server.",
+    },
+    {
+      // The three ecosystem cards; each carries a "Simulated" chip and none counts in the band above.
+      target: { selector: ".ecard-grid", text: "Slack · Microsoft Teams" },
+      title: "Fits the tools you already run",
+      body: "Three cards marked Simulated show how Wrapbox would connect: Okta or Entra for identity and who approves, Slack or Teams to deliver approvals, and OCSF or OpenTelemetry export to a SIEM like Splunk.",
+      say: "Further down, three cards marked simulated show how Wrapbox would plug into tools Veridian already runs: Okta or Entra for identity and who approves, Slack or Teams to deliver approvals, and a SIEM like Splunk, through O-C-S-F or Open Telemetry.",
+      placement: "top",
     },
     {
       target: { selector: "button.tab", text: "Identity model" },

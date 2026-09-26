@@ -1,14 +1,14 @@
 import type { TourCase } from "../types";
 
 // Priya reviews every AI agent in the company, including the one nobody registered,
-// then follows it to the sealed records that show its two transfers never left.
+// then follows it to the complete (and sealed) records that show its two transfers never left.
 const c: TourCase = {
   id: "agents-inventory",
   order: 90,
   persona: { userId: "u-priya", name: "Priya Menon", role: "Admin" },
   title: "Know every AI agent",
   goal: "Priya wants one honest list of every AI agent at work in the company: who owns each one, what it can reach, and any agent nobody registered.",
-  outcome: "Priya has the full list, knows the one unregistered agent holds no permissions and was blocked both times it tried, and has sealed records showing nothing reached the unknown address.",
+  outcome: "Priya has the full list, knows the one unregistered agent holds no permissions and was blocked both times it tried, and has the complete records showing nothing reached the unknown address.",
   start: "control",
   poster: 2,
   steps: [
@@ -16,8 +16,8 @@ const c: TourCase = {
       target: { selector: ".rail-item", text: "Agents" },
       action: "click",
       title: "Open the agent list",
-      body: "Priya, Veridian's Wrapbox admin, wants every AI agent in one list. The Agents page counts 8: 7 with a registered owner, and 1 'shadow' agent nobody registered.",
-      say: "Priya, Veridian's Wrapbox admin, wants one honest list of every AI agent at work. The Agents page counts eight: seven with a registered owner, and one shadow agent nobody registered.",
+      body: "Priya, the admin, wants every AI agent in one list. Agents combines what Wrapbox observes with Veridian's existing identity and device records: 8 agents, 7 with a registered owner, 1 'shadow' agent nobody registered.",
+      say: "Priya, Veridian's Wrapbox admin, wants one honest list of every AI agent at work. The Agents page combines what Wrapbox observes with the company's existing identity and device records: eight agents, seven with a registered owner, and one shadow agent nobody registered.",
       waitFor: { selector: ".card", text: "Agents detected" },
     },
     {
@@ -59,9 +59,9 @@ const c: TourCase = {
       target: { within: ".drawer", selector: "button", text: "Open Evidence" },
       action: "click",
       title: "Follow it to the evidence",
-      body: "Priya opens Evidence, the record of every decision. Each record carries a seal, a fingerprint of its facts linked to the one before, so any later edit shows.",
-      say: "So Priya follows it to Evidence, the record of every decision. Each record carries a seal, a fingerprint of its facts linked to the one before, so any later edit shows.",
-      waitFor: { selector: ".overview-card", text: "Tamper-evident ledger" },
+      body: "Priya opens Evidence: one complete record per decision, naming who, which agent, what data, where it was headed, the rule and the outcome. Each is also sealed to the one before, so a later edit would show.",
+      say: "So Priya follows it to Evidence, where every decision has one complete record: who, which agent, what data, where it was headed, the rule and the outcome. Each one's also sealed to the one before, so a later edit would show.",
+      waitFor: { selector: ".overview-card", text: "Complete decision records" },
     },
     {
       target: { selector: ".fselect", text: "Agent" },
