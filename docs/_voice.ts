@@ -23,12 +23,14 @@ const MANIFEST = join(ROOT, "src/tour/voice.json");
 const DRY = process.argv.includes("--dry");
 
 const MODEL = "gpt-4o-mini-tts";
-const VOICE = "cedar";
+const VOICE = "marin";
 const INSTRUCTIONS = [
-  "Voice: a warm, friendly, relaxed male presenter.",
-  "Tone: natural and conversational — like showing a colleague something useful over coffee. Curious and upbeat, professional, never salesy or theatrical.",
-  "Pace: calm and unhurried, with small natural pauses at commas and before the key point. Say fillers like 'okay', 'so', 'yeah' or 'hmm' lightly and naturally.",
-  "Pronunciation: Wrapbox is 'wrap-box'. Say product words plainly.",
+  "Identity: a real person casually walking a friend through a product they genuinely find cool — not a narrator, not an ad, not a robot reading a script.",
+  "Delivery: sound completely human and spontaneous, as if you're seeing it happen live and reacting. Vary your pitch and energy naturally: lift on the interesting bits, soften on the asides, land the key point. Let sentences breathe — real, uneven pauses, a beat of thought before 'why', a tiny pause after a comma.",
+  "Tone: warm, friendly, relaxed and quietly enthusiastic. Curious, plain-spoken, reassuring. Never salesy, never theatrical, never sing-song, never flat.",
+  "Pace: unhurried and easy, like normal conversation. Slow down slightly on the important sentence so it sticks; speed up a touch on the familiar bits.",
+  "Fillers: use light, natural connectors — 'okay', 'so', 'now', 'and', 'here's the thing', 'watch this' — the way people actually talk, but don't overdo it.",
+  "Pronunciation: Wrapbox is 'wrap-box'. Read 'A-I' as the two letters. Say product words plainly and clearly.",
 ].join(" ");
 
 function apiKey(): string {
