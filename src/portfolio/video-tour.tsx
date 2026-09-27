@@ -1,12 +1,12 @@
-// A video-tour layout for one long TourCase, on the same 1600×900 stage the
-// v2/v3 decks use. The live product fills a 16:9 frame; the caption sits in a
-// bar BELOW the video (never over the app); a real timeline scrubs steps with
-// timecodes taken from the narration clips' actual lengths; the side rail is
-// replaced by a chapters drawer. Dark, square-cornered chrome — the same look
-// as the v2/v3 deck slides. Reuses the same tour.html player (nocap=1 hides
-// the player's own floating caption; the spotlight and cursor still animate).
+// The demo player — a Netflix-style watch page for one long TourCase.
+// A dark cinematic page; the live product runs inside the shared Chrome-style
+// browser window; the scrubber + transport sit ON the video in a bottom scrim
+// that auto-hides while playing and returns on mouse move or pause (the
+// standard video-player behaviour); the story caption sits in a bar BELOW the
+// video so it never covers the app; a dark chapters drawer lists the scenes.
+// Timecodes come from the narration clips' real lengths (voice.json).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pause, Play, RotateCcw, SkipBack, SkipForward, Volume2, VolumeX, Menu, Check, X } from "lucide-react";
+import { Pause, Play, RotateCcw, SkipBack, SkipForward, Volume2, VolumeX, ListVideo, Check, X } from "lucide-react";
 import type { SlideProps } from "./deck";
 import { SHOT } from "./ui";
 import { photoOf } from "../ui/logos";
@@ -14,11 +14,8 @@ import { BrowserChrome } from "./browser-chrome";
 import type { TourCase } from "../tour/types";
 import VOICE from "../tour/voice.json";
 
-// The app renders at 16:9 inside the frame; the frame is scaled to fit the
-// stage between the heading and the caption + transport rows. Kept a touch
-// smaller than the full stage so the demo has breathing room.
 const APP_W = 1440, APP_H = 810;
-const STAGE_H = 530;
+const STAGE_H = 540;
 const SCALE = STAGE_H / APP_H;
 const STAGE_W = Math.round(APP_W * SCALE);
 
@@ -27,31 +24,37 @@ function readVoicePref(): boolean { try { return localStorage.getItem(VOICE_KEY)
 
 interface TourMsg { type: "wrapbox-tour"; id: string; step: number; total: number; status: string; error?: string; route?: string; voiceBlocked?: boolean }
 
-// One chapter per product page, matching the grand tour's step order.
+// The story's scenes — one entry per chapter of the 2 a.m. incident.
 const CHAPTERS: { at: number; label: string }[] = [
-  { at: 0, label: "Welcome" },
-  { at: 1, label: "Control Room" },
-  { at: 4, label: "Live Actions" },
-  { at: 7, label: "Agents + kill switch" },
-  { at: 15, label: "Tasks" },
-  { at: 19, label: "Intent Studio" },
-  { at: 22, label: "Safety Kernel" },
-  { at: 24, label: "Policy Simulator" },
-  { at: 26, label: "Review Center" },
-  { at: 30, label: "Standing Permissions" },
-  { at: 31, label: "Break Glass" },
-  { at: 32, label: "Coverage Map" },
-  { at: 34, label: "Trust Graph" },
-  { at: 36, label: "Evidence" },
-  { at: 39, label: "Simulation Lab" },
-  { at: 55, label: "Integrations" },
-  { at: 57, label: "Token Vault" },
-  { at: 59, label: "Core Brain" },
-  { at: 61, label: "Settings + Get started" },
-  { at: 63, label: "That's Wrapbox" },
+  { at: 0, label: "2:14 — Checkout is down" },
+  { at: 1, label: "Priya opens Wrapbox" },
+  { at: 3, label: "The rules" },
+  { at: 6, label: "Test, don't guess" },
+  { at: 10, label: "A safety update" },
+  { at: 17, label: "The fix job" },
+  { at: 21, label: "Alex's scoped yes" },
+  { at: 26, label: "The wrong database" },
+  { at: 31, label: "The trap" },
+  { at: 37, label: "Agents helping agents" },
+  { at: 41, label: "Inside the tool calls" },
+  { at: 46, label: "Alex says no" },
+  { at: 48, label: "The kill switch" },
+  { at: 58, label: "The refunds" },
+  { at: 67, label: "The agent that lied" },
+  { at: 73, label: "Supplier agents" },
+  { at: 80, label: "Every doorway" },
+  { at: 88, label: "The Token Vault" },
+  { at: 93, label: "Break glass" },
+  { at: 101, label: "Tighten the screws" },
+  { at: 106, label: "The map of the night" },
+  { at: 108, label: "The honest scorecard" },
+  { at: 110, label: "Proof" },
+  { at: 114, label: "Wrapbox learns" },
+  { at: 117, label: "One brain" },
+  { at: 120, label: "Dawn" },
 ];
 
-// The app's own route names, shown over the top bar.
+// The app's own route names, shown in the browser chrome's address bar.
 const PAGE: Record<string, string> = {
   start: "Get started", control: "Control Room", live: "Live Actions", agents: "Agents", tasks: "Tasks",
   intent: "Intent Studio", safety: "Safety Kernel", simulator: "Policy Simulator", reviews: "Review Center",
@@ -75,10 +78,12 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
   const [voice, setVoice] = useState(readVoicePref);
   const [voiceBlocked, setVoiceBlocked] = useState(false);
   const [chaptersOpen, setChaptersOpen] = useState(false);
+  const [osd, setOsd] = useState(true);
+  const osdTimer = useRef<number | undefined>(undefined);
   const total = tc.steps.length;
 
-  // Timecodes from the narration manifest; a step whose clip is not recorded
-  // yet is estimated from its text, mirroring the player's own silent pacing.
+  // Timecodes from the narration manifest; a silent step is estimated from its
+  // text, mirroring the player's own pacing.
   const clipMs = useMemo(() => {
     const clips = (VOICE as { cases: Record<string, { ms: number }[]> }).cases[tc.id] ?? [];
     return tc.steps.map((st, i) => {
@@ -119,6 +124,29 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
     send(on ? "voice-on" : "voice-off");
   }, [voice, voiceBlocked, send]);
 
+  const done = status === "done" && !SHOT;
+  const paused = status === "paused";
+  const playing = !paused && !done && status !== "loading";
+
+  // Controls behave like a video player: always there when paused, loading or
+  // finished; while playing they fade out after a moment and any mouse
+  // movement over the video brings them back.
+  const wake = useCallback(() => {
+    setOsd(true);
+    window.clearTimeout(osdTimer.current);
+    osdTimer.current = window.setTimeout(() => setOsd(false), 2600);
+  }, []);
+  useEffect(() => {
+    if (!playing) { setOsd(true); window.clearTimeout(osdTimer.current); return; }
+    wake();
+    // The app iframe swallows mouse events, so a hot-zone over its bottom edge
+    // (in the JSX) and any movement on the page itself both re-show the bar.
+    const onMove = () => wake();
+    window.addEventListener("mousemove", onMove);
+    return () => { window.clearTimeout(osdTimer.current); window.removeEventListener("mousemove", onMove); };
+  }, [playing, wake]);
+  const osdShown = osd || !playing || chaptersOpen;
+
   // P / space play-pause, M sound, ← → previous / next. Keys inside the iframe
   // arrive as messages, so both surfaces work.
   useEffect(() => {
@@ -143,8 +171,6 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
     ? `${base}tour.html?case=${tc.id}&shot=${Math.min(tc.poster ?? 1, total - 1)}&after=1&nocap=1`
     : `${base}tour.html?case=${tc.id}&voice=${voiceRef.current ? 1 : 0}&nocap=1${run.from ? `&from=${run.from}` : ""}`,
   [tc.id, run, total, base]);
-  const done = status === "done" && !SHOT;
-  const paused = status === "paused";
   const cur = tc.steps[step];
 
   const currentChapter = [...CHAPTERS].reverse().find((c) => step >= c.at) ?? CHAPTERS[0];
@@ -154,19 +180,16 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
 
   return (
     <div className="vt">
-      {/* The live product inside a real Chrome-style browser window (dark chrome + drop shadow) */}
-      <div className="vt-stage" style={{ width: STAGE_W }}>
+      {/* The live product inside the shared Chrome-style browser window */}
+      <div className="vt-stage" style={{ width: STAGE_W }} onMouseMove={playing ? wake : undefined}>
         <BrowserChrome
           page={pageOf(route)}
-          right={<>
-            <button className="vt-chip vt-chap" onClick={() => setChaptersOpen((v) => !v)} title="Chapters">
-              <Menu size={13} /> {currentChapter.label}
-            </button>
+          right={
             <span className="vt-guide">
               {face ? <img src={face} alt="" /> : <span className="vt-face-mono">{initials}</span>}
               <b>{person.name}</b>
             </span>
-          </>}
+          }
         />
         <div className="vt-view" style={{ height: STAGE_H }}>
           {active && (
@@ -182,14 +205,61 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
               tabIndex={-1}
             />
           )}
+
+          {/* Invisible strip over the video's bottom edge: hovering it brings
+              the controls back (the iframe itself swallows mouse events) */}
+          <div className="vt-hotzone" onMouseMove={wake} />
+          {/* On-video controls: bottom scrim, auto-hides while playing */}
+          <div className={`vt-osd ${osdShown ? "" : "vt-osd-hidden"}`}>
+            <div className="vt-osd-scrim" aria-hidden="true" />
+            <div className="vt-osd-inner">
+              <div className="vt-scrub">
+                <div className="vt-track" onClick={(e) => {
+                  const r = e.currentTarget.getBoundingClientRect();
+                  const pct = (e.clientX - r.left) / r.width;
+                  const targetSec = pct * totalSec;
+                  let i = 0;
+                  while (i < total - 1 && cum[i + 1] / 1000 < targetSec) i += 1;
+                  restartAt(i);
+                }}>
+                  <div className="vt-bar" style={{ width: `${progressPct}%` }} />
+                  {CHAPTERS.slice(1).map((c) => (
+                    <span key={c.label} className="vt-mark-tick" style={{ left: `${totalSec > 0 ? (cum[Math.min(c.at, total)] / 1000 / totalSec) * 100 : 0}%` }} title={c.label} />
+                  ))}
+                  <span className="vt-thumb" style={{ left: `${progressPct}%` }} />
+                </div>
+                <div className="vt-time">{fmt(elapsedSec)} <span className="vt-time-sep">/</span> {fmt(totalSec)}</div>
+              </div>
+              <div className="vt-transport">
+                <div className="vt-transport-l">
+                  <button className="vt-t-play" onClick={() => (done ? restartAt(0) : send("toggle"))} title="Play / pause (P, space)">
+                    {done ? <RotateCcw size={19} /> : paused || status === "loading" ? <Play size={19} /> : <Pause size={19} />}
+                  </button>
+                  <button className="vt-t-btn" onClick={() => restartAt(Math.max(0, step - 1))} title="Previous step (←)"><SkipBack size={15} /></button>
+                  <button className="vt-t-btn" onClick={() => restartAt(Math.min(total - 1, step + 1))} title="Next step (→)"><SkipForward size={15} /></button>
+                  <button className="vt-t-btn" onClick={() => restartAt(0)} title="Restart"><RotateCcw size={14} /></button>
+                  <button className={`vt-voice ${voice && voiceBlocked ? "ask" : ""}`} onClick={toggleVoice} title={voice ? "Narration on — AI voice (M)" : "Narration off (M)"}>
+                    {voice && !voiceBlocked ? <Volume2 size={15} /> : <VolumeX size={15} />}
+                    {voice && voiceBlocked && <span>Tap for voice</span>}
+                  </button>
+                </div>
+                <div className="vt-transport-r">
+                  <span className="vt-osd-title">{tc.title}</span>
+                  <button className="vt-chip vt-chap" onClick={() => setChaptersOpen((v) => !v)} title="Scenes">
+                    <ListVideo size={13} /> {currentChapter.label}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Chapters drawer (only when opened) */}
+        {/* Scenes drawer — dark, like an episodes panel */}
         {chaptersOpen && (
           <div className="vt-chapters" onClick={() => setChaptersOpen(false)}>
             <div className="vt-chapters-inner" onClick={(e) => e.stopPropagation()}>
               <div className="vt-chapters-head">
-                <span>Chapters</span>
+                <span>Scenes</span>
                 <button onClick={() => setChaptersOpen(false)} aria-label="Close"><X size={14} /></button>
               </div>
               <ol className="vt-chapters-list">
@@ -210,52 +280,15 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
         )}
       </div>
 
-      {/* Caption bar UNDER the video — never covers the app */}
+      {/* Story caption UNDER the video — never covers the app */}
       <div className="vt-capbar" style={{ width: STAGE_W }}>
         <div className="vt-capbar-meta">
           <span className="cap-step">Step {Math.min(step + 1, total)} / {total}</span>
           <span className="cap-chap">{currentChapter.label}</span>
         </div>
         <div className="vt-capbar-text">
-          <h2 className="cap-title">{done ? "That's Wrapbox" : cur?.title}</h2>
+          <h2 className="cap-title">{done ? "That was Wrapbox" : cur?.title}</h2>
           <p className="cap-body">{done ? tc.outcome : cur?.body}</p>
-        </div>
-      </div>
-
-      {/* Timeline with chapter ticks and real timecodes */}
-      <div className="vt-scrub" style={{ width: STAGE_W }}>
-        <div className="vt-track" onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect();
-          const pct = (e.clientX - r.left) / r.width;
-          const targetSec = pct * totalSec;
-          let i = 0;
-          while (i < total - 1 && cum[i + 1] / 1000 < targetSec) i += 1;
-          restartAt(i);
-        }}>
-          <div className="vt-bar" style={{ width: `${progressPct}%` }} />
-          {CHAPTERS.slice(1).map((c) => (
-            <span key={c.label} className="vt-mark-tick" style={{ left: `${totalSec > 0 ? (cum[Math.min(c.at, total)] / 1000 / totalSec) * 100 : 0}%` }} title={c.label} />
-          ))}
-          <span className="vt-thumb" style={{ left: `${progressPct}%` }} />
-        </div>
-        <div className="vt-time">{fmt(elapsedSec)} <span className="vt-time-sep">/</span> {fmt(totalSec)}</div>
-      </div>
-
-      {/* Transport */}
-      <div className="vt-transport" style={{ width: STAGE_W }}>
-        <div className="vt-transport-l">
-          <button className="vt-t-btn" onClick={() => restartAt(0)} title="Restart"><RotateCcw size={16} /></button>
-          <button className="vt-t-btn" onClick={() => restartAt(Math.max(0, step - 1))} title="Previous step (←)"><SkipBack size={16} /></button>
-          <button className="vt-t-play" onClick={() => (done ? restartAt(0) : send("toggle"))} title="Play / pause (P, space)">
-            {done ? <RotateCcw size={20} /> : paused || status === "loading" ? <Play size={20} /> : <Pause size={20} />}
-          </button>
-          <button className="vt-t-btn" onClick={() => restartAt(Math.min(total - 1, step + 1))} title="Next step (→)"><SkipForward size={16} /></button>
-        </div>
-        <div className="vt-transport-r">
-          <button className={`vt-voice ${voice && voiceBlocked ? "ask" : ""}`} onClick={toggleVoice} title={voice ? "Narration on — AI voice (M)" : "Narration off (M)"}>
-            {voice && !voiceBlocked ? <Volume2 size={16} /> : <VolumeX size={16} />}
-            <span>{voice && voiceBlocked ? "Tap for voice" : voice ? "Voice on" : "Voice off"}</span>
-          </button>
         </div>
       </div>
     </div>
