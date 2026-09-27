@@ -463,7 +463,7 @@ html[data-shot="1"] .aterm-line { animation: none; }
 .lvwho b { display: block; font-size: 18px; }
 .lvwho span { display: block; font-size: 14px; color: var(--ink-3); }
 .lvgoal p, .lvout p { margin: 4px 0 0; font-size: 15.5px; line-height: 1.45; color: var(--ink-2); }
-.lvsteps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow: hidden; }
+.lvsteps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
 .lvsteps li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; align-items: center; padding: 6px 10px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; transition: background 0.2s, border-color 0.2s; }
 .lvsteps li:hover { background: color-mix(in oklab, var(--surface) 60%, transparent); }
 .lvsteps li.cur { background: var(--surface); border-color: transparent; box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.25); }

@@ -89,6 +89,7 @@ export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & S
   const [route, setRoute] = useState(tc.start);
   const [voice, setVoice] = useState(readVoicePref);
   const [voiceBlocked, setVoiceBlocked] = useState(false);
+  const stepsRef = useRef<HTMLOListElement>(null);
   const total = tc.steps.length;
   const poster = Math.min(tc.poster ?? 1, total - 1);
 
@@ -132,6 +133,10 @@ export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & S
     : `tour.html?case=${tc.id}&voice=${voiceRef.current ? 1 : 0}${run.from ? `&from=${run.from}` : ""}`,
   [tc.id, poster, run]);
   const shownStep = SHOT ? poster : step;
+  // Long tours: keep the current step visible in the (scrollable) list.
+  useEffect(() => {
+    stepsRef.current?.querySelector("li.cur")?.scrollIntoView({ block: "nearest", behavior: SHOT ? "auto" : "smooth" });
+  }, [shownStep]);
   const done = status === "done" && !SHOT;
   const paused = status === "paused";
   const tint = ((n - 1) % 6) + 1;
@@ -178,7 +183,7 @@ export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & S
             <div><b>{tc.persona.name}</b><span>{tc.persona.role}</span></div>
           </div>
           <div className="lvgoal"><span className="label">Why they're here</span><p>{tc.goal}</p></div>
-          <ol className="lvsteps">
+          <ol className="lvsteps" ref={stepsRef}>
             {tc.steps.map((s, i) => {
               const cur = i === shownStep && !done;
               const past = i < shownStep || done;
