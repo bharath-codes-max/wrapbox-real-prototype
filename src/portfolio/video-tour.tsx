@@ -1,53 +1,55 @@
 // A video-tour layout for one long TourCase, on the same 1600×900 stage the
-// v2/v3 decks use. Not a use-case slide: the live product fills the stage, one
-// caption strip sits over the bottom, a proper timeline scrubs steps, and the
-// side rail collapses to chapters so a 74-step tour reads like a video, not a
-// checklist. Voice, keyboard shortcuts and message posting are unchanged, so
-// this reuses the same tour.html player as the decks.
+// v2/v3 decks use. The live product fills a 16:9 frame; the caption sits in a
+// bar BELOW the video (never over the app); a real timeline scrubs steps with
+// timecodes taken from the narration clips' actual lengths; the side rail is
+// replaced by a chapters drawer. Dark, square-cornered chrome — the same look
+// as the v2/v3 deck slides. Reuses the same tour.html player (nocap=1 hides
+// the player's own floating caption; the spotlight and cursor still animate).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pause, Play, RotateCcw, SkipBack, SkipForward, Volume2, VolumeX, Menu, X, Check } from "lucide-react";
 import type { SlideProps } from "./deck";
 import { SHOT } from "./ui";
 import { photoOf } from "../ui/logos";
 import type { TourCase } from "../tour/types";
+import VOICE from "../tour/voice.json";
 
-// The stage is 1600×900; leave a comfortable top eyebrow and bottom caption.
-const APP_W = 1600, APP_H = 900;
-const FRAME_W = 1600, FRAME_H = 792;
-const SCALE = FRAME_H / APP_H;
+// The app renders at 16:9 inside the frame; the frame is scaled to fit the
+// stage between the top bar and the caption + transport rows.
+const APP_W = 1440, APP_H = 810;
+const STAGE_H = 596;
+const SCALE = STAGE_H / APP_H;
+const STAGE_W = Math.round(APP_W * SCALE);
 
 const VOICE_KEY = "wrapbox-deck-voice";
 function readVoicePref(): boolean { try { return localStorage.getItem(VOICE_KEY) !== "0"; } catch { return true; } }
 
 interface TourMsg { type: "wrapbox-tour"; id: string; step: number; total: number; status: string; error?: string; route?: string; voiceBlocked?: boolean }
 
-// Group the 74 steps into 12 chapters by title cue. Data, not code: adding a
-// step doesn't require updating this; anything not in a chapter falls into the
-// preceding one.
+// One chapter per product page, matching the grand tour's step order.
 const CHAPTERS: { at: number; label: string }[] = [
   { at: 0, label: "Welcome" },
-  { at: 3, label: "Protect data" },
-  { at: 9, label: "On the laptop" },
-  { at: 12, label: "Context decides" },
-  { at: 17, label: "Safety Kernel" },
+  { at: 1, label: "Control Room" },
+  { at: 4, label: "Live Actions" },
+  { at: 7, label: "Agents + kill switch" },
+  { at: 15, label: "Tasks" },
   { at: 19, label: "Intent Studio" },
-  { at: 22, label: "Policy Simulator" },
-  { at: 23, label: "Task + Review" },
-  { at: 30, label: "Standing & Break Glass" },
-  { at: 32, label: "MCP tool control" },
-  { at: 38, label: "Injection-aware" },
-  { at: 42, label: "Delegation" },
-  { at: 45, label: "Supplier contracts" },
-  { at: 47, label: "Output check" },
-  { at: 51, label: "Browser + cloud" },
-  { at: 56, label: "Kill switch" },
-  { at: 64, label: "Trust & Coverage" },
-  { at: 66, label: "Vault & Evidence" },
-  { at: 70, label: "Integrations" },
-  { at: 72, label: "That's Wrapbox" },
+  { at: 22, label: "Safety Kernel" },
+  { at: 24, label: "Policy Simulator" },
+  { at: 26, label: "Review Center" },
+  { at: 30, label: "Standing Permissions" },
+  { at: 31, label: "Break Glass" },
+  { at: 32, label: "Coverage Map" },
+  { at: 34, label: "Trust Graph" },
+  { at: 36, label: "Evidence" },
+  { at: 39, label: "Simulation Lab" },
+  { at: 55, label: "Integrations" },
+  { at: 57, label: "Token Vault" },
+  { at: 59, label: "Core Brain" },
+  { at: 61, label: "Settings + Get started" },
+  { at: 63, label: "That's Wrapbox" },
 ];
 
-// The app's own route names, as they appear over the top bar.
+// The app's own route names, shown over the top bar.
 const PAGE: Record<string, string> = {
   start: "Get started", control: "Control Room", live: "Live Actions", agents: "Agents", tasks: "Tasks",
   intent: "Intent Studio", safety: "Safety Kernel", simulator: "Policy Simulator", reviews: "Review Center",
@@ -73,6 +75,26 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
   const [chaptersOpen, setChaptersOpen] = useState(false);
   const total = tc.steps.length;
 
+  // Timecodes from the narration manifest; a step whose clip is not recorded
+  // yet is estimated from its text, mirroring the player's own silent pacing.
+  const clipMs = useMemo(() => {
+    const clips = (VOICE as { cases: Record<string, { ms: number }[]> }).cases[tc.id] ?? [];
+    return tc.steps.map((st, i) => {
+      const ms = clips[i]?.ms ?? 0;
+      if (ms > 0) return ms;
+      const words = `${st.title} ${st.body}`.split(/\s+/).length;
+      return Math.min(9500, Math.max(3400, 1100 + words * 240)) + (st.hold ?? 1400);
+    });
+  }, [tc]);
+  const cum = useMemo(() => {
+    const out: number[] = [0];
+    for (const ms of clipMs) out.push(out[out.length - 1] + ms);
+    return out;
+  }, [clipMs]);
+  const totalSec = cum[cum.length - 1] / 1000;
+  const elapsedSec = cum[Math.min(step, total)] / 1000;
+  const progressPct = totalSec > 0 ? Math.min(100, (elapsedSec / totalSec) * 100) : 0;
+
   useEffect(() => {
     const on = (e: MessageEvent) => {
       const d = e.data as TourMsg | null;
@@ -95,8 +117,8 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
     send(on ? "voice-on" : "voice-off");
   }, [voice, voiceBlocked, send]);
 
-  // P play/pause, M sound, ← / → previous / next step. Keys inside the iframe
-  // arrive as messages, so this covers both surfaces.
+  // P / space play-pause, M sound, ← → previous / next. Keys inside the iframe
+  // arrive as messages, so both surfaces work.
   useEffect(() => {
     const act = (k: string) => {
       if (k === "p" || k === "P" || k === " ") send("toggle");
@@ -120,13 +142,6 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
   const paused = status === "paused";
   const cur = tc.steps[step];
 
-  // Elapsed time from the manifest — the manifest is loaded by the iframe, so
-  // here we approximate with per-step averages (~11s each) for the scrubber.
-  const AVG = 11;
-  const elapsed = step * AVG;
-  const totalSec = total * AVG;
-  const progressPct = Math.min(100, (step / Math.max(1, total - 1)) * 100);
-
   const currentChapter = [...CHAPTERS].reverse().find((c) => step >= c.at) ?? CHAPTERS[0];
   const person = tc.persona;
   const face = photoOf(person.userId);
@@ -134,7 +149,7 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
 
   return (
     <div className="vt">
-      {/* Top eyebrow: title, current page, live pill, chapter chip, guide chip */}
+      {/* Top bar: title · current app page · chapter · guide */}
       <div className="vt-top">
         <div className="vt-title">
           <span className="vt-mark">▶</span>
@@ -152,8 +167,8 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
         </div>
       </div>
 
-      {/* Big video frame — the live product fills the stage */}
-      <div className="vt-stage" style={{ width: FRAME_W * SCALE + 0, height: FRAME_H * SCALE + 0 }}>
+      {/* The video: the live product, nothing over it but the LIVE pill */}
+      <div className="vt-stage" style={{ width: STAGE_W, height: STAGE_H }}>
         {active && (
           <iframe
             key={run.key}
@@ -163,24 +178,13 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
             width={APP_W}
             height={APP_H}
             allow="autoplay"
-            style={{ transform: `scale(${(FRAME_W * SCALE) / APP_W})` }}
+            style={{ transform: `scale(${SCALE})` }}
             tabIndex={-1}
           />
         )}
         <div className="vt-live"><i /> LIVE</div>
 
-        {/* Caption strip over the bottom of the video */}
-        <div className={`vt-cap ${done ? "cap-done" : ""}`}>
-          <div className="cap-meta">
-            <span className="cap-step">Step {Math.min(step + 1, total)} of {total}</span>
-            <span className="cap-sep">·</span>
-            <span className="cap-chap">{currentChapter.label}</span>
-          </div>
-          <h2 className="cap-title">{done ? "That's Wrapbox" : cur?.title}</h2>
-          <p className="cap-body">{done ? tc.outcome : cur?.body}</p>
-        </div>
-
-        {/* Chapter overlay (closed by default) */}
+        {/* Chapters drawer (only when opened) */}
         {chaptersOpen && (
           <div className="vt-chapters" onClick={() => setChaptersOpen(false)}>
             <div className="vt-chapters-inner" onClick={(e) => e.stopPropagation()}>
@@ -196,7 +200,7 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
                     <li key={c.label} className={`${isCur ? "cur" : ""} ${past ? "past" : ""}`} onClick={() => { restartAt(c.at); setChaptersOpen(false); }}>
                       <span className="vt-chapters-no">{past ? <Check size={11} strokeWidth={3} /> : (i + 1).toString().padStart(2, "0")}</span>
                       <span className="vt-chapters-lb">{c.label}</span>
-                      <span className="vt-chapters-t">{fmt(c.at * AVG)}</span>
+                      <span className="vt-chapters-t">{fmt(cum[Math.min(c.at, total)] / 1000)}</span>
                     </li>
                   );
                 })}
@@ -206,23 +210,39 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
         )}
       </div>
 
-      {/* Real video-player timeline: scrubber, times, transport, voice */}
-      <div className="vt-scrub">
+      {/* Caption bar UNDER the video — never covers the app */}
+      <div className="vt-capbar" style={{ width: STAGE_W }}>
+        <div className="vt-capbar-meta">
+          <span className="cap-step">Step {Math.min(step + 1, total)} / {total}</span>
+          <span className="cap-chap">{currentChapter.label}</span>
+        </div>
+        <div className="vt-capbar-text">
+          <h2 className="cap-title">{done ? "That's Wrapbox" : cur?.title}</h2>
+          <p className="cap-body">{done ? tc.outcome : cur?.body}</p>
+        </div>
+      </div>
+
+      {/* Timeline with chapter ticks and real timecodes */}
+      <div className="vt-scrub" style={{ width: STAGE_W }}>
         <div className="vt-track" onClick={(e) => {
           const r = e.currentTarget.getBoundingClientRect();
           const pct = (e.clientX - r.left) / r.width;
-          restartAt(Math.round(pct * (total - 1)));
+          const targetSec = pct * totalSec;
+          let i = 0;
+          while (i < total - 1 && cum[i + 1] / 1000 < targetSec) i += 1;
+          restartAt(i);
         }}>
           <div className="vt-bar" style={{ width: `${progressPct}%` }} />
           {CHAPTERS.slice(1).map((c) => (
-            <span key={c.label} className="vt-mark-tick" style={{ left: `${(c.at / (total - 1)) * 100}%` }} title={c.label} />
+            <span key={c.label} className="vt-mark-tick" style={{ left: `${totalSec > 0 ? (cum[Math.min(c.at, total)] / 1000 / totalSec) * 100 : 0}%` }} title={c.label} />
           ))}
           <span className="vt-thumb" style={{ left: `${progressPct}%` }} />
         </div>
-        <div className="vt-time">{fmt(elapsed)} <span className="vt-time-sep">/</span> {fmt(totalSec)}</div>
+        <div className="vt-time">{fmt(elapsedSec)} <span className="vt-time-sep">/</span> {fmt(totalSec)}</div>
       </div>
 
-      <div className="vt-transport">
+      {/* Transport */}
+      <div className="vt-transport" style={{ width: STAGE_W }}>
         <div className="vt-transport-l">
           <button className="vt-t-btn" onClick={() => restartAt(0)} title="Restart"><RotateCcw size={16} /></button>
           <button className="vt-t-btn" onClick={() => restartAt(Math.max(0, step - 1))} title="Previous step (←)"><SkipBack size={16} /></button>
