@@ -690,3 +690,11 @@ html[data-variant="v3"] .lvbg { display: none; }
 .deck-mini-ctl { position: fixed; bottom: 16px; right: 20px; z-index: 10; display: flex; gap: 6px; }
 .deck-mini-ctl button { width: 32px; height: 32px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.08); background: rgba(255,255,255,0.85); color: #444; display: grid; place-items: center; cursor: pointer; backdrop-filter: blur(6px); }
 :root[data-theme="dark"] .deck-mini-ctl button { background: rgba(20,20,22,0.85); color: #eee; border-color: rgba(255,255,255,0.1); }
+
+/* Square every rectangle in the video tour / browser chrome + the v2/v3 frame.
+   The three mac dots and the guide avatar stay circular (that's the mac look). */
+.vt-stage, .vt-tab, .vt-newtab, .vt-addr, .vt-nav-b, .vt-chip, .vt-t-btn, .vt-t-play, .vt-voice,
+.vt-capbar, .vt-track, .vt-bar, .vt-thumb, .vt-chapters-inner, .vt-chapters-head button,
+.vt-chapters-list li, .vt-chapters-no, .vt-fav, .lvframe {
+  border-radius: 0 !important;
+}

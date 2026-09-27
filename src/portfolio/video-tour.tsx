@@ -136,10 +136,13 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
 
   const voiceRef = useRef(voice);
   voiceRef.current = voice;
+  // A standalone HTML build can set window.__WB_TOUR_BASE__ to an absolute
+  // URL so the tour app + audio load from there, letting one file run anywhere.
+  const base = (typeof window !== "undefined" && (window as unknown as { __WB_TOUR_BASE__?: string }).__WB_TOUR_BASE__) || "";
   const src = useMemo(() => SHOT
-    ? `tour.html?case=${tc.id}&shot=${Math.min(tc.poster ?? 1, total - 1)}&after=1&nocap=1`
-    : `tour.html?case=${tc.id}&voice=${voiceRef.current ? 1 : 0}&nocap=1${run.from ? `&from=${run.from}` : ""}`,
-  [tc.id, run, total]);
+    ? `${base}tour.html?case=${tc.id}&shot=${Math.min(tc.poster ?? 1, total - 1)}&after=1&nocap=1`
+    : `${base}tour.html?case=${tc.id}&voice=${voiceRef.current ? 1 : 0}&nocap=1${run.from ? `&from=${run.from}` : ""}`,
+  [tc.id, run, total, base]);
   const done = status === "done" && !SHOT;
   const paused = status === "paused";
   const cur = tc.steps[step];
