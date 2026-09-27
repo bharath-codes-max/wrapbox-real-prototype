@@ -8,6 +8,7 @@ import type { SlideProps } from "./deck";
 import { Reveal, Display, Lead, SHOT } from "./ui";
 import { photoOf } from "../ui/logos";
 import { CASES } from "../tour/cases";
+import { BrowserChrome } from "./browser-chrome";
 import type { TourCase } from "../tour/types";
 
 const APP_W = 1280, APP_H = 800, SCALE = 0.76;
@@ -156,11 +157,7 @@ export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & S
       <Reveal><h1 className="lvtitle">{tc.title}</h1></Reveal>
       <div className="lvbody">
         <Reveal i={1} className="lvframe" style={{ width: APP_W * SCALE }}>
-          <div className="lvbar">
-            <span className="lights"><i /><i /><i /></span>
-            <span className="lvurl">Wrapbox · {pageOf(route)}</span>
-            <span className="lvlive"><i />Running live</span>
-          </div>
+          <BrowserChrome page={pageOf(route)} />
           <div className="lvview" style={{ width: APP_W * SCALE, height: APP_H * SCALE }}>
             {active && (
               <iframe

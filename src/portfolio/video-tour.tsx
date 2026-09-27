@@ -6,17 +6,19 @@
 // as the v2/v3 deck slides. Reuses the same tour.html player (nocap=1 hides
 // the player's own floating caption; the spotlight and cursor still animate).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pause, Play, RotateCcw, SkipBack, SkipForward, Volume2, VolumeX, Menu, X, Check, ChevronLeft, ChevronRight, RotateCw, Lock, Plus } from "lucide-react";
+import { Pause, Play, RotateCcw, SkipBack, SkipForward, Volume2, VolumeX, Menu, Check, X } from "lucide-react";
 import type { SlideProps } from "./deck";
 import { SHOT } from "./ui";
 import { photoOf } from "../ui/logos";
+import { BrowserChrome } from "./browser-chrome";
 import type { TourCase } from "../tour/types";
 import VOICE from "../tour/voice.json";
 
 // The app renders at 16:9 inside the frame; the frame is scaled to fit the
-// stage between the top bar and the caption + transport rows.
+// stage between the heading and the caption + transport rows. Kept a touch
+// smaller than the full stage so the demo has breathing room.
 const APP_W = 1440, APP_H = 810;
-const STAGE_H = 596;
+const STAGE_H = 540;
 const SCALE = STAGE_H / APP_H;
 const STAGE_W = Math.round(APP_W * SCALE);
 
@@ -149,32 +151,17 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
 
   return (
     <div className="vt">
+      {/* Slide heading — light weight */}
+      <div className="vt-head" style={{ width: STAGE_W }}>
+        <h1 className="vt-head-title">Product</h1>
+        <p className="vt-head-sub">The complete Wrapbox product, page by page — running live in the real app, narrated end to end.</p>
+      </div>
+
       {/* The live product inside a real Chrome-style browser window (dark chrome + drop shadow) */}
       <div className="vt-stage" style={{ width: STAGE_W }}>
-        {/* Row 1 — tab strip: mac lights · active tab (favicon + title + close) · new tab */}
-        <div className="vt-tabstrip">
-          <span className="vt-lights"><i /><i /><i /></span>
-          <div className="vt-tab active">
-            <span className="vt-fav" />
-            <span className="vt-tab-title">Wrapbox — {pageOf(route)}</span>
-            <X size={12} className="vt-tab-x" />
-          </div>
-          <button className="vt-newtab" aria-label="New tab"><Plus size={14} /></button>
-        </div>
-        {/* Row 2 — toolbar: nav · address bar · chapters · guide */}
-        <div className="vt-toolbar">
-          <div className="vt-nav">
-            <span className="vt-nav-b"><ChevronLeft size={17} /></span>
-            <span className="vt-nav-b vt-nav-dim"><ChevronRight size={17} /></span>
-            <span className="vt-nav-b"><RotateCw size={15} /></span>
-          </div>
-          <div className="vt-addr">
-            <Lock size={12} className="vt-addr-lock" />
-            <span className="vt-addr-host">wrapbox.io</span>
-            <span className="vt-addr-path">/{pageOf(route).toLowerCase().replace(/\s+/g, "-")}</span>
-            <span className="vt-addr-live"><i /> LIVE</span>
-          </div>
-          <div className="vt-toolbar-right">
+        <BrowserChrome
+          page={pageOf(route)}
+          right={<>
             <button className="vt-chip vt-chap" onClick={() => setChaptersOpen((v) => !v)} title="Chapters">
               <Menu size={13} /> {currentChapter.label}
             </button>
@@ -182,8 +169,8 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
               {face ? <img src={face} alt="" /> : <span className="vt-face-mono">{initials}</span>}
               <b>{person.name}</b>
             </span>
-          </div>
-        </div>
+          </>}
+        />
         <div className="vt-view" style={{ height: STAGE_H }}>
           {active && (
             <iframe
