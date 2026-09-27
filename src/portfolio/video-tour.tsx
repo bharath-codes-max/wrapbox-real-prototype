@@ -6,7 +6,7 @@
 // as the v2/v3 deck slides. Reuses the same tour.html player (nocap=1 hides
 // the player's own floating caption; the spotlight and cursor still animate).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pause, Play, RotateCcw, SkipBack, SkipForward, Volume2, VolumeX, Menu, X, Check } from "lucide-react";
+import { Pause, Play, RotateCcw, SkipBack, SkipForward, Volume2, VolumeX, Menu, X, Check, ChevronLeft, ChevronRight, RotateCw, Lock, Plus } from "lucide-react";
 import type { SlideProps } from "./deck";
 import { SHOT } from "./ui";
 import { photoOf } from "../ui/logos";
@@ -149,21 +149,35 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
 
   return (
     <div className="vt">
-      {/* The live product inside a real mac-browser window (chrome + drop shadow) */}
+      {/* The live product inside a real Chrome-style browser window (dark chrome + drop shadow) */}
       <div className="vt-stage" style={{ width: STAGE_W }}>
-        {/* Browser toolbar: traffic lights · address bar · chapters · guide */}
-        <div className="vt-winbar">
+        {/* Row 1 — tab strip: mac lights · active tab (favicon + title + close) · new tab */}
+        <div className="vt-tabstrip">
           <span className="vt-lights"><i /><i /><i /></span>
-          <div className="vt-url">
-            <span className="vt-url-live"><i /> LIVE</span>
-            <span className="vt-url-host">wrapbox.app</span>
-            <span className="vt-url-sep">/</span>
-            <span className="vt-url-page">{pageOf(route)}</span>
+          <div className="vt-tab active">
+            <span className="vt-fav" />
+            <span className="vt-tab-title">Wrapbox — {pageOf(route)}</span>
+            <X size={12} className="vt-tab-x" />
           </div>
-          <div className="vt-winbar-right">
-            <span className="vt-chip vt-chap" onClick={() => setChaptersOpen((v) => !v)} title="Chapters">
+          <button className="vt-newtab" aria-label="New tab"><Plus size={14} /></button>
+        </div>
+        {/* Row 2 — toolbar: nav · address bar · chapters · guide */}
+        <div className="vt-toolbar">
+          <div className="vt-nav">
+            <span className="vt-nav-b"><ChevronLeft size={17} /></span>
+            <span className="vt-nav-b vt-nav-dim"><ChevronRight size={17} /></span>
+            <span className="vt-nav-b"><RotateCw size={15} /></span>
+          </div>
+          <div className="vt-addr">
+            <Lock size={12} className="vt-addr-lock" />
+            <span className="vt-addr-host">wrapbox.io</span>
+            <span className="vt-addr-path">/{pageOf(route).toLowerCase().replace(/\s+/g, "-")}</span>
+            <span className="vt-addr-live"><i /> LIVE</span>
+          </div>
+          <div className="vt-toolbar-right">
+            <button className="vt-chip vt-chap" onClick={() => setChaptersOpen((v) => !v)} title="Chapters">
               <Menu size={13} /> {currentChapter.label}
-            </span>
+            </button>
             <span className="vt-guide">
               {face ? <img src={face} alt="" /> : <span className="vt-face-mono">{initials}</span>}
               <b>{person.name}</b>
