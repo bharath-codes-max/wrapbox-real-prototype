@@ -18,7 +18,7 @@ import VOICE from "../tour/voice.json";
 // stage between the heading and the caption + transport rows. Kept a touch
 // smaller than the full stage so the demo has breathing room.
 const APP_W = 1440, APP_H = 810;
-const STAGE_H = 540;
+const STAGE_H = 530;
 const SCALE = STAGE_H / APP_H;
 const STAGE_W = Math.round(APP_W * SCALE);
 
@@ -154,12 +154,6 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
 
   return (
     <div className="vt">
-      {/* Slide heading — light weight */}
-      <div className="vt-head" style={{ width: STAGE_W }}>
-        <h1 className="vt-head-title">Product</h1>
-        <p className="vt-head-sub">The complete Wrapbox product, page by page — running live in the real app, narrated end to end.</p>
-      </div>
-
       {/* The live product inside a real Chrome-style browser window (dark chrome + drop shadow) */}
       <div className="vt-stage" style={{ width: STAGE_W }}>
         <BrowserChrome
