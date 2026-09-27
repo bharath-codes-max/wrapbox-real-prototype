@@ -46,7 +46,7 @@ function useStageScale() {
   return scale;
 }
 
-export function Deck({ slides = SLIDES, showNumber = true }: { slides?: SlideDef[]; showNumber?: boolean }) {
+export function Deck({ slides = SLIDES, showNumber = true, chrome = true }: { slides?: SlideDef[]; showNumber?: boolean; chrome?: boolean }) {
   const SLIDES_ = slides;
   const [idx, setIdx] = useState(() => readHash(SLIDES_.length));
   const [step, setStep] = useState(0);
@@ -149,7 +149,7 @@ export function Deck({ slides = SLIDES, showNumber = true }: { slides?: SlideDef
         </div>
       </div>
 
-      <footer className="chrome" aria-label="Deck controls">
+      {chrome && <footer className="chrome" aria-label="Deck controls">
         <button className="nav" onClick={prev} disabled={idx === 0 && step === 0} aria-label="Previous"><ChevronLeft size={18} /></button>
         <span className="count">{idx + 1} / {SLIDES_.length}</span>
         <div className="dashes" role="tablist" aria-label="Slides">
@@ -168,7 +168,13 @@ export function Deck({ slides = SLIDES, showNumber = true }: { slides?: SlideDef
         <button className="nav" onClick={next} disabled={idx === SLIDES_.length - 1 && step >= steps - 1} aria-label="Next"><ChevronRight size={18} /></button>
         <button className="ico" onClick={toggleTheme} aria-label={theme === "dark" ? "Switch to light" : "Switch to dark"} title="Theme (T)">{theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}</button>
         <button className="ico" onClick={toggleFullscreen} aria-label={fs ? "Exit fullscreen" : "Fullscreen"} title="Fullscreen (F)">{fs ? <Minimize2 size={17} /> : <Maximize2 size={17} />}</button>
-      </footer>
+      </footer>}
+      {!chrome && (
+        <div className="deck-mini-ctl">
+          <button onClick={toggleTheme} title="Theme (T)" aria-label={theme === "dark" ? "Switch to light" : "Switch to dark"}>{theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}</button>
+          <button onClick={toggleFullscreen} title="Fullscreen (F)" aria-label={fs ? "Exit fullscreen" : "Fullscreen"}>{fs ? <Minimize2 size={15} /> : <Maximize2 size={15} />}</button>
+        </div>
+      )}
     </MotionConfig>
   );
 }

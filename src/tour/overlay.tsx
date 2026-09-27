@@ -50,12 +50,15 @@ export function TourOverlay() {
   const c = s.caption;
   const r = s.rect && c && !c.centered ? s.rect : null;
   const pos = c ? place(r, s.pad, size, c.placement, vp.w, vp.h) : null;
+  // In "nocap" mode (the video-tour shell draws its own caption underneath), we
+  // still want the spotlight and cursor to animate — just no floating card.
+  const nocap = new URLSearchParams(location.search).get("nocap") === "1";
   return (
     <div className="tour-layer" aria-live="polite">
       {c && (r
         ? <div className="tour-spot" style={{ left: r.x - s.pad, top: r.y - s.pad, width: r.w + s.pad * 2, height: r.h + s.pad * 2 }} />
         : <div className="tour-dim" />)}
-      {c && pos && (
+      {c && pos && !nocap && (
         <div ref={card} key={c.index} className={`tour-card ${c.centered ? "centered" : ""}`} style={{ left: pos.left, top: pos.top, width: CARD_W }}>
           <div className="tour-card-step">Step {c.index + 1} of {c.total}</div>
           <div className="tour-card-title">{c.title}</div>
