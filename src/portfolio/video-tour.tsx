@@ -149,40 +149,42 @@ export function VideoTour({ tc, active }: { tc: TourCase } & SlideProps) {
 
   return (
     <div className="vt">
-      {/* Top bar: title · current app page · chapter · guide */}
-      <div className="vt-top">
-        <div className="vt-title">
-          <span className="vt-mark">▶</span>
-          <b>{tc.title}</b>
+      {/* The live product inside a real mac-browser window (chrome + drop shadow) */}
+      <div className="vt-stage" style={{ width: STAGE_W }}>
+        {/* Browser toolbar: traffic lights · address bar · chapters · guide */}
+        <div className="vt-winbar">
+          <span className="vt-lights"><i /><i /><i /></span>
+          <div className="vt-url">
+            <span className="vt-url-live"><i /> LIVE</span>
+            <span className="vt-url-host">wrapbox.app</span>
+            <span className="vt-url-sep">/</span>
+            <span className="vt-url-page">{pageOf(route)}</span>
+          </div>
+          <div className="vt-winbar-right">
+            <span className="vt-chip vt-chap" onClick={() => setChaptersOpen((v) => !v)} title="Chapters">
+              <Menu size={13} /> {currentChapter.label}
+            </span>
+            <span className="vt-guide">
+              {face ? <img src={face} alt="" /> : <span className="vt-face-mono">{initials}</span>}
+              <b>{person.name}</b>
+            </span>
+          </div>
         </div>
-        <div className="vt-mid">
-          <span className="vt-page"><span className="lights"><i /><i /><i /></span>Wrapbox · {pageOf(route)}</span>
-          <span className="vt-chip vt-chap" onClick={() => setChaptersOpen((v) => !v)} title="Chapters">
-            <Menu size={13} /> {currentChapter.label}
-          </span>
+        <div className="vt-view" style={{ height: STAGE_H }}>
+          {active && (
+            <iframe
+              key={run.key}
+              ref={frame}
+              src={src}
+              title={`${tc.title} — live tour`}
+              width={APP_W}
+              height={APP_H}
+              allow="autoplay"
+              style={{ transform: `scale(${SCALE})` }}
+              tabIndex={-1}
+            />
+          )}
         </div>
-        <div className="vt-guide">
-          {face ? <img src={face} alt="" /> : <span className="vt-face-mono">{initials}</span>}
-          <span>Guided by <b>{person.name}</b></span>
-        </div>
-      </div>
-
-      {/* The video: the live product, nothing over it but the LIVE pill */}
-      <div className="vt-stage" style={{ width: STAGE_W, height: STAGE_H }}>
-        {active && (
-          <iframe
-            key={run.key}
-            ref={frame}
-            src={src}
-            title={`${tc.title} — live tour`}
-            width={APP_W}
-            height={APP_H}
-            allow="autoplay"
-            style={{ transform: `scale(${SCALE})` }}
-            tabIndex={-1}
-          />
-        )}
-        <div className="vt-live"><i /> LIVE</div>
 
         {/* Chapters drawer (only when opened) */}
         {chaptersOpen && (
