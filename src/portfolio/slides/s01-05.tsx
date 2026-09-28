@@ -1,11 +1,12 @@
 // Cover · Understand · Research (numbers, the gap)
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SlideProps } from "../deck";
-import { Display, Eyebrow, Lead, Reveal, Head, Stat, Sources, Brand, Clip, RPLUS, claimById, fmtDate } from "../ui";
+import { Display, Lead, Reveal, Head, Stat, Sources, Brand, Clip, RPLUS, claimById, fmtDate } from "../ui";
 import { research } from "../data/research";
 import { decideOnce, scenario } from "../live";
 import { pipelineFor } from "../../engine/simulate";
 import { AgentTerminal } from "../../ui/agent-terminal";
+import { WrapboxWordmark } from "../../ui/logo";
 import type { SimulationEvent } from "../../model/types";
 
 /* ---------- cover ---------- */
@@ -36,7 +37,7 @@ export function Cover({ active }: SlideProps) {
   return (
     <div className="cols cols-53" style={{ height: "100%", alignItems: "center", gap: 56 }}>
       <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 30 }}>
-        <Reveal><Eyebrow>Product portfolio · Bharath Salla</Eyebrow></Reveal>
+        <Reveal><WrapboxWordmark height={28} /></Reveal>
         <Reveal i={1}><Display>Runtime authorization for <em>AI agents.</em></Display></Reveal>
         <Reveal i={2}><Lead>Wrapbox decides whether each agent action is safe from its action, environment, data, destination and blast radius.</Lead></Reveal>
         <Reveal i={3} className="dec cover-dec" aria-label="The four decisions">
