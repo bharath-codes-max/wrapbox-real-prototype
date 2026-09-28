@@ -38,7 +38,7 @@ const ff = spawn("ffmpeg", ["-y", "-loglevel", "error", "-f", "image2pipe", "-fr
   "-g", String(FPS / 2), "-bf", "2", "-r", String(FPS), VIDEO_ONLY], { stdio: ["pipe", "inherit", "inherit"] });
 
 const browser = await chromium.launch({ channel: "chrome", headless: true });
-const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 2 }); // 2× then downscaled: sharp text
 const narr = [];
 let doneAt = 0, failed = null;
 await page.exposeFunction("__wbRec", (ev) => {

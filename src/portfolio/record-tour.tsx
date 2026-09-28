@@ -1,19 +1,18 @@
-// The YouTube recording frame: exactly 1920×1080, no player controls (YouTube
-// brings its own). The live product runs in the shared Chrome-style browser
-// window; the story caption card sits INSIDE the frame at the bottom, with a
-// thin progress line. docs/_record.mjs screen-captures this page and lays the
+// The YouTube recording frame: exactly 1920×1080 and filled edge to edge — the
+// live product fills the frame (no browser window, no margins, no player
+// controls: YouTube brings its own), with the story caption as a full-width
+// strip along the bottom and a thin progress line. docs/_record.mjs screen-captures this page and lays the
 // narration clips onto the soundtrack at the moments the runner reports.
 import { useEffect, useRef, useState } from "react";
-import { BrowserChrome } from "./browser-chrome";
-import { CHAPTERS, pageOf } from "./video-tour";
+import { CHAPTERS } from "./video-tour";
 import { WrapboxLogo } from "../ui/logo";
-import { photoOf } from "../ui/logos";
 import type { TourCase } from "../tour/types";
 
-// 1080 = 28 top + 88 chrome + 798 app + 14 gap + 124 caption + 28 bottom
-const W = 1419, VIEW_H = 798;
-const APP_W = 1440, APP_H = 810;
-const SCALE = VIEW_H / APP_H;
+// 1080 = 956 app + 124 caption, both full 1920 wide. The app lays out at
+// 1600×797 and is scaled ×1.2 (captured at 2× pixel density, so it stays sharp).
+const VIEW_W = 1920, VIEW_H = 956;
+const SCALE = 1.2;
+const APP_W = VIEW_W / SCALE, APP_H = Math.round(VIEW_H / SCALE);
 
 interface TourMsg { type: "wrapbox-tour"; id: string; step: number; status: string; route?: string; narrated?: number; at?: number }
 type Rec = (ev: Record<string, unknown>) => void;
@@ -24,7 +23,6 @@ export function RecordTour({ tc }: { tc: TourCase }) {
   const [started, setStarted] = useState(false);
   const [step, setStep] = useState(0);
   const [status, setStatus] = useState("loading");
-  const [route, setRoute] = useState(tc.start);
   const total = tc.steps.length;
 
   // The recorder calls window.__wbGo() once capture is running, so the very
@@ -36,7 +34,6 @@ export function RecordTour({ tc }: { tc: TourCase }) {
     const on = (e: MessageEvent) => {
       const d = e.data as TourMsg | null;
       if (!d || d.type !== "wrapbox-tour" || d.id !== tc.id || e.source !== frame.current?.contentWindow) return;
-      if (d.route) setRoute(d.route);
       if (typeof d.narrated === "number") { setStarted(true); rec?.({ narrated: d.narrated, at: d.at }); }
       setStep(d.step); setStatus(d.status);
       if (d.status === "done") rec?.({ done: Date.now() });
@@ -50,37 +47,30 @@ export function RecordTour({ tc }: { tc: TourCase }) {
   const cur = tc.steps[step];
   const chapter = [...CHAPTERS].reverse().find((c) => step >= c.at) ?? CHAPTERS[0];
   const pct = done ? 100 : (step / Math.max(1, total - 1)) * 100;
-  const face = photoOf(tc.persona.userId);
 
   return (
     <div className="rv">
-      <div className="rv-stage" style={{ width: W }}>
-        <BrowserChrome
-          page={pageOf(route)}
-          right={<span className="vt-guide">{face && <img src={face} alt="" />}<b>{tc.persona.name}</b></span>}
-        />
-        <div className="rv-view" style={{ height: VIEW_H }}>
-          {go && (
-            <iframe
-              ref={frame}
-              src={`tour.html?case=${tc.id}&voice=0&nocap=1`}
-              title={tc.title}
-              width={APP_W}
-              height={APP_H}
-              style={{ transform: `scale(${SCALE})` }}
-              tabIndex={-1}
-            />
-          )}
-          {/* Opening title card, over the window until the story starts */}
-          <div className={`rv-title ${started ? "rv-title-out" : ""}`}>
-            <WrapboxLogo size={64} tone="dark" />
-            <h1>2 a.m. — the night checkout broke</h1>
-            <p>A live walkthrough of Wrapbox, running in the real product</p>
-          </div>
+      <div className="rv-view" style={{ width: VIEW_W, height: VIEW_H }}>
+        {go && (
+          <iframe
+            ref={frame}
+            src={`tour.html?case=${tc.id}&voice=0&nocap=1`}
+            title={tc.title}
+            width={APP_W}
+            height={APP_H}
+            style={{ transform: `scale(${SCALE})` }}
+            tabIndex={-1}
+          />
+        )}
+        {/* Opening title card, full frame, until the story starts */}
+        <div className={`rv-title ${started ? "rv-title-out" : ""}`}>
+          <WrapboxLogo size={84} tone="dark" />
+          <h1>2 a.m. — the night checkout broke</h1>
+          <p>A live walkthrough of Wrapbox, running in the real product</p>
         </div>
       </div>
 
-      <div className="rv-cap" style={{ width: W }}>
+      <div className="rv-cap">
         <div className="rv-prog"><i style={{ width: `${pct}%` }} /></div>
         <div className="rv-cap-meta">
           <span className="rv-step">{String(Math.min(step + 1, total)).padStart(2, "0")} / {total}</span>
