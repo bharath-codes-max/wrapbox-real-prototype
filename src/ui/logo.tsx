@@ -1,53 +1,41 @@
-// The Wrapbox mark — drawn exactly as in the main prototype's brand files:
-// a box, the wrapping seal, and the verified tick.
-import { useId } from "react";
+// The Wrapbox brand mark and wordmark — the real logo file. `tone="light"`
+// renders the ink-on-light version (black + green); `tone="dark"` renders the
+// white-ink version for dark surfaces. The green never changes between them.
+import mark from "../assets/brand/wrapbox-mark.png";
+import markWhite from "../assets/brand/wrapbox-mark-white.png";
+import lockup from "../assets/brand/wrapbox-logo.png";
+import lockupWhite from "../assets/brand/wrapbox-logo-white.png";
 
-export function WrapboxLogo({ size = 30, tone = "light" }: { size?: number; tone?: "dark" | "light" }) {
-  const id = useId().replace(/:/g, "");
-  const ink = tone === "dark" ? "#ffffff" : "currentColor";
+// Intrinsic aspect ratios of the source files (width ÷ height), so `size`
+// (a height, matching every existing call site) yields the right width.
+const MARK_RATIO = 415 / 256;
+const LOCKUP_RATIO = 2000 / 325;
+
+/** The "W" mark alone — for tab favicons, app-icon chips, small badges. */
+export function WrapboxLogo({ size = 30, tone = "light", style }: { size?: number; tone?: "dark" | "light"; style?: React.CSSProperties }) {
   return (
-    <svg
-      width={size}
+    <img
+      src={tone === "dark" ? markWhite : mark}
+      alt="Wrapbox"
+      width={Math.round(size * MARK_RATIO)}
       height={size}
-      viewBox="0 0 40 40"
-      fill="none"
-      aria-hidden="true"
-      style={{
-        flexShrink: 0,
-        color: "var(--fg)",
-        filter: tone === "dark" ? "drop-shadow(0 1px 2px rgba(0,0,0,0.5))" : "drop-shadow(0 2px 6px rgba(24,72,255,0.18))",
-      }}
-    >
-      <defs>
-        <linearGradient id={`wbg-${id}`} x1="6" y1="6" x2="34" y2="34" gradientUnits="userSpaceOnUse">
-          <stop stopColor={tone === "dark" ? "#9db6ff" : "#5a82ff"} />
-          <stop offset="1" stopColor={tone === "dark" ? "#4f7bff" : "#1848ff"} />
-        </linearGradient>
-      </defs>
-      <rect x="9" y="9" width="22" height="22" rx="6" stroke={`url(#wbg-${id})`} strokeWidth="2.4" />
-      <path d="M20 4 H30 a6 6 0 0 1 6 6 V20" stroke={ink} strokeWidth="2.6" strokeLinecap="round" />
-      <path d="M15 20.5 l3.5 3.5 L26 16" stroke={ink} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+      style={{ flexShrink: 0, display: "block", objectFit: "contain", ...style }}
+    />
   );
 }
 
-/** Logo + "Wrapbox" in ink — the brand wordmark lockup. */
+/** The full lockup — mark + lowercase "wrapbox" wordmark, as one image. */
 export function WrapboxWordmark({ tone = "light", size = 18 }: { tone?: "dark" | "light"; size?: number }) {
+  // `size` has historically been a text-size figure (≈18 in the nav); the
+  // full lockup reads at roughly 1.9× that as a height.
+  const h = Math.round(size * 1.9);
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 11, userSelect: "none" }}>
-      <WrapboxLogo size={Math.round(size * 1.67)} tone={tone} />
-      <span
-        style={{
-          fontFamily: "var(--brandfont)",
-          fontSize: size,
-          fontWeight: 700,
-          letterSpacing: "-0.3px",
-          color: tone === "dark" ? "#fff" : "var(--fg)",
-          lineHeight: 1,
-        }}
-      >
-        Wrapbox
-      </span>
-    </span>
+    <img
+      src={tone === "dark" ? lockupWhite : lockup}
+      alt="Wrapbox"
+      width={Math.round(h * LOCKUP_RATIO)}
+      height={h}
+      style={{ flexShrink: 0, display: "block", objectFit: "contain" }}
+    />
   );
 }
