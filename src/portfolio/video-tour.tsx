@@ -25,7 +25,7 @@ function readVoicePref(): boolean { try { return localStorage.getItem(VOICE_KEY)
 interface TourMsg { type: "wrapbox-tour"; id: string; step: number; total: number; status: string; error?: string; route?: string; voiceBlocked?: boolean }
 
 // The story's scenes — one entry per chapter of the 2 a.m. incident.
-const CHAPTERS: { at: number; label: string }[] = [
+export const CHAPTERS: { at: number; label: string }[] = [
   { at: 0, label: "2:14 — Checkout is down" },
   { at: 1, label: "Priya opens Wrapbox" },
   { at: 3, label: "The rules" },
@@ -62,7 +62,7 @@ const PAGE: Record<string, string> = {
   evidence: "Evidence", simlab: "Simulation Lab", integrations: "Integrations", vault: "Token Vault",
   brain: "Core Brain", settings: "Settings", onboarding: "Setup",
 };
-const pageOf = (route: string) => PAGE[route.split("/")[0]] ?? "Wrapbox";
+export const pageOf = (route: string) => PAGE[route.split("/")[0]] ?? "Wrapbox";
 
 function fmt(sec: number): string {
   const m = Math.floor(sec / 60), s = Math.floor(sec % 60);

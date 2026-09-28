@@ -1,3 +1,7 @@
 node_modules
 dist
 *.log
+
+# YouTube recording: build artifact + output (too large for git)
+docs/record.html
+docs/video/

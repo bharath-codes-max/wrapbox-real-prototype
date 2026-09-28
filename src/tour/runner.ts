@@ -132,6 +132,9 @@ export class Runner {
     const a = new Audio(VOICE_BASE + clip.file);
     a.muted = !this.opt.voice;
     this.audio = a;
+    // The exact moment this line starts, so a video recorder can lay the clip
+    // onto its soundtrack in sync (docs/_record.mjs).
+    this.post({ narrated: i, at: Date.now() });
     // Browsers only allow sound after the viewer has interacted with the page;
     // until then the walkthrough keeps its pace silently and the deck offers a sound button.
     a.play().then(() => this.post({ voiceBlocked: false })).catch(() => this.post({ voiceBlocked: true }));
