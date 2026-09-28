@@ -313,7 +313,7 @@ function Topbar({ nav, onPalette }: { nav: (r: string) => void; onPalette: () =>
   return (
     <header className="topbar">
       <button className="sidebar-brand" onClick={() => nav("control")} aria-label="Wrapbox home">
-        <WrapboxWordmark tone={theme === "dark" ? "dark" : "light"} />
+        <WrapboxWordmark tone={theme === "dark" ? "dark" : "light"} height={28} className="logo" />
       </button>
       <span className="topbar-div" />
       <WorkspaceMenu nav={nav} />

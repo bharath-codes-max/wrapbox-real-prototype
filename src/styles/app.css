@@ -82,7 +82,7 @@
 /* Light theme — opt-in from the header toggle (the original cream palette). */
 :root[data-theme="light"] {
   /* Anthropic / Claude — warm cream canvas, coral accent, matte dark header */
-  --bg: #faf9f5;          /* cream canvas */
+  --bg: #ffffff;          /* white canvas */
   --surface: #ffffff;      /* clean white cards lift off the cream */
   --surface-2: #f5f0e8;    /* warm inset / hover / sidebar */
   --surface-3: #efe9de;    /* warm strong */
@@ -274,7 +274,7 @@ button { font-family: var(--sans); }
 .topbar .pill-review { background: rgba(255, 255, 255, 0.14); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); color: #fff; }
 
 /* Light theme: a clean white top nav (ElevenLabs-style) instead of dark matte. */
-:root[data-theme="light"] .topbar { background: #f5f3ee; border-bottom: 1px solid var(--line); height: 64px; padding: 0 24px; gap: 16px; }
+:root[data-theme="light"] .topbar { background: #ffffff; border-bottom: 1px solid var(--line); height: 72px; padding: 0 28px; gap: 18px; }
 :root[data-theme="light"] .topbar-search { height: 38px; border-radius: 10px; }
 :root[data-theme="light"] .theme-toggle { width: 36px; height: 36px; border-radius: 10px; }
 :root[data-theme="light"] .topbar .pill { height: 34px; padding: 0 14px; }
@@ -1297,3 +1297,7 @@ textarea.input { resize: vertical; line-height: 1.6; }
 @keyframes govblink { 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .govcode-dot, .govcode-out::after { animation: none; } }
 @media (max-width: 900px) { .govbanner > div > div:first-child { grid-column: 1 / -1; } }
+
+/* Brand logo in the first header: 28px tall, width auto (≈172px); 20px on phones. */
+.topbar .logo { height: 28px !important; width: auto !important; }
+@media (max-width: 640px) { .topbar .logo { height: 20px !important; } }
