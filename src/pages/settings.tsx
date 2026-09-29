@@ -31,7 +31,7 @@ function HonestList({ items, tone }: { items: string[]; tone: string }) {
       {items.map((t, i) => (
         <div
           key={i}
-          className="row"
+          className="row honest-item"
           style={{ gap: 11, alignItems: "flex-start", padding: "9px 0", borderTop: i ? "1px solid var(--line)" : "none" }}
         >
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: `var(--${tone})`, marginTop: 7, flexShrink: 0 }} />

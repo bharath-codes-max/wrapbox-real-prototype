@@ -203,7 +203,7 @@ export function IntegrationsPage({ nav }: { nav: (r: string) => void }) {
                     <div className="eyebrow row" style={{ gap: 7 }}>
                       <TerminalSquare size={13} /> Coding agents
                     </div>
-                    <h2 style={{ fontSize: "clamp(26px, 2.6vw, 34px)", fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.12, margin: "12px 0 0", color: "var(--fg)" }}>
+                    <h2 className="feature-hero-title" style={{ fontSize: "clamp(26px, 2.6vw, 34px)", fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.12, margin: "12px 0 0", color: "var(--fg)" }}>
                       Take action from anywhere
                     </h2>
                     <p style={{ fontSize: 15, lineHeight: 1.6, color: "var(--fg-2)", margin: "14px 0 0", maxWidth: 460 }}>

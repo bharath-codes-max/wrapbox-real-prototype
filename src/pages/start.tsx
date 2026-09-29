@@ -307,13 +307,13 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
           <GovernedBanner s={s} nav={nav} />
         ) : (
         <div style={{ maxWidth: 820, ...depth(-2) }}>
-          <h1 style={{
+          <h1 className="start-hero-title" style={{
             fontSize: "clamp(36px, 4.4vw, 58px)", lineHeight: 1.02, letterSpacing: "-0.04em",
             fontWeight: 600, margin: 0, color: "var(--fg)", textWrap: "balance",
           }}>
             Runtime authorization for every AI agent, from laptop to cloud.
           </h1>
-          <p style={{ margin: "18px 0 0", fontSize: 16.5, lineHeight: 1.5, color: "var(--fg-2)", maxWidth: "62ch" }}>
+          <p className="start-hero-sub" style={{ margin: "18px 0 0", fontSize: 16.5, lineHeight: 1.5, color: "var(--fg-2)", maxWidth: "62ch" }}>
             Claude Code, Codex, ChatGPT, your own agents — Wrapbox decides whether each action is safe from its action, environment, data, destination and blast radius, and returns ALLOW, CONSTRAIN, REVIEW or BLOCK.
           </p>
         </div>
@@ -352,7 +352,7 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
             padding: "clamp(16px, 2.4vw, 28px)",
           }}
         >
-          <div aria-hidden="true" style={{
+          <div aria-hidden="true" className="start-stage-haze" style={{
             position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
             background: [
               // pointer-following haze
@@ -396,7 +396,7 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
           <div className="spread" style={{ position: "relative", zIndex: 1, gap: 10 }}>
             <div className="row" style={{ gap: 10 }}>
               <span className="small faint">Governs</span>
-              <span style={{ display: "inline-flex" }}>
+              <span className="governs-stack" style={{ display: "inline-flex" }}>
                 {governs.map((a, i) => (
                   <span key={a.id} title={a.name} style={{
                     width: 26, height: 26, borderRadius: 7, display: "grid", placeItems: "center",
@@ -718,7 +718,7 @@ function TickerRow({ e, big }: { e: SimulationEvent; big: boolean }) {
 function IconTile({ children, tone = "accent" }: { children: ReactNode; tone?: "accent" | "constrain" }) {
   const other = tone === "accent" ? "var(--constrain)" : "var(--accent)";
   return (
-    <span style={{
+    <span className="icon-tile" style={{
       width: 40, height: 40, borderRadius: 12, display: "grid", placeItems: "center", color: "var(--accent-fg)",
       background: `linear-gradient(135deg, var(--${tone}), color-mix(in oklab, var(--${tone}) 58%, ${other}))`,
       boxShadow: `0 8px 18px -10px color-mix(in oklab, var(--${tone}) 85%, transparent)`,
