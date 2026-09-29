@@ -671,6 +671,8 @@
 /* Get started — product-scale heading; recorded decisions replayed as running code. */
 :root[data-ds] .start-hero-title { font-size: clamp(28px, 2.5vw, 36px) !important; line-height: 1.12 !important; letter-spacing: -0.028em !important; font-weight: 600 !important; }
 :root[data-ds] .start-hero-sub { margin-top: 14px !important; font-size: 14.5px !important; line-height: 1.6 !important; }
+:root[data-ds] .start-banner { margin: 0 0 30px; overflow: hidden; border-radius: 12px; border: 1px solid var(--line); line-height: 0; }
+:root[data-ds] .start-banner img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 1; object-fit: cover; }
 :root[data-ds] .glow { border-radius: 12px; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: none; }
 :root[data-ds] .glow-soft { box-shadow: none; }
 :root[data-ds] .governs-stack > span:empty { display: none !important; }
@@ -817,6 +819,8 @@
 }
 @media (max-width: 640px) {
   :root[data-ds] .main .page { padding: 20px 16px 84px; }
+  /* On phones the banner crops to the checkpoint scene instead of shrinking it. */
+  :root[data-ds] .start-banner img { aspect-ratio: 2.2 / 1; object-position: 80% 50%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

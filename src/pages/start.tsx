@@ -21,6 +21,8 @@ import { EventDetail } from "../ui/event-detail";
 import { DESKTOP_SHELL } from "../ui/shell";
 import { pipelineFor } from "../engine/simulate";
 import { scenarioById } from "../engine/scenarios";
+import permitBannerDark from "../assets/illustrations/permit-banner-dark.webp";
+import permitBannerLight from "../assets/illustrations/permit-banner-light.webp";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -240,7 +242,8 @@ function GovernedBanner({ s, nav }: { s: AppState; nav: (r: string) => void }) {
 
 export function StartPage({ nav }: { nav: (r: string) => void }) {
   const s = useAppState();
-  const bigComposer = useIsLightTheme() && !DESKTOP_SHELL;
+  const isLight = useIsLightTheme();
+  const bigComposer = isLight && !DESKTOP_SHELL;
   const m = metrics(s);
   const ob = s.onboarding;
   const fresh = s.workspace === "fresh";
@@ -308,6 +311,18 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
         onMouseLeave={onHeroLeave}
         style={{ position: "relative", padding: "clamp(12px, 2.6vw, 36px) 0 0" }}
       >
+        {/* The prototype opens with the permit-checkpoint illustration — one per theme. */}
+        {DESKTOP_SHELL && (
+          <figure className="start-banner">
+            <img
+              src={isLight ? permitBannerLight : permitBannerDark}
+              width={2000}
+              height={500}
+              decoding="async"
+              alt="AI agents queue at a Wrapbox checkpoint that asks each one for a permit: one is turned away, one passes the barrier with an approved permit."
+            />
+          </figure>
+        )}
         {bigComposer ? (
           <GovernedBanner s={s} nav={nav} />
         ) : (
