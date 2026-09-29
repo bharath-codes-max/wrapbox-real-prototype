@@ -19,6 +19,7 @@ import { describe } from "../ui/describe";
 import { DESKTOP_SHELL } from "../ui/shell";
 import { sfx } from "../ui/sfx";
 import gateBanner from "../assets/illustrations/gate-banner.webp";
+import gateBannerDark from "../assets/illustrations/gate-banner-dark.webp";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -314,11 +315,13 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
         {DESKTOP_SHELL && (
           <figure className="start-banner start-banner-gate">
             <img
-              src={gateBanner}
+              src={isLight ? gateBanner : gateBannerDark}
               width={2000}
               height={500}
               decoding="async"
-              alt="Agent security platform — every agent gets checked at the gate. Verify, permit and monitor every AI agent before it acts. AI agents queue at a checkpoint; one is turned away, one passes with an approved permit."
+              alt={isLight
+                ? "Agent security platform — every agent gets checked at the gate. Verify, permit and monitor every AI agent before it acts. AI agents queue at a checkpoint; one is turned away, one passes with an approved permit."
+                : "AI agents queue at a checkpoint that asks each one for a permit: one is turned away, one passes the barrier with an approved permit."}
             />
           </figure>
         )}
