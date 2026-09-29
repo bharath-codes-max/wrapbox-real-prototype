@@ -4,12 +4,12 @@
 // page is read from the store; the decision composer replays real recorded
 // events and shows nothing when the workspace has none.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
-import { ArrowRight, ArrowUp, Building2, Check, ChevronDown, Plus, Radio, RotateCcw } from "lucide-react";
+import { ArrowRight, ArrowUp, Building2, Check, ChevronDown, Plus, Radio, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import {
   useAppState, metrics, switchWorkspace, startFreshWorkspace,
   type AppState, type Region,
 } from "../state/store";
-import { AGENTS, DEVICES, agentById, userById } from "../model/org";
+import { AGENTS, DEVICES, agentById, userById, type OrgAgent } from "../model/org";
 import { CAPABILITIES, PLANE_LABEL } from "../model/registries";
 import { ROLLOUT } from "../model/rollout";
 import { pendingRelease } from "../engine/kernel";
@@ -368,6 +368,7 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
 
         {/* The prototype replays recorded decisions as running code (list + terminal). */}
         {DESKTOP_SHELL && <LiveReplay s={s} total={m.total} company={company} nav={nav} governs={governs} />}
+        {DESKTOP_SHELL && <AgentFactory s={s} nav={nav} />}
 
         {/* The "video" panel — dark theme only; the light hero is the banner above. */}
         {!bigComposer && !DESKTOP_SHELL && <div
@@ -862,6 +863,166 @@ function LiveReplay({ s, total, company, nav, governs }: {
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Agent factory — the workspace's real agents laid out as a live schematic
+// (the visual grammar of a "cloud software factory" board: a dotted field,
+// one cell per agent, a spotlight cycling through real recorded decisions).
+// Every word in the tooltip is read from the store: the agent's real name,
+// provider and risk tier, its most recent recorded decision and the plane it
+// happened on. An agent with no recorded activity says so plainly — nothing
+// here is a fabricated "agent is thinking" animation. Desktop only: hover has
+// no equivalent on touch, so the section is hidden below the tablet breakpoint
+// (see .factory in desktop.css).
+// ---------------------------------------------------------------------------
+
+const FACTORY_COLS = 12;
+const FACTORY_ROWS = 5;
+const FACTORY_CELLS = FACTORY_COLS * FACTORY_ROWS;
+const SPOTLIGHT_MS = 2600;
+
+/** Small stable hash so each agent always lands on the same grid cell (no
+ *  reshuffle on re-render) while still reading as "scattered", not a table. */
+function cellFor(id: string, taken: Set<number>): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  let i = h % FACTORY_CELLS;
+  while (taken.has(i)) i = (i + 7) % FACTORY_CELLS; // 7 is coprime to 60 — visits every cell
+  taken.add(i);
+  return i;
+}
+
+const RISK_TONE: Record<OrgAgent["risk"], string> = { low: "allow", moderate: "review", high: "review", critical: "block" };
+
+function FactorySound() {
+  const [on, setOn] = useState(() => { try { return localStorage.getItem("wrapbox-factory-sound") === "1"; } catch { return false; } });
+  const ctxRef = useRef<AudioContext | null>(null);
+  useEffect(() => { (window as unknown as { __wbFactoryBeep?: () => void }).__wbFactoryBeep = () => {
+    if (!on) return;
+    try {
+      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = (ctxRef.current ??= new Ctx());
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = "sine"; osc.frequency.value = 740;
+      gain.gain.setValueAtTime(0.05, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + 0.12);
+    } catch { /* audio unavailable — silent no-op */ }
+  }; }, [on]);
+  return (
+    <button
+      type="button"
+      className="factory-mute"
+      onClick={() => { const v = !on; setOn(v); try { localStorage.setItem("wrapbox-factory-sound", v ? "1" : "0"); } catch { /* private mode */ } }}
+      title={on ? "Mute the spotlight tick" : "Play a soft tick when the spotlight moves"}
+      aria-pressed={on}
+    >
+      {on ? <Volume2 size={12} /> : <VolumeX size={12} />}
+    </button>
+  );
+}
+
+function AgentFactory({ s, nav }: { s: AppState; nav: (r: string) => void }) {
+  const recent = useMemo(
+    () => [...s.events].filter((e) => !!agentById(e.agent)).sort((a, b) => b.timestamp - a.timestamp).slice(0, 16),
+    [s.events],
+  );
+  const lastByAgent = useMemo(() => {
+    const m = new Map<string, SimulationEvent>();
+    for (const e of recent) if (!m.has(e.agent)) m.set(e.agent, e);
+    return m;
+  }, [recent]);
+  const cells = useMemo(() => {
+    const taken = new Set<number>();
+    return AGENTS.map((a) => ({ agent: a, cell: cellFor(a.id, taken) }));
+  }, []);
+  const cellOf = useMemo(() => new Map(cells.map((c) => [c.cell, c.agent])), [cells]);
+
+  const [spot, setSpot] = useState(0);
+  const [hover, setHover] = useState<{ agent: OrgAgent; x: number; y: number } | null>(null);
+  const [openEvt, setOpenEvt] = useState<SimulationEvent | null>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const reduced = reducedMotion();
+
+  useEffect(() => {
+    if (reduced || recent.length === 0) return;
+    const t = window.setInterval(() => {
+      setSpot((v) => (v + 1) % recent.length);
+      (window as unknown as { __wbFactoryBeep?: () => void }).__wbFactoryBeep?.();
+    }, SPOTLIGHT_MS);
+    return () => window.clearInterval(t);
+  }, [recent.length, reduced]);
+  const spotAgent = recent[spot]?.agent;
+
+  const showTip = (agent: OrgAgent, el: HTMLElement) => {
+    const box = boxRef.current;
+    if (!box) return;
+    const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
+    setHover({ agent, x: r.left - b.left + r.width / 2, y: r.top - b.top });
+  };
+
+  const registered = AGENTS.filter((a) => !a.discovered).length;
+  const activeRules = s.contracts.filter((c) => c.status === "ACTIVE").reduce((n, c) => n + c.clauses.length, 0);
+
+  return (
+    <section className="factory">
+      <div className="factory-fig">
+        <span className="factory-fig-icon">&gt;_</span>
+        <span className="factory-fig-rule" aria-hidden="true" />
+        <span className="factory-fig-label">[ fig. — the workspace ]</span>
+        <span className="factory-fig-rule" aria-hidden="true" />
+        <span className="factory-fig-icon">#</span>
+      </div>
+      <div className="factory-board" ref={boxRef}>
+        <span className="factory-yaml">WRAPBOX.YAML</span>
+        <span className="factory-live"><i /> LIVE</span>
+        <div className="factory-grid">
+          {Array.from({ length: FACTORY_CELLS }, (_, i) => {
+            const agent = cellOf.get(i);
+            if (!agent) return <span key={i} className="factory-cell factory-cell-empty" aria-hidden="true" />;
+            const last = lastByAgent.get(agent.id);
+            const lit = agent.id === spotAgent;
+            return (
+              <button
+                key={i}
+                type="button"
+                className={`factory-cell factory-cell-agent tone-${RISK_TONE[agent.risk]}${lit ? " lit" : ""}${agent.discovered ? " unknown" : ""}`}
+                onMouseEnter={(e) => showTip(agent, e.currentTarget)}
+                onMouseLeave={() => setHover((h) => (h?.agent.id === agent.id ? null : h))}
+                onClick={() => last && setOpenEvt(last)}
+                aria-label={`${agent.name} — ${last ? describe(last) : "no recorded activity yet"}`}
+              />
+            );
+          })}
+        </div>
+        {hover && (() => {
+          const last = lastByAgent.get(hover.agent.id);
+          return (
+            <div className="factory-tip" style={{ left: hover.x, top: hover.y }}>
+              <div className="factory-tip-head">
+                <b>{hover.agent.kind === "internal" ? "internal" : hover.agent.kind} agent</b>
+                <span className="dim">· {last ? "active" : "idle"}</span>
+              </div>
+              <div className="factory-tip-body">{last ? describe(last) : "No recorded activity yet."}</div>
+              <div className="factory-tip-foot">
+                <span>TRIGGERED FROM {last ? PLANE[last.plane] : "—"}</span>
+                <span>{hover.agent.provider} <span className="dim">·</span> {last ? <DecisionChip d={last.decision} small /> : hover.agent.risk.toUpperCase()}</span>
+              </div>
+            </div>
+          );
+        })()}
+        <FactorySound />
+      </div>
+      <div className="factory-foot">
+        <span>{m0(s)} decisions</span> <span className="dim">·</span> <span>{registered} of {AGENTS.length} agents registered</span> <span className="dim">·</span> <span>{activeRules} rules enforced</span>
+        <button className="btn btn-ghost btn-sm" onClick={() => nav("agents")}>Open Agents <ArrowRight size={13} /></button>
+      </div>
+      {openEvt && <EventDetail e={openEvt} onClose={() => setOpenEvt(null)} onNavigate={(r) => { setOpenEvt(null); nav(r); }} />}
+    </section>
+  );
+}
+const m0 = (s: AppState) => s.events.length;
 
 // ---------------------------------------------------------------------------
 // Path card

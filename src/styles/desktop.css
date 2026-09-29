@@ -795,6 +795,90 @@
 :root[data-ds] .live-replay-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 18px; border-top: 1px solid var(--line); }
 :root[data-ds] .live-replay-empty { display: flex; align-items: center; gap: 14px; padding: 28px 22px; }
 
+/* Get Started — the agent factory: one cell per real agent, a spotlight that
+   cycles through actually-recorded decisions, and a tooltip that reads straight
+   off the store. Desktop only (hover has no touch equivalent) — hidden below
+   860px alongside the sidebar-bottom/demo-bar rules further down this file. */
+:root[data-ds] .factory { margin-top: 28px; }
+:root[data-ds] .factory-fig {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  font: 500 11px var(--mono); letter-spacing: 0.02em; color: var(--fg-4);
+}
+:root[data-ds] .factory-fig-icon { flex-shrink: 0; }
+:root[data-ds] .factory-fig-rule { flex: 1; height: 1px; background: var(--line); }
+:root[data-ds] .factory-fig-label { flex-shrink: 0; white-space: nowrap; }
+:root[data-ds] .factory-board {
+  position: relative; border: 1px solid var(--line); border-radius: 12px;
+  background-color: var(--surface);
+  background-image: radial-gradient(var(--line-strong) 1px, transparent 1px);
+  background-size: 22px 22px; background-position: 18px 18px;
+  padding: 40px 24px 24px;
+}
+:root[data-ds] .factory-yaml {
+  position: absolute; top: 14px; left: 20px; font: 500 10.5px var(--mono);
+  letter-spacing: 0.04em; color: var(--fg-4);
+}
+:root[data-ds] .factory-live {
+  position: absolute; top: 13px; right: 46px; display: inline-flex; align-items: center; gap: 6px;
+  font: 600 10px var(--mono); letter-spacing: 0.06em; color: var(--fg-3);
+}
+:root[data-ds] .factory-live i {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--allow);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--allow) 20%, transparent);
+  animation: factory-pulse 1.8s ease-in-out infinite;
+}
+@keyframes factory-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+:root[data-ds] .factory-mute {
+  position: absolute; top: 11px; right: 14px; width: 22px; height: 22px; display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--ds-quiet); color: var(--fg-3);
+  cursor: pointer; transition: background-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+:root[data-ds] .factory-mute:hover { background: var(--ds-hover); color: var(--fg); }
+:root[data-ds] .factory-grid {
+  display: grid; grid-template-columns: repeat(12, 1fr); gap: 7px;
+}
+:root[data-ds] .factory-cell {
+  aspect-ratio: 1; border: 0; padding: 0; border-radius: 3px; min-width: 0;
+}
+:root[data-ds] .factory-cell-empty { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+:root[data-ds] .factory-cell-agent {
+  cursor: pointer; box-shadow: inset 0 0 0 1px var(--line-strong);
+  transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+:root[data-ds] .factory-cell-agent.tone-allow { background: color-mix(in oklab, var(--allow) 55%, transparent); }
+:root[data-ds] .factory-cell-agent.tone-review { background: color-mix(in oklab, var(--review) 55%, transparent); }
+:root[data-ds] .factory-cell-agent.tone-block { background: color-mix(in oklab, var(--block) 55%, transparent); }
+:root[data-ds] .factory-cell-agent.unknown { background: color-mix(in oklab, var(--fg-4) 30%, transparent); }
+:root[data-ds] .factory-cell-agent:hover { transform: scale(1.18); box-shadow: inset 0 0 0 1px var(--fg-3); z-index: 1; }
+:root[data-ds] .factory-cell-agent.lit {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--fg-2);
+  transform: scale(1.18); z-index: 1;
+}
+:root[data-ds] .factory-tip {
+  position: absolute; z-index: 5; transform: translate(-50%, calc(-100% - 10px));
+  width: 220px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 8px;
+  background: var(--ds-sheet); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+}
+:root[data-ds] .factory-tip::after {
+  content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--line-strong);
+}
+:root[data-ds] .factory-tip-head { display: flex; align-items: baseline; gap: 6px; font-size: 11.5px; font-weight: 600; text-transform: capitalize; }
+:root[data-ds] .factory-tip-head .dim { font-weight: 400; color: var(--fg-3); text-transform: none; }
+:root[data-ds] .factory-tip-body { margin-top: 4px; font-size: 12px; line-height: 1.4; color: var(--fg-2); }
+:root[data-ds] .factory-tip-foot {
+  margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: flex; align-items: center;
+  justify-content: space-between; gap: 8px; font: 500 9.5px var(--mono); letter-spacing: 0.03em; color: var(--fg-4);
+}
+:root[data-ds] .factory-tip-foot .dim { color: var(--fg-4); }
+:root[data-ds] .factory-foot {
+  display: flex; align-items: center; gap: 10px; margin-top: 14px;
+  font-size: 12.5px; color: var(--fg-3);
+}
+:root[data-ds] .factory-foot .dim { color: var(--fg-4); }
+:root[data-ds] .factory-foot .btn { margin-left: auto; }
+
 /* Policy Simulator — the three acts as columns, separated by hairlines. */
 :root[data-ds] .sim-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(250px, 0.8fr); align-items: start; }
 :root[data-ds] .sim-col { min-width: 0; padding: 0 24px; }
@@ -892,6 +976,8 @@
   :root[data-ds] .sidebar-bottom { display: none; }
   :root[data-ds] .topbar { height: 60px; padding: 0 12px; }
   :root[data-ds] .demo-bar { left: 7px; right: 7px; bottom: 7px; }
+  /* Hover has no touch equivalent — the factory grid is a desktop-only widget. */
+  :root[data-ds] .factory { display: none; }
 }
 @media (max-width: 760px) {
   :root[data-ds] .metricband .metric { padding: 4px 16px; }
