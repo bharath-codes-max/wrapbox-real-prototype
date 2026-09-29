@@ -18,8 +18,7 @@ import { AgentMark, Avatar, Chip, DecisionChip, timeAgo, Progress } from "../ui/
 import { describe } from "../ui/describe";
 import { DESKTOP_SHELL } from "../ui/shell";
 import { sfx } from "../ui/sfx";
-import permitBannerDark from "../assets/illustrations/permit-banner-dark.webp";
-import gateBannerLight from "../assets/illustrations/gate-banner-light.webp";
+import gateBanner from "../assets/illustrations/gate-banner.webp";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -313,15 +312,13 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
             in App.tsx) for a touch of depth; a themed overlay keeps it from looking like
             a flat pasted image. */}
         {DESKTOP_SHELL && (
-          <figure className={`start-banner${isLight ? " start-banner-gate" : ""}`}>
+          <figure className="start-banner start-banner-gate">
             <img
-              src={isLight ? gateBannerLight : permitBannerDark}
+              src={gateBanner}
               width={2000}
               height={500}
               decoding="async"
-              alt={isLight
-                ? "Agent security platform — every agent gets checked at the gate. Verify, permit and monitor every AI agent before it acts. AI agents queue at a checkpoint; one is turned away, one passes with an approved permit."
-                : "AI agents queue at a Wrapbox checkpoint that asks each one for a permit: one is turned away, one passes the barrier with an approved permit."}
+              alt="Agent security platform — every agent gets checked at the gate. Verify, permit and monitor every AI agent before it acts. AI agents queue at a checkpoint; one is turned away, one passes with an approved permit."
             />
           </figure>
         )}
