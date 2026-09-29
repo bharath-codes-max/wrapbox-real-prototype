@@ -6,7 +6,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { ArrowRight, ArrowUp, Building2, Check, ChevronDown, Plus, Radio, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import {
-  useAppState, metrics, switchWorkspace, startFreshWorkspace,
+  useAppState, metrics, switchWorkspace, startFreshWorkspace, shadowEvent,
   type AppState, type Region,
 } from "../state/store";
 import { AGENTS, DEVICES, agentById, userById } from "../model/org";
@@ -19,9 +19,11 @@ import { describe } from "../ui/describe";
 import { EventDetail } from "../ui/event-detail";
 import { DESKTOP_SHELL } from "../ui/shell";
 import { sfx } from "../ui/sfx";
+import { buildPolicyMap } from "../ui/policy-map";
+import { SCENARIOS } from "../engine/scenarios";
 import { buildHeatmap, heatCellRange, heatColumnLabel, heatLevel, heatWindowLabel, HEAT_COLS } from "../ui/heatmap";
 import permitBannerDark from "../assets/illustrations/permit-banner-dark.webp";
-import permitBannerLight from "../assets/illustrations/permit-banner-light.webp";
+import gateBannerLight from "../assets/illustrations/gate-banner-light.webp";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -315,13 +317,15 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
             in App.tsx) for a touch of depth; a themed overlay keeps it from looking like
             a flat pasted image. */}
         {DESKTOP_SHELL && (
-          <figure className="start-banner">
+          <figure className={`start-banner${isLight ? " start-banner-gate" : ""}`}>
             <img
-              src={isLight ? permitBannerLight : permitBannerDark}
+              src={isLight ? gateBannerLight : permitBannerDark}
               width={2000}
               height={500}
               decoding="async"
-              alt="AI agents queue at a Wrapbox checkpoint that asks each one for a permit: one is turned away, one passes the barrier with an approved permit."
+              alt={isLight
+                ? "Agent security platform — every agent gets checked at the gate. Verify, permit and monitor every AI agent before it acts. AI agents queue at a checkpoint; one is turned away, one passes with an approved permit."
+                : "AI agents queue at a Wrapbox checkpoint that asks each one for a permit: one is turned away, one passes the barrier with an approved permit."}
             />
           </figure>
         )}
@@ -736,56 +740,76 @@ function TickerRow({ e, big }: { e: SimulationEvent; big: boolean }) {
 }
 
 // ---------------------------------------------------------------------------
-// Agent activity — a GitHub-style heatmap of the workspace's real decisions:
-// one row per agent, 52 time buckets ending now (the bucket grows to cover the
-// recorded history), each cell coloured by the most severe decision it holds
-// and shaded by volume. Bucketing lives in ui/heatmap.ts and is unit-tested;
-// nothing here is drawn that the event log doesn't contain. A spotlight steps
-// through the newest real decisions. Desktop only (hover has no touch
-// equivalent) — hidden below 860px in desktop.css.
+// Agent activity — two honest views in the GitHub contribution-graph grammar.
+// · Policy map (default): every authored scenario re-issued by every agent and
+//   evaluated right now by the real engine (store.shadowEvent — nothing is
+//   recorded). Dense and multi-tone because the verdicts really differ by agent;
+//   recomputed on every rule, kernel or permission change (ui/policy-map.ts).
+// · Activity: the recorded decision log bucketed agent × time (ui/heatmap.ts).
+// Both are unit-tested. The sweep and glow are presentation only — no cell
+// changes colour unless a verdict does. Desktop only (hidden below 860px).
 // ---------------------------------------------------------------------------
 
 const SPOTLIGHT_MS = 2600;
 const TONE_ORDER: Decision[] = ["ALLOW", "CONSTRAIN", "REVIEW", "BLOCK"];
+const GROUP_LABEL: Record<string, string> = {
+  NETWORK: "Network", ENDPOINT: "Endpoint", GATEWAY: "Gateway", MCP: "MCP", BROWSER_HOSTED: "Browser",
+  AGENTIC: "Agentic", CONTEXT: "Context", SAFETY: "Safety Kernel",
+};
+const GROUP_SHORT: Record<string, string> = { CONTEXT: "Ctx", SAFETY: "SK" };
+const RISK_LEVEL: Record<SimulationEvent["risk"], number> = { low: 2, moderate: 3, high: 4, critical: 4 };
+const titleCase = (d: string) => d.charAt(0) + d.slice(1).toLowerCase();
 
 function SfxToggle() {
-  const [muted, setMuted] = useState(sfx.isMuted());
-  useEffect(() => sfx.subscribe(() => setMuted(sfx.isMuted())), []);
+  const [, force] = useState(0);
+  useEffect(() => sfx.subscribe(() => force((n) => n + 1)), []);
+  const muted = sfx.isMuted();
+  const locked = !muted && !sfx.isUnlocked();
   return (
-    <button
-      type="button"
-      className="heat-mute"
-      onClick={() => { sfx.setMuted(!muted); if (muted) sfx.chime(); }}
-      aria-label={muted ? "Unmute sound effects" : "Mute sound effects"}
-      title={muted ? "Unmute sound effects" : "Mute sound effects"}
-    >
-      {muted ? <VolumeX size={13} /> : <Volume2 size={13} />}
-    </button>
+    <span className="heat-sound">
+      {locked && <span className="heat-sound-hint"><i />Click anywhere to enable sound</span>}
+      <button
+        type="button"
+        className={`heat-mute${locked ? " locked" : ""}`}
+        onClick={() => { const next = !muted; sfx.setMuted(next); if (!next) sfx.chime(); }}
+        aria-label={muted ? "Unmute sound effects" : "Mute sound effects"}
+        title={muted ? "Unmute sound effects" : "Mute sound effects"}
+      >
+        {muted ? <VolumeX size={13} /> : <Volume2 size={13} />}
+      </button>
+    </span>
   );
 }
 
 function AgentFactory({ s, nav }: { s: AppState; nav: (r: string) => void }) {
+  const [view, setView] = useState<"map" | "activity">("map");
   const [now] = useState(() => Date.now());
-  const heat = useMemo(() => buildHeatmap(s.events, AGENTS.map((a) => a.id), Math.max(now, ...s.events.map((e) => e.timestamp))), [s.events, now]);
+  const agentIds = useMemo(() => AGENTS.map((a) => a.id), []);
+  const map = useMemo(
+    () => buildPolicyMap(SCENARIOS, agentIds, (sc) => shadowEvent(sc, s.contracts, s.kernel, s.standing, { withLiveOverride: true })),
+    [agentIds, s.contracts, s.kernel, s.standing, s.events],
+  );
+  const heat = useMemo(() => buildHeatmap(s.events, agentIds, Math.max(now, ...s.events.map((e) => e.timestamp))), [s.events, agentIds, now]);
   const recent = useMemo(() => [...s.events].sort((a, b) => b.timestamp - a.timestamp).slice(0, 16), [s.events]);
   const [spot, setSpot] = useState(0);
-  const [tip, setTip] = useState<{ row: number; col: number; x: number; y: number } | null>(null);
+  const [hot, setHot] = useState<{ row: number; col: number; x: number; y: number } | null>(null);
   const [openEvt, setOpenEvt] = useState<SimulationEvent | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const reduced = reducedMotion();
 
   useEffect(() => {
-    if (reduced || recent.length < 2) return;
+    if (reduced || view !== "activity" || recent.length < 2) return;
     const t = window.setInterval(() => setSpot((v) => (v + 1) % recent.length), SPOTLIGHT_MS);
     return () => window.clearInterval(t);
-  }, [recent.length, reduced]);
+  }, [recent.length, reduced, view]);
+  useEffect(() => setHot(null), [view]);
   const spotEvt = recent[spot];
   const spotRow = spotEvt ? heat.rows.findIndex((r) => r.agent === spotEvt.agent) : -1;
   const spotCol = spotEvt ? Math.floor((spotEvt.timestamp - heat.start) / heat.bucketMs) : -1;
 
-  const totals = useMemo(() => {
-    const t: Partial<Record<Decision, number>> = {};
-    for (const r of heat.rows) for (const c of r.cells) for (const [d, n] of Object.entries(c.byDecision)) t[d as Decision] = (t[d as Decision] ?? 0) + (n ?? 0);
+  const activityTotals = useMemo(() => {
+    const t: Record<Decision, number> = { ALLOW: 0, CONSTRAIN: 0, REVIEW: 0, BLOCK: 0 };
+    for (const r of heat.rows) for (const c of r.cells) for (const d of TONE_ORDER) t[d] += c.byDecision[d] ?? 0;
     return t;
   }, [heat]);
 
@@ -793,111 +817,173 @@ function AgentFactory({ s, nav }: { s: AppState; nav: (r: string) => void }) {
     const box = boxRef.current;
     if (!box) return;
     const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
-    const x = Math.min(Math.max(r.left - b.left + r.width / 2, 130), b.width - 130);
-    setTip({ row, col, x, y: r.top - b.top });
+    const x = Math.min(Math.max(r.left - b.left + r.width / 2, 150), b.width - 150);
+    setHot({ row, col, x, y: r.top - b.top });
     sfx.hover();
   };
 
+  const isMap = view === "map";
+  const cols = isMap ? map.cols.length : HEAT_COLS;
+  const totals = isMap ? map.totals : activityTotals;
   const registered = AGENTS.filter((a) => !a.discovered).length;
   const activeRules = s.contracts.filter((c) => c.status === "ACTIVE").reduce((n, c) => n + c.clauses.length, 0);
-  const tipCell = tip ? heat.rows[tip.row].cells[tip.col] : null;
-  const tipAgent = tip ? agentById(heat.rows[tip.row].agent) : undefined;
+  const hotAgent = hot ? agentById(agentIds[hot.row]) : undefined;
+  const sub = isMap
+    ? `${map.rows.length * map.cols.length} live verdicts · ${map.cols.length} scenarios × ${map.rows.length} agents`
+    : s.events.length ? `${s.events.length} decisions · ${heatWindowLabel(heat.bucketMs)}` : "No decisions recorded yet";
 
   return (
     <section className="heat">
-      <div className="heat-board" ref={boxRef} onMouseLeave={() => setTip(null)}>
+      <div className="heat-board" ref={boxRef} onMouseLeave={() => setHot(null)}>
         <div className="heat-head">
           <div className="heat-title">
             <span className="heat-title-main">Agent activity</span>
-            <span className="heat-title-sub">{s.events.length ? `${s.events.length} decisions · ${heatWindowLabel(heat.bucketMs)}` : "No decisions recorded yet"}</span>
+            <div className="heat-tabs" role="tablist" aria-label="View">
+              <button role="tab" aria-selected={isMap} className={isMap ? "on" : ""} onClick={() => { sfx.click(); setView("map"); }}>Policy map</button>
+              <button role="tab" aria-selected={!isMap} className={!isMap ? "on" : ""} onClick={() => { sfx.click(); setView("activity"); }}>Activity</button>
+            </div>
+            <span className="heat-title-sub">{sub}</span>
           </div>
           <div className="heat-head-right">
-            {s.events.length > 0 && <span className="heat-live"><i /> LIVE</span>}
+            <span className="heat-live"><i /> {isMap ? "EVALUATED NOW" : "LIVE"}</span>
             <SfxToggle />
           </div>
         </div>
 
-        <div className="heat-grid" style={{ ["--cols" as string]: HEAT_COLS }}>
+        <div
+          className={`heat-grid${isMap ? " is-map" : " is-activity"}${hot ? " hovering" : ""}${reduced ? "" : " animate"}`}
+          style={{ ["--cols" as string]: cols }}
+        >
           <span />
-          {Array.from({ length: HEAT_COLS }, (_, col) => {
-            const label = heatColumnLabel(heat, col);
-            return <span key={`h${col}`} className="heat-col-label">{label}</span>;
-          })}
-          {heat.rows.map((row, ri) => {
-            const agent = agentById(row.agent);
+          {isMap
+            ? map.groups.map((g) => (
+                <span key={g.group} className={`heat-group${hot && hot.col >= g.start && hot.col < g.start + g.span ? " hot" : ""}`} style={{ gridColumn: `${g.start + 2} / span ${g.span}` }} title={GROUP_LABEL[g.group]}>
+                  {g.span <= 2 ? GROUP_SHORT[g.group] ?? GROUP_LABEL[g.group] : GROUP_LABEL[g.group] ?? g.group}
+                </span>
+              ))
+            : Array.from({ length: HEAT_COLS }, (_, col) => (
+                <span key={`h${col}`} className="heat-col-label">{heatColumnLabel(heat, col)}</span>
+              ))}
+          {agentIds.map((id, ri) => {
+            const agent = agentById(id);
             return [
-              <span key={`l${ri}`} className="heat-row-label" title={agent?.name}>
-                <AgentMark agentId={row.agent} size={12} />
-                <span>{agent?.name ?? row.agent}</span>
+              <span key={`l${ri}`} className={`heat-row-label${hot?.row === ri ? " hot" : ""}`} title={agent?.name}>
+                <AgentMark agentId={id} size={12} />
+                <span>{agent?.name ?? id}</span>
               </span>,
-              ...row.cells.map((c, col) => {
+              ...Array.from({ length: cols }, (_, col) => {
+                const cross = hot && (hot.row === ri || hot.col === col) ? " x" : "";
+                const style = { ["--c" as string]: col, ["--d" as string]: (ri * 7 + col * 3) % 24 } as CSSProperties;
+                if (isMap) {
+                  const c = map.rows[ri].cells[col];
+                  const d = c.event.decision;
+                  return (
+                    <span
+                      key={`${ri}-${col}`}
+                      className={`heat-cell t-${d.toLowerCase()} l-${RISK_LEVEL[c.event.risk]}${c.authored ? " authored" : ""}${cross}`}
+                      style={style}
+                      onMouseEnter={(e) => enter(ri, col, e.currentTarget)}
+                      onClick={() => { sfx.click(); nav(`simlab/${map.cols[col].group.toLowerCase()}`); }}
+                    />
+                  );
+                }
+                const c = heat.rows[ri].cells[col];
                 const lvl = heatLevel(c.count, heat.max);
-                const lit = ri === spotRow && col === spotCol;
-                const cls = `heat-cell${c.tone ? ` t-${c.tone.toLowerCase()} l-${lvl}` : ""}${lit ? " lit" : ""}`;
-                return c.count ? (
-                  <button
+                const lit = ri === spotRow && col === spotCol ? " lit" : "";
+                return (
+                  <span
                     key={`${ri}-${col}`}
-                    type="button"
-                    className={cls}
+                    className={`heat-cell${c.tone ? ` t-${c.tone.toLowerCase()} l-${lvl} has` : ""}${lit}${cross}`}
+                    style={style}
                     onMouseEnter={(e) => enter(ri, col, e.currentTarget)}
-                    onFocus={(e) => enter(ri, col, e.currentTarget)}
-                    onClick={() => { sfx.click(); if (c.latest) setOpenEvt(c.latest); }}
-                    aria-label={`${agent?.name ?? row.agent}, ${heatCellRange(heat, col)}: ${c.count} decision${c.count === 1 ? "" : "s"}, most severe ${c.tone}`}
+                    onClick={() => { if (c.latest) { sfx.click(); setOpenEvt(c.latest); } }}
                   />
-                ) : (
-                  <span key={`${ri}-${col}`} className={cls} onMouseEnter={(e) => enter(ri, col, e.currentTarget)} aria-hidden="true" />
                 );
               }),
             ];
           })}
         </div>
 
+        <p className="sr-only">
+          {isMap
+            ? `Policy map: ${TONE_ORDER.map((d) => `${totals[d]} ${d.toLowerCase()}`).join(", ")} across ${map.cols.length} scenarios and ${map.rows.length} agents.`
+            : `Recorded activity: ${TONE_ORDER.map((d) => `${totals[d]} ${d.toLowerCase()}`).join(", ")}.`}
+        </p>
+
         <div className="heat-legend">
           <div className="heat-key">
             {TONE_ORDER.map((d) => (
-              <span key={d} className="heat-key-item"><i className={`heat-swatch t-${d.toLowerCase()} l-4`} />{d.charAt(0) + d.slice(1).toLowerCase()} <b>{totals[d] ?? 0}</b></span>
+              <span key={d} className="heat-key-item"><i className={`heat-swatch t-${d.toLowerCase()} l-4`} />{titleCase(d)} <b>{totals[d]}</b></span>
             ))}
           </div>
-          <div className="heat-scale">
-            <span>Less</span>
-            <i className="heat-swatch" />
-            {[1, 2, 3, 4].map((l) => <i key={l} className={`heat-swatch t-neutral l-${l}`} />)}
-            <span>More</span>
-          </div>
+          {isMap ? (
+            <div className="heat-scale">
+              <i className="heat-swatch t-allow l-4 authored" /><span>scenario's own agent</span>
+              <span className="heat-scale-sep">·</span><span>shade = risk</span>
+            </div>
+          ) : (
+            <div className="heat-scale">
+              <span>Less</span>
+              <i className="heat-swatch" />
+              {[1, 2, 3, 4].map((l) => <i key={l} className={`heat-swatch t-neutral l-${l}`} />)}
+              <span>More</span>
+            </div>
+          )}
         </div>
 
-        {tip && tipCell && (
-          <div className="heat-tip" style={{ left: tip.x, top: tip.y }}>
-            <div className="heat-tip-head">
-              <b>{tipAgent?.name ?? heat.rows[tip.row].agent}</b>
-              <span className="dim">· {tipCell.count ? `${tipCell.count} decision${tipCell.count === 1 ? "" : "s"}` : "no decisions"}</span>
-            </div>
-            <div className="heat-tip-time">{heatCellRange(heat, tip.col)}</div>
-            {tipCell.latest ? (
-              <>
-                <div className="heat-tip-body">{describe(tipCell.latest)}</div>
-                {tipCell.count > 1 && (
-                  <div className="heat-tip-mix">
-                    {TONE_ORDER.filter((d) => tipCell.byDecision[d]).map((d) => (
-                      <span key={d}><i className={`heat-swatch t-${d.toLowerCase()} l-4`} />{tipCell.byDecision[d]} {d.toLowerCase()}</span>
-                    ))}
-                  </div>
-                )}
+        {hot && (() => {
+          if (isMap) {
+            const c = map.rows[hot.row].cells[hot.col];
+            const sc = map.cols[hot.col];
+            return (
+              <div className="heat-tip" style={{ left: hot.x, top: hot.y }}>
+                <div className="heat-tip-head"><b>{hotAgent?.name ?? agentIds[hot.row]}</b><span className="dim">· {GROUP_LABEL[sc.group]}</span></div>
+                <div className="heat-tip-time">{c.authored ? "AUTHORED SCENARIO" : "WHAT-IF · SAME REQUEST, THIS AGENT"} · EVALUATED NOW</div>
+                <div className="heat-tip-body">{sc.title}</div>
+                <div className="heat-tip-why">{c.event.decidedBy?.label ?? "No rule matched — the default applies."}</div>
                 <div className="heat-tip-foot">
-                  <span>TRIGGERED FROM {PLANE[tipCell.latest.plane]}</span>
-                  <span className="heat-tip-foot-r">{tipAgent?.provider} <span className="dim">·</span> <DecisionChip d={tipCell.latest.decision} small /></span>
+                  <span>{PLANE[c.event.plane]} · {c.event.risk.toUpperCase()} RISK</span>
+                  <span className="heat-tip-foot-r"><DecisionChip d={c.event.decision} small /></span>
                 </div>
-              </>
-            ) : (
-              <div className="heat-tip-body dim">Nothing recorded for this agent in this window.</div>
-            )}
-          </div>
-        )}
+              </div>
+            );
+          }
+          const c = heat.rows[hot.row].cells[hot.col];
+          return (
+            <div className="heat-tip" style={{ left: hot.x, top: hot.y }}>
+              <div className="heat-tip-head">
+                <b>{hotAgent?.name ?? agentIds[hot.row]}</b>
+                <span className="dim">· {c.count ? `${c.count} decision${c.count === 1 ? "" : "s"}` : "no decisions"}</span>
+              </div>
+              <div className="heat-tip-time">{heatCellRange(heat, hot.col)}</div>
+              {c.latest ? (
+                <>
+                  <div className="heat-tip-body">{describe(c.latest)}</div>
+                  {c.count > 1 && (
+                    <div className="heat-tip-mix">
+                      {TONE_ORDER.filter((d) => c.byDecision[d]).map((d) => (
+                        <span key={d}><i className={`heat-swatch t-${d.toLowerCase()} l-4`} />{c.byDecision[d]} {d.toLowerCase()}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="heat-tip-foot">
+                    <span>TRIGGERED FROM {PLANE[c.latest.plane]}</span>
+                    <span className="heat-tip-foot-r">{hotAgent?.provider} <span className="dim">·</span> <DecisionChip d={c.latest.decision} small /></span>
+                  </div>
+                </>
+              ) : (
+                <div className="heat-tip-body dim">Nothing recorded for this agent in this window.</div>
+              )}
+            </div>
+          );
+        })()}
       </div>
       <div className="heat-foot">
         <span>{registered} of {AGENTS.length} agents registered</span> <span className="dim">·</span> <span>{activeRules} rules enforced</span>
-        {heat.dropped > 0 && <><span className="dim">·</span> <span>{heat.dropped} outside this window</span></>}
-        <button className="btn btn-ghost btn-sm" onClick={() => nav("live")}>Live Actions <ArrowRight size={13} /></button>
+        {!isMap && heat.dropped > 0 && <><span className="dim">·</span> <span>{heat.dropped} outside this window</span></>}
+        {isMap
+          ? <button className="btn btn-ghost btn-sm" onClick={() => nav("simlab")}>Simulation Lab <ArrowRight size={13} /></button>
+          : <button className="btn btn-ghost btn-sm" onClick={() => nav("live")}>Live Actions <ArrowRight size={13} /></button>}
       </div>
       {openEvt && <EventDetail e={openEvt} onClose={() => setOpenEvt(null)} onNavigate={(r) => { setOpenEvt(null); nav(r); }} />}
     </section>

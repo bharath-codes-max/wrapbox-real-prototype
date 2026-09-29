@@ -1,7 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildHeatmap, heatLevel, HEAT_COLS } from "../src/ui/heatmap";
-import { getState } from "../src/state/store";
+import { decisionNow, getState, shadowEvent } from "../src/state/store";
+import { buildPolicyMap } from "../src/ui/policy-map";
+import { SCENARIOS } from "../src/engine/scenarios";
 import { AGENTS } from "../src/model/org";
 import type { Decision, SimulationEvent } from "../src/model/types";
 
@@ -49,4 +51,26 @@ test("heatmap: intensity is relative to the busiest cell", () => {
   assert.equal(heatLevel(1, 8), 1);
   assert.equal(heatLevel(8, 8), 4);
   assert.equal(heatLevel(1, 1), 4);
+});
+
+test("policy map: every agent × scenario is a live engine verdict; authored cells match the Simulation Lab", () => {
+  const s = getState();
+  const agents = AGENTS.map((a) => a.id);
+  const map = buildPolicyMap(SCENARIOS, agents, (sc) => shadowEvent(sc, s.contracts, s.kernel, s.standing, { withLiveOverride: true }));
+  assert.equal(map.rows.length, agents.length);
+  assert.ok(map.cols.every((sc) => sc.group !== "TASK"));
+  const cells = map.rows.flatMap((r) => r.cells);
+  assert.equal(cells.length, agents.length * map.cols.length);
+  assert.equal(Object.values(map.totals).reduce((a, b) => a + b, 0), cells.length);
+  assert.equal(map.groups.reduce((n, g) => n + g.span, 0), map.cols.length);
+  let authored = 0;
+  map.rows.forEach((r) => r.cells.forEach((c, i) => {
+    assert.equal(c.event.agent, r.agent, "cell evaluated for the wrong agent");
+    if (c.authored) { authored++; assert.equal(c.event.decision, decisionNow(map.cols[i]), `${map.cols[i].id} disagrees with the Simulation Lab`); }
+  }));
+  assert.ok(authored > 0);
+  // Agent identity changes real outcomes — the map is not one verdict repeated per row.
+  assert.ok(map.cols.some((_, i) => new Set(map.rows.map((r) => r.cells[i].event.decision)).size > 1));
+  // A what-if never records anything.
+  assert.equal(getState().events.length, s.events.length);
 });
