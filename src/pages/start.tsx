@@ -9,15 +9,17 @@ import {
   useAppState, metrics, switchWorkspace, startFreshWorkspace,
   type AppState, type Region,
 } from "../state/store";
-import { AGENTS, DEVICES, agentById, userById, type OrgAgent } from "../model/org";
+import { AGENTS, DEVICES, agentById, userById } from "../model/org";
 import { CAPABILITIES, PLANE_LABEL } from "../model/registries";
 import { ROLLOUT } from "../model/rollout";
 import { pendingRelease } from "../engine/kernel";
-import type { DecidedBy, Plane, SimulationEvent } from "../model/types";
+import type { DecidedBy, Decision, Plane, SimulationEvent } from "../model/types";
 import { AgentMark, Avatar, Chip, DecisionChip, timeAgo, Progress } from "../ui/kit";
 import { describe } from "../ui/describe";
 import { EventDetail } from "../ui/event-detail";
 import { DESKTOP_SHELL } from "../ui/shell";
+import { sfx } from "../ui/sfx";
+import { buildHeatmap, heatCellRange, heatColumnLabel, heatLevel, heatWindowLabel, HEAT_COLS } from "../ui/heatmap";
 import permitBannerDark from "../assets/illustrations/permit-banner-dark.webp";
 import permitBannerLight from "../assets/illustrations/permit-banner-light.webp";
 
@@ -734,167 +736,173 @@ function TickerRow({ e, big }: { e: SimulationEvent; big: boolean }) {
 }
 
 // ---------------------------------------------------------------------------
-// Agent factory — the workspace's real agents laid out as a live schematic
-// (the visual grammar of a "cloud software factory" board: a dotted field,
-// one cell per agent, a spotlight cycling through real recorded decisions).
-// Every word in the tooltip is read from the store: the agent's real name,
-// provider and risk tier, its most recent recorded decision and the plane it
-// happened on. An agent with no recorded activity says so plainly — nothing
-// here is a fabricated "agent is thinking" animation. Desktop only: hover has
-// no equivalent on touch, so the section is hidden below the tablet breakpoint
-// (see .factory in desktop.css).
+// Agent activity — a GitHub-style heatmap of the workspace's real decisions:
+// one row per agent, 52 time buckets ending now (the bucket grows to cover the
+// recorded history), each cell coloured by the most severe decision it holds
+// and shaded by volume. Bucketing lives in ui/heatmap.ts and is unit-tested;
+// nothing here is drawn that the event log doesn't contain. A spotlight steps
+// through the newest real decisions. Desktop only (hover has no touch
+// equivalent) — hidden below 860px in desktop.css.
 // ---------------------------------------------------------------------------
 
-// A dense field of small cells, Warp-style — most stay empty outlines; a
-// handful carry a real agent. Column count is nominal (only used to size the
-// hash space below); the CSS grid itself reflows fixed-size cells to fit.
-const FACTORY_COLS = 40;
-const FACTORY_ROWS = 6;
-const FACTORY_CELLS = FACTORY_COLS * FACTORY_ROWS;
 const SPOTLIGHT_MS = 2600;
+const TONE_ORDER: Decision[] = ["ALLOW", "CONSTRAIN", "REVIEW", "BLOCK"];
 
-/** Small stable hash so each agent always lands on the same grid cell (no
- *  reshuffle on re-render) while still reading as "scattered", not a table. */
-function cellFor(id: string, taken: Set<number>): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  let i = h % FACTORY_CELLS;
-  while (taken.has(i)) i = (i + 7) % FACTORY_CELLS; // 7 is coprime to 240 — visits every cell
-  taken.add(i);
-  return i;
-}
-
-const RISK_TONE: Record<OrgAgent["risk"], string> = { low: "allow", moderate: "review", high: "review", critical: "block" };
-
-function FactorySound() {
-  const [on, setOn] = useState(() => { try { return localStorage.getItem("wrapbox-factory-sound") === "1"; } catch { return false; } });
-  const ctxRef = useRef<AudioContext | null>(null);
-  useEffect(() => { (window as unknown as { __wbFactoryBeep?: () => void }).__wbFactoryBeep = () => {
-    if (!on) return;
-    try {
-      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      const ctx = (ctxRef.current ??= new Ctx());
-      const osc = ctx.createOscillator(), gain = ctx.createGain();
-      osc.type = "sine"; osc.frequency.value = 740;
-      gain.gain.setValueAtTime(0.05, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.start(); osc.stop(ctx.currentTime + 0.12);
-    } catch { /* audio unavailable — silent no-op */ }
-  }; }, [on]);
+function SfxToggle() {
+  const [muted, setMuted] = useState(sfx.isMuted());
+  useEffect(() => sfx.subscribe(() => setMuted(sfx.isMuted())), []);
   return (
     <button
       type="button"
-      className="factory-mute"
-      onClick={() => { const v = !on; setOn(v); try { localStorage.setItem("wrapbox-factory-sound", v ? "1" : "0"); } catch { /* private mode */ } }}
-      title={on ? "Mute the spotlight tick" : "Play a soft tick when the spotlight moves"}
-      aria-pressed={on}
+      className="heat-mute"
+      onClick={() => { sfx.setMuted(!muted); if (muted) sfx.chime(); }}
+      aria-label={muted ? "Unmute sound effects" : "Mute sound effects"}
+      title={muted ? "Unmute sound effects" : "Mute sound effects"}
     >
-      {on ? <Volume2 size={12} /> : <VolumeX size={12} />}
+      {muted ? <VolumeX size={13} /> : <Volume2 size={13} />}
     </button>
   );
 }
 
 function AgentFactory({ s, nav }: { s: AppState; nav: (r: string) => void }) {
-  const recent = useMemo(
-    () => [...s.events].filter((e) => !!agentById(e.agent)).sort((a, b) => b.timestamp - a.timestamp).slice(0, 16),
-    [s.events],
-  );
-  const lastByAgent = useMemo(() => {
-    const m = new Map<string, SimulationEvent>();
-    for (const e of recent) if (!m.has(e.agent)) m.set(e.agent, e);
-    return m;
-  }, [recent]);
-  const cells = useMemo(() => {
-    const taken = new Set<number>();
-    return AGENTS.map((a) => ({ agent: a, cell: cellFor(a.id, taken) }));
-  }, []);
-  const cellOf = useMemo(() => new Map(cells.map((c) => [c.cell, c.agent])), [cells]);
-
+  const [now] = useState(() => Date.now());
+  const heat = useMemo(() => buildHeatmap(s.events, AGENTS.map((a) => a.id), Math.max(now, ...s.events.map((e) => e.timestamp))), [s.events, now]);
+  const recent = useMemo(() => [...s.events].sort((a, b) => b.timestamp - a.timestamp).slice(0, 16), [s.events]);
   const [spot, setSpot] = useState(0);
-  const [hover, setHover] = useState<{ agent: OrgAgent; x: number; y: number } | null>(null);
+  const [tip, setTip] = useState<{ row: number; col: number; x: number; y: number } | null>(null);
   const [openEvt, setOpenEvt] = useState<SimulationEvent | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const reduced = reducedMotion();
 
   useEffect(() => {
-    if (reduced || recent.length === 0) return;
-    const t = window.setInterval(() => {
-      setSpot((v) => (v + 1) % recent.length);
-      (window as unknown as { __wbFactoryBeep?: () => void }).__wbFactoryBeep?.();
-    }, SPOTLIGHT_MS);
+    if (reduced || recent.length < 2) return;
+    const t = window.setInterval(() => setSpot((v) => (v + 1) % recent.length), SPOTLIGHT_MS);
     return () => window.clearInterval(t);
   }, [recent.length, reduced]);
-  const spotAgent = recent[spot]?.agent;
+  const spotEvt = recent[spot];
+  const spotRow = spotEvt ? heat.rows.findIndex((r) => r.agent === spotEvt.agent) : -1;
+  const spotCol = spotEvt ? Math.floor((spotEvt.timestamp - heat.start) / heat.bucketMs) : -1;
 
-  const showTip = (agent: OrgAgent, el: HTMLElement) => {
+  const totals = useMemo(() => {
+    const t: Partial<Record<Decision, number>> = {};
+    for (const r of heat.rows) for (const c of r.cells) for (const [d, n] of Object.entries(c.byDecision)) t[d as Decision] = (t[d as Decision] ?? 0) + (n ?? 0);
+    return t;
+  }, [heat]);
+
+  const enter = (row: number, col: number, el: HTMLElement) => {
     const box = boxRef.current;
     if (!box) return;
     const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
-    setHover({ agent, x: r.left - b.left + r.width / 2, y: r.top - b.top });
+    const x = Math.min(Math.max(r.left - b.left + r.width / 2, 130), b.width - 130);
+    setTip({ row, col, x, y: r.top - b.top });
+    sfx.hover();
   };
 
   const registered = AGENTS.filter((a) => !a.discovered).length;
   const activeRules = s.contracts.filter((c) => c.status === "ACTIVE").reduce((n, c) => n + c.clauses.length, 0);
+  const tipCell = tip ? heat.rows[tip.row].cells[tip.col] : null;
+  const tipAgent = tip ? agentById(heat.rows[tip.row].agent) : undefined;
 
   return (
-    <section className="factory">
-      <div className="factory-fig">
-        <span className="factory-fig-icon">&gt;_</span>
-        <span className="factory-fig-rule" aria-hidden="true" />
-        <span className="factory-fig-label">[ fig. — the workspace ]</span>
-        <span className="factory-fig-rule" aria-hidden="true" />
-        <span className="factory-fig-icon">#</span>
-      </div>
-      <div className="factory-board" ref={boxRef}>
-        <span className="factory-yaml">WRAPBOX.YAML</span>
-        <span className="factory-live"><i /> LIVE</span>
-        <div className="factory-grid">
-          {Array.from({ length: FACTORY_CELLS }, (_, i) => {
-            const agent = cellOf.get(i);
-            if (!agent) return <span key={i} className="factory-cell factory-cell-empty" aria-hidden="true" />;
-            const last = lastByAgent.get(agent.id);
-            const lit = agent.id === spotAgent;
-            return (
-              <button
-                key={i}
-                type="button"
-                className={`factory-cell factory-cell-agent tone-${RISK_TONE[agent.risk]}${lit ? " lit" : ""}${agent.discovered ? " unknown" : ""}`}
-                onMouseEnter={(e) => showTip(agent, e.currentTarget)}
-                onMouseLeave={() => setHover((h) => (h?.agent.id === agent.id ? null : h))}
-                onClick={() => last && setOpenEvt(last)}
-                aria-label={`${agent.name} — ${last ? describe(last) : "no recorded activity yet"}`}
-              />
-            );
+    <section className="heat">
+      <div className="heat-board" ref={boxRef} onMouseLeave={() => setTip(null)}>
+        <div className="heat-head">
+          <div className="heat-title">
+            <span className="heat-title-main">Agent activity</span>
+            <span className="heat-title-sub">{s.events.length ? `${s.events.length} decisions · ${heatWindowLabel(heat.bucketMs)}` : "No decisions recorded yet"}</span>
+          </div>
+          <div className="heat-head-right">
+            {s.events.length > 0 && <span className="heat-live"><i /> LIVE</span>}
+            <SfxToggle />
+          </div>
+        </div>
+
+        <div className="heat-grid" style={{ ["--cols" as string]: HEAT_COLS }}>
+          <span />
+          {Array.from({ length: HEAT_COLS }, (_, col) => {
+            const label = heatColumnLabel(heat, col);
+            return <span key={`h${col}`} className="heat-col-label">{label}</span>;
+          })}
+          {heat.rows.map((row, ri) => {
+            const agent = agentById(row.agent);
+            return [
+              <span key={`l${ri}`} className="heat-row-label" title={agent?.name}>
+                <AgentMark agentId={row.agent} size={12} />
+                <span>{agent?.name ?? row.agent}</span>
+              </span>,
+              ...row.cells.map((c, col) => {
+                const lvl = heatLevel(c.count, heat.max);
+                const lit = ri === spotRow && col === spotCol;
+                const cls = `heat-cell${c.tone ? ` t-${c.tone.toLowerCase()} l-${lvl}` : ""}${lit ? " lit" : ""}`;
+                return c.count ? (
+                  <button
+                    key={`${ri}-${col}`}
+                    type="button"
+                    className={cls}
+                    onMouseEnter={(e) => enter(ri, col, e.currentTarget)}
+                    onFocus={(e) => enter(ri, col, e.currentTarget)}
+                    onClick={() => { sfx.click(); if (c.latest) setOpenEvt(c.latest); }}
+                    aria-label={`${agent?.name ?? row.agent}, ${heatCellRange(heat, col)}: ${c.count} decision${c.count === 1 ? "" : "s"}, most severe ${c.tone}`}
+                  />
+                ) : (
+                  <span key={`${ri}-${col}`} className={cls} onMouseEnter={(e) => enter(ri, col, e.currentTarget)} aria-hidden="true" />
+                );
+              }),
+            ];
           })}
         </div>
-        {hover && (() => {
-          const last = lastByAgent.get(hover.agent.id);
-          return (
-            <div className="factory-tip" style={{ left: hover.x, top: hover.y }}>
-              <div className="factory-tip-head">
-                <b>{hover.agent.kind === "internal" ? "internal" : hover.agent.kind} agent</b>
-                <span className="dim">· {last ? "active" : "idle"}</span>
-              </div>
-              <div className="factory-tip-body">{last ? describe(last) : "No recorded activity yet."}</div>
-              <div className="factory-tip-foot">
-                <span>TRIGGERED FROM {last ? PLANE[last.plane] : "—"}</span>
-                <span>{hover.agent.provider} <span className="dim">·</span> {last ? <DecisionChip d={last.decision} small /> : hover.agent.risk.toUpperCase()}</span>
-              </div>
+
+        <div className="heat-legend">
+          <div className="heat-key">
+            {TONE_ORDER.map((d) => (
+              <span key={d} className="heat-key-item"><i className={`heat-swatch t-${d.toLowerCase()} l-4`} />{d.charAt(0) + d.slice(1).toLowerCase()} <b>{totals[d] ?? 0}</b></span>
+            ))}
+          </div>
+          <div className="heat-scale">
+            <span>Less</span>
+            <i className="heat-swatch" />
+            {[1, 2, 3, 4].map((l) => <i key={l} className={`heat-swatch t-neutral l-${l}`} />)}
+            <span>More</span>
+          </div>
+        </div>
+
+        {tip && tipCell && (
+          <div className="heat-tip" style={{ left: tip.x, top: tip.y }}>
+            <div className="heat-tip-head">
+              <b>{tipAgent?.name ?? heat.rows[tip.row].agent}</b>
+              <span className="dim">· {tipCell.count ? `${tipCell.count} decision${tipCell.count === 1 ? "" : "s"}` : "no decisions"}</span>
             </div>
-          );
-        })()}
-        <FactorySound />
+            <div className="heat-tip-time">{heatCellRange(heat, tip.col)}</div>
+            {tipCell.latest ? (
+              <>
+                <div className="heat-tip-body">{describe(tipCell.latest)}</div>
+                {tipCell.count > 1 && (
+                  <div className="heat-tip-mix">
+                    {TONE_ORDER.filter((d) => tipCell.byDecision[d]).map((d) => (
+                      <span key={d}><i className={`heat-swatch t-${d.toLowerCase()} l-4`} />{tipCell.byDecision[d]} {d.toLowerCase()}</span>
+                    ))}
+                  </div>
+                )}
+                <div className="heat-tip-foot">
+                  <span>TRIGGERED FROM {PLANE[tipCell.latest.plane]}</span>
+                  <span className="heat-tip-foot-r">{tipAgent?.provider} <span className="dim">·</span> <DecisionChip d={tipCell.latest.decision} small /></span>
+                </div>
+              </>
+            ) : (
+              <div className="heat-tip-body dim">Nothing recorded for this agent in this window.</div>
+            )}
+          </div>
+        )}
       </div>
-      <div className="factory-foot">
-        <span>{m0(s)} decisions</span> <span className="dim">·</span> <span>{registered} of {AGENTS.length} agents registered</span> <span className="dim">·</span> <span>{activeRules} rules enforced</span>
-        <button className="btn btn-ghost btn-sm" onClick={() => nav("agents")}>Open Agents <ArrowRight size={13} /></button>
+      <div className="heat-foot">
+        <span>{registered} of {AGENTS.length} agents registered</span> <span className="dim">·</span> <span>{activeRules} rules enforced</span>
+        {heat.dropped > 0 && <><span className="dim">·</span> <span>{heat.dropped} outside this window</span></>}
+        <button className="btn btn-ghost btn-sm" onClick={() => nav("live")}>Live Actions <ArrowRight size={13} /></button>
       </div>
       {openEvt && <EventDetail e={openEvt} onClose={() => setOpenEvt(null)} onNavigate={(r) => { setOpenEvt(null); nav(r); }} />}
     </section>
   );
 }
-const m0 = (s: AppState) => s.events.length;
 
 // ---------------------------------------------------------------------------
 // Path card

@@ -784,90 +784,96 @@
   color: var(--fg-2) !important; border-radius: 9px !important;
 }
 
-/* Get Started — the agent factory: one cell per real agent, a spotlight that
-   cycles through actually-recorded decisions, and a tooltip that reads straight
-   off the store. Desktop only (hover has no touch equivalent) — hidden below
-   860px alongside the sidebar-bottom/demo-bar rules further down this file. */
-:root[data-ds] .factory { margin-top: 28px; }
-:root[data-ds] .factory-fig {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
-  font: 500 11px var(--mono); letter-spacing: 0.02em; color: var(--fg-4);
+/* Get Started — agent activity heatmap (GitHub contribution-graph grammar,
+   multi-tone): rows are agents, columns are time buckets, colour is the most
+   severe decision in the cell, shade is volume. Desktop only — hidden below
+   860px with the other hover-only widgets further down this file. */
+:root[data-ds]:not([data-theme="light"]) { --heat-empty: #1f2023; --heat-empty-edge: rgba(255, 255, 255, 0.03); }
+:root[data-ds][data-theme="light"] { --heat-empty: #ebedf0; --heat-empty-edge: rgba(0, 0, 0, 0.04); }
+:root[data-ds] .heat { margin-top: 28px; }
+:root[data-ds] .heat-board {
+  position: relative; padding: 18px 22px 16px; border: 1px solid var(--line);
+  border-radius: 12px; background: var(--surface);
 }
-:root[data-ds] .factory-fig-icon { flex-shrink: 0; }
-:root[data-ds] .factory-fig-rule { flex: 1; height: 1px; background: var(--line); }
-:root[data-ds] .factory-fig-label { flex-shrink: 0; white-space: nowrap; }
-:root[data-ds] .factory-board {
-  position: relative; border: 1px solid var(--line); border-radius: 12px;
-  background-color: var(--surface);
-  background-image: radial-gradient(var(--line-strong) 1px, transparent 1px);
-  background-size: 14px 14px; background-position: 12px 12px;
-  padding: 34px 20px 18px;
-}
-:root[data-ds] .factory-yaml {
-  position: absolute; top: 14px; left: 20px; font: 500 10.5px var(--mono);
-  letter-spacing: 0.04em; color: var(--fg-4);
-}
-:root[data-ds] .factory-live {
-  position: absolute; top: 13px; right: 46px; display: inline-flex; align-items: center; gap: 6px;
-  font: 600 10px var(--mono); letter-spacing: 0.06em; color: var(--fg-3);
-}
-:root[data-ds] .factory-live i {
+:root[data-ds] .heat-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+:root[data-ds] .heat-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+:root[data-ds] .heat-title-main { font-size: 14px; font-weight: 600; letter-spacing: -0.006em; white-space: nowrap; }
+:root[data-ds] .heat-title-sub { font-size: 12.5px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root[data-ds] .heat-head-right { display: flex; align-items: center; gap: 10px; }
+:root[data-ds] .heat-live { display: inline-flex; align-items: center; gap: 6px; font: 600 10px var(--mono); letter-spacing: 0.08em; color: var(--fg-3); }
+:root[data-ds] .heat-live i {
   width: 6px; height: 6px; border-radius: 50%; background: var(--allow);
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--allow) 20%, transparent);
-  animation: factory-pulse 1.8s ease-in-out infinite;
+  animation: heat-pulse 1.8s ease-in-out infinite;
 }
-@keyframes factory-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-:root[data-ds] .factory-mute {
-  position: absolute; top: 11px; right: 14px; width: 22px; height: 22px; display: grid; place-items: center;
-  border: 1px solid var(--line); border-radius: 6px; background: var(--ds-quiet); color: var(--fg-3);
-  cursor: pointer; transition: background-color 0.15s var(--ease), color 0.15s var(--ease);
+@keyframes heat-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+:root[data-ds] .heat-mute {
+  width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid var(--line);
+  border-radius: 7px; background: var(--ds-fill); color: var(--fg-3); cursor: pointer;
+  transition: background-color 0.15s var(--ease), color 0.15s var(--ease);
 }
-:root[data-ds] .factory-mute:hover { background: var(--ds-hover); color: var(--fg); }
-:root[data-ds] .factory-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, 13px); grid-auto-rows: 13px;
-  gap: 4px; justify-content: start;
+:root[data-ds] .heat-mute:hover { background: var(--ds-fill-hover); color: var(--fg); }
+:root[data-ds] .heat-grid {
+  display: grid; grid-template-columns: 132px repeat(var(--cols), minmax(0, 1fr));
+  gap: 4px; align-items: center;
 }
-:root[data-ds] .factory-cell {
-  width: 13px; height: 13px; border: 0; padding: 0; border-radius: 2px; min-width: 0;
+:root[data-ds] .heat-col-label { height: 14px; font-size: 11px; color: var(--fg-3); white-space: nowrap; overflow: visible; line-height: 14px; }
+:root[data-ds] .heat-row-label {
+  display: flex; align-items: center; gap: 7px; min-width: 0; padding-right: 10px;
+  font-size: 11.5px; color: var(--fg-2);
 }
-:root[data-ds] .factory-cell-empty { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
-:root[data-ds] .factory-cell-agent {
-  cursor: pointer; box-shadow: inset 0 0 0 1px var(--line-strong);
-  transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
+:root[data-ds] .heat-row-label > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root[data-ds] .heat-row-label .logo-img { flex-shrink: 0; background: transparent; padding: 0; }
+:root[data-ds] .heat-cell {
+  display: block; aspect-ratio: 1; width: 100%; min-width: 0; padding: 0; border: 0;
+  border-radius: 3px; background: var(--heat-empty); box-shadow: inset 0 0 0 1px var(--heat-empty-edge);
 }
-:root[data-ds] .factory-cell-agent.tone-allow { background: color-mix(in oklab, var(--allow) 55%, transparent); }
-:root[data-ds] .factory-cell-agent.tone-review { background: color-mix(in oklab, var(--review) 55%, transparent); }
-:root[data-ds] .factory-cell-agent.tone-block { background: color-mix(in oklab, var(--block) 55%, transparent); }
-:root[data-ds] .factory-cell-agent.unknown { background: color-mix(in oklab, var(--fg-4) 30%, transparent); }
-:root[data-ds] .factory-cell-agent:hover { transform: scale(1.4); box-shadow: inset 0 0 0 1px var(--fg-3); z-index: 1; }
-:root[data-ds] .factory-cell-agent.lit {
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--fg-2);
-  transform: scale(1.4); z-index: 1;
+:root[data-ds] button.heat-cell { cursor: pointer; transition: transform 0.12s var(--ease), box-shadow 0.12s var(--ease); }
+:root[data-ds] .heat-cell:hover { box-shadow: inset 0 0 0 1px var(--fg-4); }
+:root[data-ds] button.heat-cell:hover { transform: scale(1.25); position: relative; z-index: 1; }
+:root[data-ds] .heat-cell.lit { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--fg); transform: scale(1.15); position: relative; z-index: 2; }
+:root[data-ds] .heat-swatch {
+  display: inline-block; width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0;
+  background: var(--heat-empty); box-shadow: inset 0 0 0 1px var(--heat-empty-edge);
 }
-:root[data-ds] .factory-tip {
+:root[data-ds] .t-allow { --tone: var(--allow); }
+:root[data-ds] .t-constrain { --tone: var(--constrain); }
+:root[data-ds] .t-review { --tone: var(--review); }
+:root[data-ds] .t-block { --tone: var(--block); }
+:root[data-ds] .t-neutral { --tone: var(--fg-2); }
+:root[data-ds] .l-1 { background: color-mix(in oklab, var(--tone) 32%, var(--heat-empty)); }
+:root[data-ds] .l-2 { background: color-mix(in oklab, var(--tone) 55%, var(--heat-empty)); }
+:root[data-ds] .l-3 { background: color-mix(in oklab, var(--tone) 78%, var(--heat-empty)); }
+:root[data-ds] .l-4 { background: var(--tone); }
+:root[data-ds] .heat-legend { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; padding-left: 136px; }
+:root[data-ds] .heat-key { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--fg-3); }
+:root[data-ds] .heat-key-item { display: inline-flex; align-items: center; gap: 6px; }
+:root[data-ds] .heat-key-item b { font-weight: 600; color: var(--fg); font-variant-numeric: tabular-nums; }
+:root[data-ds] .heat-scale { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--fg-3); }
+:root[data-ds] .heat-scale span:first-child { margin-right: 3px; }
+:root[data-ds] .heat-scale span:last-child { margin-left: 3px; }
+:root[data-ds] .heat-tip {
   position: absolute; z-index: 5; transform: translate(-50%, calc(-100% - 10px));
-  width: 220px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 8px;
-  background: var(--ds-sheet); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
-  pointer-events: none;
+  width: 260px; padding: 11px 13px; border: 1px solid var(--line-strong); border-radius: 10px;
+  background: var(--ds-sheet); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22); pointer-events: none;
 }
-:root[data-ds] .factory-tip::after {
-  content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%);
-  border: 5px solid transparent; border-top-color: var(--line-strong);
+:root[data-ds] .heat-tip-head { display: flex; align-items: baseline; gap: 6px; font-size: 12.5px; }
+:root[data-ds] .heat-tip-head b { font-weight: 600; }
+:root[data-ds] .heat-tip .dim { color: var(--fg-3); }
+:root[data-ds] .heat-tip-time { margin-top: 2px; font: 500 10.5px var(--mono); color: var(--fg-4); }
+:root[data-ds] .heat-tip-body { margin-top: 7px; font-size: 12.5px; line-height: 1.45; color: var(--fg-2); }
+:root[data-ds] .heat-tip-mix { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 7px; font-size: 11.5px; color: var(--fg-3); }
+:root[data-ds] .heat-tip-mix span { display: inline-flex; align-items: center; gap: 5px; }
+:root[data-ds] .heat-tip-mix .heat-swatch { width: 9px; height: 9px; border-radius: 2px; }
+:root[data-ds] .heat-tip-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line);
+  font: 500 9.5px var(--mono); letter-spacing: 0.04em; color: var(--fg-4);
 }
-:root[data-ds] .factory-tip-head { display: flex; align-items: baseline; gap: 6px; font-size: 11.5px; font-weight: 600; text-transform: capitalize; }
-:root[data-ds] .factory-tip-head .dim { font-weight: 400; color: var(--fg-3); text-transform: none; }
-:root[data-ds] .factory-tip-body { margin-top: 4px; font-size: 12px; line-height: 1.4; color: var(--fg-2); }
-:root[data-ds] .factory-tip-foot {
-  margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: flex; align-items: center;
-  justify-content: space-between; gap: 8px; font: 500 9.5px var(--mono); letter-spacing: 0.03em; color: var(--fg-4);
-}
-:root[data-ds] .factory-tip-foot .dim { color: var(--fg-4); }
-:root[data-ds] .factory-foot {
-  display: flex; align-items: center; gap: 10px; margin-top: 14px;
-  font-size: 12.5px; color: var(--fg-3);
-}
-:root[data-ds] .factory-foot .dim { color: var(--fg-4); }
-:root[data-ds] .factory-foot .btn { margin-left: auto; }
+:root[data-ds] .heat-tip-foot-r { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+:root[data-ds] .heat-foot { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 12.5px; color: var(--fg-3); }
+:root[data-ds] .heat-foot .dim { color: var(--fg-4); }
+:root[data-ds] .heat-foot .btn { margin-left: auto; }
 
 /* Policy Simulator — the three acts as columns, separated by hairlines. */
 :root[data-ds] .sim-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(250px, 0.8fr); align-items: start; }
@@ -962,8 +968,8 @@
   :root[data-ds] .sidebar-bottom { display: none; }
   :root[data-ds] .topbar { height: 60px; padding: 0 12px; }
   :root[data-ds] .demo-bar { left: 7px; right: 7px; bottom: 7px; }
-  /* Hover has no touch equivalent — the factory grid is a desktop-only widget. */
-  :root[data-ds] .factory { display: none; }
+  /* Hover has no touch equivalent — the activity heatmap is desktop-only. */
+  :root[data-ds] .heat { display: none; }
 }
 @media (max-width: 760px) {
   :root[data-ds] .metricband .metric { padding: 4px 16px; }
