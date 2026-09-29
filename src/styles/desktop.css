@@ -35,9 +35,9 @@
    Linear equivalent and keeps its existing muted amber. */
 :root[data-ds]:not([data-theme="light"]) {
   color-scheme: dark;
-  --ds-chrome: #08090a;      /* void */
-  --bg: #08090a;             /* void — page canvas */
-  --surface: #0f1011;        /* carbon — card surfaces */
+  --ds-chrome: #161718;      /* obsidian — window chrome: sidebar, topbar, shell */
+  --bg: #161718;             /* obsidian — page canvas */
+  --surface: #161718;        /* obsidian — card surfaces */
   --surface-2: #161718;      /* obsidian — elevated panels */
   --surface-3: #23252a;      /* graphite — interactive surface tint */
   --line: #23252a;           /* graphite — hairline borders */
@@ -58,8 +58,8 @@
   --cta-bg: #e4f222;
   --cta-bg-hover: #eaf655;
   --cta-fg: #08090a;
-  --header: #08090a;
-  --sidebar: #08090a;
+  --header: #161718;
+  --sidebar: #161718;
   --ink: #ffffff;
   --ink-fg: #08090a;
   --allow: #27a644;          /* pulse green */
