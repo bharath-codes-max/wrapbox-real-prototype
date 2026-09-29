@@ -791,15 +791,10 @@
 /* Wordmark a touch smaller than the shared 28px (app.css); phones keep their 20px. */
 @media (min-width: 641px) { :root[data-ds] .topbar .logo { height: 23px !important; } }
 
-/* Icon tiles — a quiet green wash, tuned per theme for contrast on its surface. */
-:root[data-ds] .icon-tile { border-radius: 9px !important; }
-:root[data-ds]:not([data-theme="light"]) .icon-tile {
-  background: rgba(39, 166, 68, 0.14) !important; box-shadow: inset 0 0 0 1px rgba(39, 166, 68, 0.3) !important;
-  color: #4cc26b !important;
-}
-:root[data-ds][data-theme="light"] .icon-tile {
-  background: #e8f5ee !important; box-shadow: inset 0 0 0 1px rgba(47, 158, 100, 0.22) !important;
-  color: #23824f !important;
+/* Icon tiles — solid green with a white glyph, the same in both themes. */
+:root[data-ds] .icon-tile {
+  border-radius: 9px !important; background: #2ea043 !important; color: #ffffff !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 1px 2px rgba(0, 0, 0, 0.18) !important;
 }
 
 /* Get Started — decorative activity grid: square cells, GitHub's green scale
@@ -825,9 +820,40 @@
 :root[data-ds] .heat-cell.g-2 { background: var(--g2); }
 :root[data-ds] .heat-cell.g-3 { background: var(--g3); }
 :root[data-ds] .heat-cell.g-4 { background: var(--g4); }
-:root[data-ds] .heat-grid .heat-cell:hover { transform: scale(1.4); filter: brightness(1.25); position: relative; z-index: 1; }
-:root[data-ds] .heat-grid .heat-cell.tw { animation: heat-twinkle 3.6s ease-in-out infinite; animation-delay: calc(var(--d) * -90ms); }
+:root[data-ds] .heat-board { position: relative; }
+:root[data-ds] .heat-grid .heat-cell { cursor: pointer; }
+:root[data-ds] .heat-grid .heat-cell:hover,
+:root[data-ds] .heat-grid .heat-cell.on { transform: scale(1.35); outline: 1.5px solid var(--fg); outline-offset: 1px; position: relative; z-index: 1; animation: none; }
+/* Blink, not glow: lit cells snap off for a beat; a few empty ones snap on. */
+:root[data-ds] .heat-grid .heat-cell.bk { animation: heat-blink var(--t) step-end infinite; animation-delay: calc(var(--d) * -110ms); }
+:root[data-ds] .heat-grid .heat-cell.bk-on { animation: heat-blink-on var(--t) step-end infinite; animation-delay: calc(var(--d) * -110ms); }
+@keyframes heat-blink { 0% { opacity: 1; } 84% { opacity: 0.12; } 90% { opacity: 1; } 94% { opacity: 0.12; } 97% { opacity: 1; } }
+@keyframes heat-blink-on { 0% { background: var(--g0); } 80% { background: var(--g3); } 92% { background: var(--g0); } }
 @keyframes heat-twinkle { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+/* Hover code panel — a real rule clause, typed in line by line. */
+:root[data-ds] .heat-code {
+  position: absolute; z-index: 6; width: 352px; transform: translate(-50%, calc(-100% - 10px));
+  border-radius: 10px; overflow: hidden; pointer-events: none;
+  background: #0d1117; border: 1px solid #30363d; box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.18);
+  animation: heat-code-in 0.14s var(--ease);
+}
+:root[data-ds] .heat-code.below { transform: translate(-50%, 10px); }
+@keyframes heat-code-in { from { opacity: 0; margin-top: 4px; } to { opacity: 1; margin-top: 0; } }
+:root[data-ds] .heat-code-bar { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 10px; background: #161b22; border-bottom: 1px solid #30363d; }
+:root[data-ds] .heat-code-dots { display: inline-flex; gap: 5px; }
+:root[data-ds] .heat-code-dots i { width: 8px; height: 8px; border-radius: 50%; background: #30363d; }
+:root[data-ds] .heat-code-file { font: 500 11px var(--mono); color: #8b949e; }
+:root[data-ds] .heat-code-body { margin: 0; padding: 9px 0 10px; font: 400 11.5px/1.6 var(--mono); color: #e6edf3; white-space: pre; overflow: hidden; }
+:root[data-ds] .heat-code-line { display: block; padding: 0 12px 0 0; opacity: 0; animation: heat-line-in 0.18s var(--ease) forwards; text-overflow: ellipsis; overflow: hidden; }
+@keyframes heat-line-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
+:root[data-ds] .heat-code-line .ln { display: inline-block; width: 30px; padding-right: 10px; text-align: right; color: #484f58; user-select: none; }
+:root[data-ds] .heat-code-line .cm { color: #8b949e; font-style: italic; }
+:root[data-ds] .heat-code-line .ky { color: #7ee787; }
+:root[data-ds] .heat-code-line .vl { color: #a5d6ff; }
+:root[data-ds] .heat-code-line .fx-allow { color: #3fb950; font-weight: 600; }
+:root[data-ds] .heat-code-line .fx-constrain { color: #39c5cf; font-weight: 600; }
+:root[data-ds] .heat-code-line .fx-review { color: #d29922; font-weight: 600; }
+:root[data-ds] .heat-code-line .fx-block { color: #f85149; font-weight: 600; }
 :root[data-ds] .heat-legend { display: flex; align-items: center; justify-content: flex-end; gap: 3px; margin-top: 8px; font-size: 11px; color: var(--fg-3); }
 :root[data-ds] .heat-legend .heat-cell { width: 10px; }
 :root[data-ds] .heat-legend span:first-child { margin-right: 4px; }
@@ -845,7 +871,8 @@
 :root[data-ds] .heat-foot .dim { color: var(--fg-4); }
 :root[data-ds] .heat-foot .btn { margin-left: auto; }
 @media (prefers-reduced-motion: reduce) {
-  :root[data-ds] .heat-grid .heat-cell, :root[data-ds] .heat-sound-hint i { animation: none !important; }
+  :root[data-ds] .heat-grid .heat-cell, :root[data-ds] .heat-sound-hint i, :root[data-ds] .heat-code { animation: none !important; }
+  :root[data-ds] .heat-code-line { animation: none !important; opacity: 1; }
 }
 
 /* Policy Simulator — the three acts as columns, separated by hairlines. */

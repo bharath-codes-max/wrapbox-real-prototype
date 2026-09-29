@@ -13,7 +13,7 @@ import { AGENTS, DEVICES, agentById, userById } from "../model/org";
 import { CAPABILITIES, PLANE_LABEL } from "../model/registries";
 import { ROLLOUT } from "../model/rollout";
 import { pendingRelease } from "../engine/kernel";
-import type { DecidedBy, Plane, SimulationEvent } from "../model/types";
+import type { ContractClause, DecidedBy, Plane, SimulationEvent } from "../model/types";
 import { AgentMark, Avatar, Chip, DecisionChip, timeAgo, Progress } from "../ui/kit";
 import { describe } from "../ui/describe";
 import { DESKTOP_SHELL } from "../ui/shell";
@@ -734,8 +734,9 @@ function TickerRow({ e, big }: { e: SimulationEvent; big: boolean }) {
 
 // ---------------------------------------------------------------------------
 // Activity grid — a decorative contribution-graph band: square cells in
-// GitHub's green scale, about half lit, gently twinkling. Visual only: it shows
-// no data and carries no numbers. Hover and click play the interface sounds.
+// GitHub's green scale, about half lit, some blinking. The pattern is visual
+// only; hovering a cell shows a real clause from the workspace's active rules,
+// picked at random per cell. Hover and click play the interface sounds.
 // Desktop only (hidden below 860px).
 // ---------------------------------------------------------------------------
 
@@ -777,32 +778,93 @@ function SfxToggle() {
   );
 }
 
+type CodeLine = { k?: string; v?: string; c?: string; tone?: string };
+
+/** A real clause from the workspace's active rules, rendered as policy YAML. */
+function clauseSnippet(contract: string, cl: ContractClause): CodeLine[] {
+  const list = (x: string[] | "ANY" | undefined) => (!x || x === "ANY" ? "any" : `[${x.join(", ")}]`);
+  const text = cl.text.length > 54 ? `${cl.text.slice(0, 53)}…` : cl.text;
+  const lines: CodeLine[] = [
+    { c: `# ${contract}` },
+    { k: "- id", v: cl.id },
+    { k: "  rule", v: `"${text}"` },
+    { k: "  when" },
+    { k: "      actions", v: list(cl.actions) },
+    { k: "      data", v: list(cl.dataClasses.length ? cl.dataClasses : "ANY") },
+    { k: "      destinations", v: list(cl.destinations) },
+  ];
+  if (cl.environments?.length) lines.push({ k: "      env", v: list(cl.environments) });
+  lines.push({ k: "  effect", v: cl.effect, tone: cl.effect.toLowerCase() });
+  if (cl.transform) lines.push({ k: "  transform", v: cl.transform });
+  lines.push({ k: "  fail_closed", v: String(cl.failClosed) });
+  return lines;
+}
+
 function AgentFactory({ s, nav }: { s: AppState; nav: (r: string) => void }) {
   const registered = AGENTS.filter((a) => !a.discovered).length;
-  const activeRules = s.contracts.filter((c) => c.status === "ACTIVE").reduce((n, c) => n + c.clauses.length, 0);
+  const active = s.contracts.filter((c) => c.status === "ACTIVE");
+  const activeRules = active.reduce((n, c) => n + c.clauses.length, 0);
+  const clauses = useMemo(() => active.flatMap((c) => c.clauses.map((cl) => ({ name: c.name, cl }))), [s.contracts]);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [tip, setTip] = useState<{ i: number; x: number; y: number; below: boolean } | null>(null);
+
+  const enter = (i: number, el: HTMLElement) => {
+    sfx.hover();
+    const box = boxRef.current;
+    if (!box) return;
+    const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
+    const below = r.top - b.top < 150;
+    setTip({ i, x: Math.min(Math.max(r.left - b.left + r.width / 2, 176), b.width - 176), y: below ? r.bottom - b.top : r.top - b.top, below });
+  };
+  const pick = tip && clauses.length ? clauses[Math.floor(cellNoise(tip.i + 31) * clauses.length)] : null;
+  const code = pick ? clauseSnippet(pick.name, pick.cl) : null;
+
   return (
     <section className="heat">
-      <div className="heat-board">
+      <div className="heat-board" ref={boxRef} onMouseLeave={() => setTip(null)}>
         <div className="heat-head">
           <span className="heat-title-main">Agent activity</span>
           <SfxToggle />
         </div>
-        <div className="heat-grid" style={{ ["--cols" as string]: GRID_COLS }} aria-hidden="true">
-          {GRID_LEVELS.map((lvl, i) => (
-            <span
-              key={i}
-              className={`heat-cell g-${lvl}${lvl && cellNoise(i + 7919) < 0.28 ? " tw" : ""}`}
-              style={{ ["--d" as string]: Math.floor(cellNoise(i + 104729) * 40) } as CSSProperties}
-              onMouseEnter={() => sfx.hover()}
-              onClick={() => sfx.click()}
-            />
-          ))}
+        <div className="heat-grid" style={{ ["--cols" as string]: GRID_COLS }}>
+          {GRID_LEVELS.map((lvl, i) => {
+            const n = cellNoise(i + 7919);
+            const blink = lvl ? (n < 0.34 ? " bk" : "") : n < 0.09 ? " bk-on" : "";
+            return (
+              <span
+                key={i}
+                className={`heat-cell g-${lvl}${blink}${tip?.i === i ? " on" : ""}`}
+                style={{ ["--d" as string]: Math.floor(cellNoise(i + 104729) * 50), ["--t" as string]: `${2.2 + cellNoise(i + 15485863) * 3.2}s` } as CSSProperties}
+                onMouseEnter={(e) => enter(i, e.currentTarget)}
+                onClick={() => sfx.click()}
+                aria-hidden="true"
+              />
+            );
+          })}
         </div>
         <div className="heat-legend">
           <span>Less</span>
           {[0, 1, 2, 3, 4].map((l) => <i key={l} className={`heat-cell g-${l}`} />)}
           <span>More</span>
         </div>
+        {tip && (
+          <div key={tip.i} className={`heat-code${tip.below ? " below" : ""}`} style={{ left: tip.x, top: tip.y }}>
+            <div className="heat-code-bar">
+              <span className="heat-code-dots"><i /><i /><i /></span>
+              <span className="heat-code-file">{code ? "policy.yaml" : "workspace"}</span>
+            </div>
+            <pre className="heat-code-body">
+              {code
+                ? code.map((l, n) => (
+                    <span key={n} className="heat-code-line" style={{ animationDelay: `${n * 32}ms` }}>
+                      <span className="ln">{n + 1}</span>
+                      {l.c ? <span className="cm">{l.c}</span> : <><span className="ky">{l.k}:</span>{l.v !== undefined && <> <span className={l.tone ? `vl fx-${l.tone}` : "vl"}>{l.v}</span></>}</>}
+                    </span>
+                  ))
+                : <span className="heat-code-line"><span className="cm"># No active rules yet — publish one in Intent Studio.</span></span>}
+            </pre>
+          </div>
+        )}
       </div>
       <div className="heat-foot">
         <span>{registered} of {AGENTS.length} agents registered</span> <span className="dim">·</span> <span>{activeRules} rules enforced</span>
