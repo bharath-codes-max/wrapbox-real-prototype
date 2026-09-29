@@ -16,11 +16,8 @@ import { pendingRelease } from "../engine/kernel";
 import type { DecidedBy, Plane, SimulationEvent } from "../model/types";
 import { AgentMark, Avatar, Chip, DecisionChip, timeAgo, Progress } from "../ui/kit";
 import { describe } from "../ui/describe";
-import { AgentTerminal } from "../ui/agent-terminal";
 import { EventDetail } from "../ui/event-detail";
 import { DESKTOP_SHELL } from "../ui/shell";
-import { pipelineFor } from "../engine/simulate";
-import { scenarioById } from "../engine/scenarios";
 import permitBannerDark from "../assets/illustrations/permit-banner-dark.webp";
 import permitBannerLight from "../assets/illustrations/permit-banner-light.webp";
 
@@ -366,8 +363,6 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
           )}
         </div>
 
-        {/* The prototype replays recorded decisions as running code (list + terminal). */}
-        {DESKTOP_SHELL && <LiveReplay s={s} total={m.total} company={company} nav={nav} governs={governs} />}
         {DESKTOP_SHELL && <AgentFactory s={s} nav={nav} />}
 
         {/* The "video" panel — dark theme only; the light hero is the banner above. */}
@@ -739,132 +734,6 @@ function TickerRow({ e, big }: { e: SimulationEvent; big: boolean }) {
 }
 
 // ---------------------------------------------------------------------------
-// Live replay — the workspace's latest recorded decisions, each replayed through
-// the same pipeline stages the engine produced for it (pipelineFor), revealed one
-// stage at a time like running code. Nothing is invented: an empty workspace shows
-// an empty state, and every row opens the real evidence record.
-// ---------------------------------------------------------------------------
-
-const REPLAY_ROWS = 8;
-const STAGE_MS = 480;   // one pipeline stage appears
-const HOLD_MS = 3400;   // the finished decision stays on screen before the next one
-
-function LiveReplay({ s, total, company, nav, governs }: {
-  s: AppState; total: number; company: string; nav: (r: string) => void; governs: typeof AGENTS;
-}) {
-  const recent = useMemo(
-    () => [...s.events]
-      .filter((e) => e.scenario && scenarioById(e.scenario))
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, REPLAY_ROWS),
-    [s.events],
-  );
-  const [idx, setIdx] = useState(0);
-  const [visible, setVisible] = useState(0);
-  const [hold, setHold] = useState(false);
-  const [openEvt, setOpenEvt] = useState<SimulationEvent | null>(null);
-  const cur = recent.length ? recent[Math.min(idx, recent.length - 1)] : null;
-  const sc = cur?.scenario ? scenarioById(cur.scenario) ?? null : null;
-  const stages = useMemo(() => (cur && sc ? pipelineFor(sc, cur) : []), [cur, sc]);
-  const still = reducedMotion();
-  const termRef = useRef<HTMLDivElement>(null);
-
-  // A new decision starts from its prompt; reduced motion shows the finished trace.
-  useEffect(() => { setVisible(still ? stages.length : 0); }, [cur?.id, stages.length, still]);
-  // Reveal the next stage, then hold, then move to the next decision. The pointer over
-  // the panel only holds the finished trace (so it can be read) — a decision that was
-  // just clicked still plays out.
-  useEffect(() => {
-    if (!cur || still || recent.length === 0) return;
-    if (hold && visible >= stages.length) return;
-    const t = window.setTimeout(
-      () => (visible < stages.length ? setVisible((v) => v + 1) : setIdx((i) => (i + 1) % recent.length)),
-      visible < stages.length ? STAGE_MS : HOLD_MS,
-    );
-    return () => window.clearTimeout(t);
-  }, [cur, visible, stages.length, hold, still, recent.length]);
-  // Keep the newest line in view, like a terminal.
-  useEffect(() => {
-    const body = termRef.current?.querySelector<HTMLElement>(".aterm-body");
-    if (body) body.scrollTo({ top: body.scrollHeight, behavior: still ? "auto" : "smooth" });
-  }, [visible, cur?.id, still]);
-
-  return (
-    <div className="live-replay" onMouseEnter={() => setHold(true)} onMouseLeave={() => setHold(false)}>
-      <div className="live-replay-head">
-        <div className="row" style={{ gap: 10, flexWrap: "nowrap", minWidth: 0 }}>
-          <span className={`pill-dot${total > 0 ? " live-dot" : ""}`} style={{ background: total > 0 ? "var(--allow)" : "var(--fg-4)" }} />
-          <span className="live-replay-title">Live decisions</span>
-          <span className="faint small" style={ellipsis}>
-            {total > 0 ? `${plural(total, "decision")} recorded in ${company} · replayed through the real pipeline` : "None recorded yet"}
-          </span>
-        </div>
-        {total > 0 && (
-          <button className="btn btn-ghost btn-sm" onClick={() => nav("live")}>Live Actions <ArrowRight size={13} /></button>
-        )}
-      </div>
-
-      {!cur || !sc ? (
-        <div className="live-replay-empty">
-          <Radio size={18} style={{ color: "var(--fg-3)" }} />
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontWeight: 500 }}>No decisions yet — run a go-live self-test in setup</div>
-            <div className="faint small" style={{ marginTop: 2 }}>Nothing replays here until {company} records a real one.</div>
-          </div>
-          <button className="btn btn-sm" onClick={() => nav("onboarding/admin")}>Open setup <ArrowRight size={13} /></button>
-        </div>
-      ) : (
-        <div className="live-replay-body">
-          <ol className="live-replay-list" aria-label="Latest recorded decisions">
-            {recent.map((e, i) => {
-              const on = e.id === cur.id;
-              return (
-                <li key={e.id}>
-                  <button type="button" className={`live-replay-row${on ? " on" : ""}`} onClick={() => setIdx(i)} aria-current={on ? "true" : undefined}>
-                    <span className="live-replay-mark"><AgentMark agentId={e.agent} size={16} /></span>
-                    <span className="live-replay-text">
-                      <span className="live-replay-sentence" style={ellipsis}>{describe(e)}</span>
-                      <span className="live-replay-meta" style={ellipsis}>
-                        {agentById(e.agent)?.name ?? e.agent} · {PLANE[e.plane]} · {timeAgo(e.timestamp)}
-                      </span>
-                    </span>
-                    <DecisionChip d={e.decision} small />
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-          <div className="live-replay-term" ref={termRef}>
-            <AgentTerminal scenario={sc} event={cur} stages={stages} visible={visible} onOpenEvidence={() => setOpenEvt(cur)} />
-          </div>
-        </div>
-      )}
-
-      <div className="live-replay-foot">
-        <div className="row" style={{ gap: 10 }}>
-          <span className="small faint">Governs</span>
-          <span className="governs-stack" style={{ display: "inline-flex" }}>
-            {governs.map((a, i) => (
-              <span key={a.id} title={a.name} style={{
-                width: 26, height: 26, borderRadius: 7, display: "grid", placeItems: "center",
-                background: LOGO_TILE, border: "1px solid var(--line-strong)",
-                marginLeft: i === 0 ? 0 : -6, position: "relative", zIndex: governs.length - i,
-              }}>
-                <AgentMark agentId={a.id} size={15} />
-              </span>
-            ))}
-          </span>
-          <span className="small faint">and your own agents</span>
-        </div>
-        {cur && <span className="small faint">{hold ? "Holding this decision — move away to continue" : "Hover to hold · click a decision to replay it"}</span>}
-      </div>
-
-      {openEvt && <EventDetail e={openEvt} onClose={() => setOpenEvt(null)} onNavigate={(r) => { setOpenEvt(null); nav(r); }} />}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Agent factory — the workspace's real agents laid out as a live schematic
 // (the visual grammar of a "cloud software factory" board: a dotted field,
 // one cell per agent, a spotlight cycling through real recorded decisions).
@@ -876,8 +745,11 @@ function LiveReplay({ s, total, company, nav, governs }: {
 // (see .factory in desktop.css).
 // ---------------------------------------------------------------------------
 
-const FACTORY_COLS = 12;
-const FACTORY_ROWS = 5;
+// A dense field of small cells, Warp-style — most stay empty outlines; a
+// handful carry a real agent. Column count is nominal (only used to size the
+// hash space below); the CSS grid itself reflows fixed-size cells to fit.
+const FACTORY_COLS = 40;
+const FACTORY_ROWS = 6;
 const FACTORY_CELLS = FACTORY_COLS * FACTORY_ROWS;
 const SPOTLIGHT_MS = 2600;
 
@@ -887,7 +759,7 @@ function cellFor(id: string, taken: Set<number>): number {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
   let i = h % FACTORY_CELLS;
-  while (taken.has(i)) i = (i + 7) % FACTORY_CELLS; // 7 is coprime to 60 — visits every cell
+  while (taken.has(i)) i = (i + 7) % FACTORY_CELLS; // 7 is coprime to 240 — visits every cell
   taken.add(i);
   return i;
 }

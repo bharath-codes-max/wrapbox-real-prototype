@@ -767,34 +767,6 @@
   color: var(--fg-2) !important; border-radius: 9px !important;
 }
 
-:root[data-ds] .live-replay { margin-top: 28px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
-:root[data-ds] .live-replay-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 18px; border-bottom: 1px solid var(--line); }
-:root[data-ds] .live-replay-title { font-size: 14px; font-weight: 600; white-space: nowrap; }
-:root[data-ds] .live-replay-body { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); }
-:root[data-ds] .live-replay-list { list-style: none; margin: 0; padding: 8px; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--line); }
-:root[data-ds] .live-replay-row {
-  display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px;
-  border: 0; border-radius: 8px; background: transparent; cursor: pointer; text-align: left;
-  color: var(--fg); font-family: var(--sans); transition: background-color 0.15s var(--ease);
-}
-:root[data-ds] .live-replay-row:hover { background: var(--ds-hover); }
-:root[data-ds] .live-replay-row.on { background: var(--ds-selected); }
-:root[data-ds] .live-replay-mark {
-  width: 30px; height: 30px; flex-shrink: 0; display: grid; place-items: center;
-  border-radius: 8px; background: var(--ds-logo-tile); box-shadow: inset 0 0 0 1px var(--line);
-}
-:root[data-ds] .live-replay-mark .logo-img { background: transparent; padding: 0; }
-:root[data-ds] .live-replay-text { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
-:root[data-ds] .live-replay-sentence { font-size: 13px; font-weight: 500; }
-:root[data-ds] .live-replay-meta { font-size: 12px; color: var(--fg-3); }
-:root[data-ds] .live-replay-term { padding: 14px; min-width: 0; }
-:root[data-ds] .live-replay-term .aterm-body {
-  height: 300px; min-height: 0; overflow-y: auto; scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 24px); mask-image: linear-gradient(to bottom, transparent 0, #000 24px);
-}
-:root[data-ds] .live-replay-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 18px; border-top: 1px solid var(--line); }
-:root[data-ds] .live-replay-empty { display: flex; align-items: center; gap: 14px; padding: 28px 22px; }
-
 /* Get Started — the agent factory: one cell per real agent, a spotlight that
    cycles through actually-recorded decisions, and a tooltip that reads straight
    off the store. Desktop only (hover has no touch equivalent) — hidden below
@@ -811,8 +783,8 @@
   position: relative; border: 1px solid var(--line); border-radius: 12px;
   background-color: var(--surface);
   background-image: radial-gradient(var(--line-strong) 1px, transparent 1px);
-  background-size: 22px 22px; background-position: 18px 18px;
-  padding: 40px 24px 24px;
+  background-size: 14px 14px; background-position: 12px 12px;
+  padding: 34px 20px 18px;
 }
 :root[data-ds] .factory-yaml {
   position: absolute; top: 14px; left: 20px; font: 500 10.5px var(--mono);
@@ -835,10 +807,11 @@
 }
 :root[data-ds] .factory-mute:hover { background: var(--ds-hover); color: var(--fg); }
 :root[data-ds] .factory-grid {
-  display: grid; grid-template-columns: repeat(12, 1fr); gap: 7px;
+  display: grid; grid-template-columns: repeat(auto-fill, 13px); grid-auto-rows: 13px;
+  gap: 4px; justify-content: start;
 }
 :root[data-ds] .factory-cell {
-  aspect-ratio: 1; border: 0; padding: 0; border-radius: 3px; min-width: 0;
+  width: 13px; height: 13px; border: 0; padding: 0; border-radius: 2px; min-width: 0;
 }
 :root[data-ds] .factory-cell-empty { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
 :root[data-ds] .factory-cell-agent {
@@ -849,10 +822,10 @@
 :root[data-ds] .factory-cell-agent.tone-review { background: color-mix(in oklab, var(--review) 55%, transparent); }
 :root[data-ds] .factory-cell-agent.tone-block { background: color-mix(in oklab, var(--block) 55%, transparent); }
 :root[data-ds] .factory-cell-agent.unknown { background: color-mix(in oklab, var(--fg-4) 30%, transparent); }
-:root[data-ds] .factory-cell-agent:hover { transform: scale(1.18); box-shadow: inset 0 0 0 1px var(--fg-3); z-index: 1; }
+:root[data-ds] .factory-cell-agent:hover { transform: scale(1.4); box-shadow: inset 0 0 0 1px var(--fg-3); z-index: 1; }
 :root[data-ds] .factory-cell-agent.lit {
   box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--fg-2);
-  transform: scale(1.18); z-index: 1;
+  transform: scale(1.4); z-index: 1;
 }
 :root[data-ds] .factory-tip {
   position: absolute; z-index: 5; transform: translate(-50%, calc(-100% - 10px));
@@ -965,10 +938,6 @@
   :root[data-ds] .sim-cols { grid-template-columns: minmax(0, 1fr); }
   :root[data-ds] .sim-col { padding: 0; }
   :root[data-ds] .sim-col + .sim-col { border-left: 0; border-top: 1px solid var(--line); padding-top: 24px; }
-}
-@media (max-width: 1100px) {
-  :root[data-ds] .live-replay-body { grid-template-columns: minmax(0, 1fr); }
-  :root[data-ds] .live-replay-list { border-right: 0; border-bottom: 1px solid var(--line); }
 }
 @media (max-width: 860px) {
   :root[data-ds] .shell { padding: 0 6px 6px; }
