@@ -113,34 +113,40 @@
   --ds-glass: rgba(15, 16, 17, 0.86);
 }
 
-/* ---------------------------------------------------------------- tokens · light */
+/* ---------------------------------------------------------------- tokens · light
+   Following the Warp (warp.co) app reference: neutral gray canvas (#f6f6f6) with
+   pure-white cards separated by solid #ececec hairlines, #202020/#757575 text
+   (verified against warp.co's live styles), ink-black primary actions like the
+   reference's Approve button, and the reference's own blue (#2b93eb) and green
+   (#2f9e64) sampled from the dashboard shot. Warp's "restartSoft" typeface is
+   proprietary — Inter (already loaded) is the closest neutral grotesque. */
 :root[data-ds][data-theme="light"] {
   color-scheme: light;
-  --ds-chrome: #f4f4f2;
+  --ds-chrome: #f6f6f6;
   --bg: #ffffff;
-  --surface: #fcfcfb;
-  --surface-2: #f5f5f3;
-  --surface-3: #ececea;
-  --line: rgba(20, 20, 19, 0.085);
-  --line-strong: rgba(20, 20, 19, 0.14);
-  --fg: #1b1b1a;
-  --fg-2: #53524e;
-  --fg-3: #858480;
-  --fg-4: #b1b0aa;
-  --accent: #3560d0;
-  --accent-2: #4d74db;
-  --accent-strong: #3560d0;
-  --accent-soft: rgba(53, 96, 208, 0.08);
+  --surface: #ffffff;
+  --surface-2: #fafafa;
+  --surface-3: #efefef;
+  --line: #ececec;
+  --line-strong: #dcdcdc;
+  --fg: #202020;
+  --fg-2: #4c4c4c;
+  --fg-3: #757575;
+  --fg-4: #a8a8a8;
+  --accent: #2b93eb;
+  --accent-2: #4da3ef;
+  --accent-strong: #1e83dd;
+  --accent-soft: rgba(43, 147, 235, 0.09);
   --accent-fg: #ffffff;
-  --accent-active: #2a4fb2;
-  --cta-bg: var(--accent-strong);
-  --cta-bg-hover: var(--accent-active);
+  --accent-active: #1a76c9;
+  --cta-bg: #1a1a1a;
+  --cta-bg-hover: #000000;
   --cta-fg: #ffffff;
-  --sidebar: #f4f4f2;
-  --ink: #1c1c1b;
+  --sidebar: #f6f6f6;
+  --ink: #1a1a1a;
   --ink-fg: #ffffff;
-  --allow: #2f8a5e;
-  --allow-soft: rgba(47, 138, 94, 0.1);
+  --allow: #2f9e64;
+  --allow-soft: rgba(47, 158, 100, 0.1);
   --constrain: #1f7f8c;
   --constrain-soft: rgba(31, 127, 140, 0.1);
   --review: #9d6f12;
@@ -150,42 +156,54 @@
   --violet: #6c56c2;
   --violet-soft: rgba(108, 86, 194, 0.09);
   --code-bg: #18181a;
-  --code-line: rgba(20, 20, 19, 0.16);
-  --brand-grad: linear-gradient(90deg, #3560d0, #3560d0);
-  --brand-swatch: #1ea76a;
-  --glow: 0 0 0 1px rgba(53, 96, 208, 0.3);
-  --glow-soft: 0 0 0 1px rgba(53, 96, 208, 0.18);
+  --code-line: rgba(0, 0, 0, 0.16);
+  --brand-grad: linear-gradient(90deg, #2b93eb, #2b93eb);
+  --brand-swatch: #2f9e64;
+  --glow: 0 0 0 1px rgba(43, 147, 235, 0.3);
+  --glow-soft: 0 0 0 1px rgba(43, 147, 235, 0.18);
   --shadow-sm: 0 0 0 0 transparent;
   --shadow: 0 0 0 0 transparent;
-  --shadow-md: 0 10px 28px -14px rgba(20, 20, 19, 0.18);
-  --shadow-lg: 0 24px 64px -20px rgba(20, 20, 19, 0.22), 0 2px 8px rgba(20, 20, 19, 0.06);
-  --ds-hover: rgba(20, 20, 19, 0.045);
-  --ds-selected: rgba(20, 20, 19, 0.07);
+  --shadow-md: 0 10px 28px -14px rgba(0, 0, 0, 0.14);
+  --shadow-lg: 0 24px 64px -20px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.05);
+  --ds-hover: rgba(0, 0, 0, 0.04);
+  --ds-selected: #efefef;
   --ds-fill: #ffffff;
-  --ds-fill-hover: #f6f6f4;
-  --ds-border: rgba(20, 20, 19, 0.13);
-  --ds-border-hover: rgba(20, 20, 19, 0.2);
-  --ds-quiet: rgba(20, 20, 19, 0.055);
-  --ds-quiet-2: rgba(20, 20, 19, 0.085);
-  --ds-chrome-line: rgba(20, 20, 19, 0.08);
-  --ds-panel-border: rgba(20, 20, 19, 0.09);
-  --ds-panel-shadow: 0 1px 2px rgba(20, 20, 19, 0.05);
-  --ds-row-hover: #f8f8f6;
+  --ds-fill-hover: #f5f5f5;
+  --ds-border: #e0e0e0;
+  --ds-border-hover: #cfcfcf;
+  --ds-quiet: rgba(0, 0, 0, 0.05);
+  --ds-quiet-2: rgba(0, 0, 0, 0.08);
+  --ds-chrome-line: #ececec;
+  --ds-panel-border: #ececec;
+  --ds-panel-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --ds-row-hover: #fafafa;
   --ds-overlay: rgba(255, 255, 255, 0.86);
   --ds-sheet: #ffffff;
-  --ds-sheet-border: rgba(20, 20, 19, 0.1);
-  --ds-veil: rgba(20, 20, 19, 0.16);
-  --ds-primary: #1c1c1b;
+  --ds-sheet-border: #e8e8e8;
+  --ds-veil: rgba(0, 0, 0, 0.16);
+  --ds-primary: #1a1a1a;
   --ds-primary-hover: #000000;
   --ds-primary-fg: #ffffff;
-  --ds-track: rgba(20, 20, 19, 0.07);
-  --ds-track-edge: rgba(20, 20, 19, 0.05);
-  --ds-focus: rgba(53, 96, 208, 0.55);
-  --ds-focus-ring: rgba(53, 96, 208, 0.14);
+  --ds-track: rgba(0, 0, 0, 0.06);
+  --ds-track-edge: rgba(0, 0, 0, 0.04);
+  --ds-focus: rgba(43, 147, 235, 0.55);
+  --ds-focus-ring: rgba(43, 147, 235, 0.16);
   --ds-logo-tile: #ffffff;
   --ds-term: #121214;
-  --ds-term-border: rgba(20, 20, 19, 0.16);
+  --ds-term-border: rgba(0, 0, 0, 0.16);
   --ds-glass: rgba(255, 255, 255, 0.84);
+}
+
+/* Light refinements — the Warp reference's control shapes: 9px buttons and a
+   quiet gray search well, matching its radius vocabulary (4 / 8 / 9 / pill). */
+:root[data-ds][data-theme="light"] .btn { border-radius: 9px; }
+:root[data-ds][data-theme="light"] .btn-lg { border-radius: 9px; }
+:root[data-ds][data-theme="light"] .btn-sm { border-radius: 7px; }
+:root[data-ds][data-theme="light"] .topbar .topbar-search {
+  background: #fafafa; border-color: var(--line); border-radius: 9px;
+}
+:root[data-ds][data-theme="light"] .topbar .topbar-search:hover {
+  background: #f5f5f5; border-color: var(--line-strong);
 }
 
 /* ---------------------------------------------------------------- shared tokens */
@@ -367,10 +385,9 @@
 /* ---------------------------------------------------------------- surfaces */
 /* Sections, not floating cards: a one-step tone lift, a hairline, no shadow. */
 :root[data-ds] .card {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
   padding: 18px 20px; box-shadow: none;
 }
-:root[data-ds]:not([data-theme="light"]) .card { border-radius: 12px; }
 :root[data-ds] .card:hover { border-color: var(--line); }
 :root[data-ds] .card .card,
 :root[data-ds] .drawer .card { background: var(--ds-hover); border-color: var(--line); }
