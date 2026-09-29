@@ -344,7 +344,7 @@
 /* The dominant application surface — one inset panel. */
 :root[data-ds] .main {
   background: var(--bg);
-  border: 1px solid var(--ds-panel-border); border-radius: 12px;
+  border: 1px solid var(--ds-panel-border); border-radius: 0;
   box-shadow: var(--ds-panel-shadow);
 }
 :root[data-ds] .shell > .main:first-child { margin-left: 8px; } /* setup wizard: no sidebar */
