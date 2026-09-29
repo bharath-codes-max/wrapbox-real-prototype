@@ -24,77 +24,93 @@
    · Motion: gentle fade, slight scale and blur. No lifts, glows or sheens.
    ========================================================================== */
 
-/* ---------------------------------------------------------------- tokens · dark */
+/* ---------------------------------------------------------------- tokens · dark
+   Following the Linear style reference literally: void/carbon/obsidian/graphite
+   surface ladder, paper/mist/fog/ash text ladder, solid-hex hairlines (not alpha
+   overlays), and acid-lime reserved for exactly one button class (.btn-accent) —
+   every other "interactive" surface (focus rings, links, tab-active, selected
+   rows, checkboxes) stays neutral mist/fog, per the reference's own "one
+   chromatic accent, used sparingly" rule. Decision tones map to the reference's
+   own badge palette: Pulse Green / Coral Red / Signal Teal; Review has no
+   Linear equivalent and keeps its existing muted amber. */
 :root[data-ds]:not([data-theme="light"]) {
   color-scheme: dark;
-  --ds-chrome: #0e0e10;
-  --bg: #141416;
-  --surface: #19191c;
-  --surface-2: #1e1e22;
-  --surface-3: #252529;
-  --line: rgba(255, 255, 255, 0.065);
-  --line-strong: rgba(255, 255, 255, 0.11);
-  --fg: #ececef;
-  --fg-2: #a3a3ab;
-  --fg-3: #717179;
-  --fg-4: #4e4e56;
-  --accent: #86a5f4;
-  --accent-2: #a3bbf7;
-  --accent-strong: #3d6cdc;
-  --accent-soft: rgba(134, 165, 244, 0.12);
-  --accent-fg: #ffffff;
-  --accent-active: #b6c8f9;
-  --header: #0e0e10;
-  --sidebar: #0e0e10;
-  --ink: #ececef;
-  --ink-fg: #121214;
-  --allow: #55b68b;
-  --allow-soft: rgba(85, 182, 139, 0.12);
-  --constrain: #52b0c3;
-  --constrain-soft: rgba(82, 176, 195, 0.12);
-  --review: #d8a54d;
+  --ds-chrome: #08090a;      /* void */
+  --bg: #08090a;             /* void — page canvas */
+  --surface: #0f1011;        /* carbon — card surfaces */
+  --surface-2: #161718;      /* obsidian — elevated panels */
+  --surface-3: #23252a;      /* graphite — interactive surface tint */
+  --line: #23252a;           /* graphite — hairline borders */
+  --line-strong: #383b3f;    /* smoke — higher-contrast separators */
+  --fg: #ffffff;             /* paper — primary headings, max contrast */
+  --fg-2: #d0d6e0;           /* mist — secondary text, button text */
+  --fg-3: #8a8f98;           /* fog — tertiary/muted text, placeholders */
+  --fg-4: #62666d;           /* ash — most-muted, inactive */
+  /* General interactive affordances (focus, links, tab-active, selected rows,
+     native checkboxes) stay neutral — only .btn-accent below gets the lime. */
+  --accent: #d0d6e0;
+  --accent-2: #8a8f98;
+  --accent-strong: #d0d6e0;
+  --accent-soft: rgba(208, 214, 224, 0.1);
+  --accent-fg: #08090a;
+  --accent-active: #ffffff;
+  /* The one chromatic CTA — acid lime, void text — wired to .btn-accent only. */
+  --cta-bg: #e4f222;
+  --cta-bg-hover: #eaf655;
+  --cta-fg: #08090a;
+  --header: #08090a;
+  --sidebar: #08090a;
+  --ink: #ffffff;
+  --ink-fg: #08090a;
+  --allow: #27a644;          /* pulse green */
+  --allow-soft: rgba(39, 166, 68, 0.13);
+  --constrain: #02b8cc;      /* signal teal */
+  --constrain-soft: rgba(2, 184, 204, 0.13);
+  --review: #d8a54d;         /* no Linear equivalent — kept */
   --review-soft: rgba(216, 165, 77, 0.13);
-  --block: #e06c70;
-  --block-soft: rgba(224, 108, 112, 0.13);
-  --violet: #a796e0;
-  --violet-soft: rgba(167, 150, 224, 0.12);
-  --code-bg: #101012;
-  --code-line: rgba(255, 255, 255, 0.07);
-  --brand-grad: linear-gradient(90deg, #86a5f4, #86a5f4);
+  --block: #eb5757;          /* coral red */
+  --block-soft: rgba(235, 87, 87, 0.13);
+  --violet: #6366f1;         /* iris violet */
+  --violet-soft: rgba(99, 102, 241, 0.13);
+  --code-bg: #08090a;
+  --code-line: #23252a;
+  --brand-grad: linear-gradient(90deg, #d0d6e0, #d0d6e0);
   --brand-swatch: #1ea76a;
-  --glow: 0 0 0 1px rgba(134, 165, 244, 0.35);
-  --glow-soft: 0 0 0 1px rgba(134, 165, 244, 0.2);
+  /* Linear separates surfaces with hairlines, not glows — .glow becomes a plain edge. */
+  --glow: 0 0 0 1px var(--line);
+  --glow-soft: 0 0 0 1px var(--line);
   --shadow-sm: 0 0 0 0 transparent;
   --shadow: 0 0 0 0 transparent;
   --shadow-md: 0 12px 32px -16px rgba(0, 0, 0, 0.65);
-  --shadow-lg: 0 32px 80px -24px rgba(0, 0, 0, 0.72), 0 2px 10px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 4px 32px rgba(8, 9, 10, 0.6), 0 0 0 1px var(--line);
   --ds-hover: rgba(255, 255, 255, 0.045);
   --ds-selected: rgba(255, 255, 255, 0.075);
-  --ds-fill: rgba(255, 255, 255, 0.04);
-  --ds-fill-hover: rgba(255, 255, 255, 0.075);
-  --ds-border: rgba(255, 255, 255, 0.09);
-  --ds-border-hover: rgba(255, 255, 255, 0.14);
-  --ds-quiet: rgba(255, 255, 255, 0.06);
-  --ds-quiet-2: rgba(255, 255, 255, 0.1);
-  --ds-chrome-line: rgba(255, 255, 255, 0.06);
-  --ds-panel-border: rgba(255, 255, 255, 0.06);
+  --ds-fill: rgba(255, 255, 255, 0.05);       /* Linear's Pill/Button fill */
+  --ds-fill-hover: rgba(255, 255, 255, 0.08);
+  --ds-input-fill: rgba(255, 255, 255, 0.02); /* Linear's literal Text Input fill */
+  --ds-border: #23252a;                       /* graphite, solid */
+  --ds-border-hover: #383b3f;                 /* smoke, solid */
+  --ds-quiet: rgba(255, 255, 255, 0.05);
+  --ds-quiet-2: rgba(255, 255, 255, 0.09);
+  --ds-chrome-line: #23252a;
+  --ds-panel-border: #23252a;
   --ds-panel-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --ds-row-hover: #1c1c20;
-  --ds-overlay: rgba(24, 24, 27, 0.86);
-  --ds-sheet: #18181b;
-  --ds-sheet-border: rgba(255, 255, 255, 0.09);
-  --ds-veil: rgba(6, 6, 8, 0.5);
-  --ds-primary: #ececef;
-  --ds-primary-hover: #ffffff;
-  --ds-primary-fg: #121214;
+  --ds-row-hover: #17181a;
+  --ds-overlay: rgba(15, 16, 17, 0.88);
+  --ds-sheet: #161718;       /* obsidian — the floating drawer/modal panel */
+  --ds-sheet-border: #23252a;
+  --ds-veil: rgba(8, 9, 10, 0.55);
+  --ds-primary: #ffffff;     /* paper — Linear's neutral "Sign-up" pill archetype */
+  --ds-primary-hover: #f2f2f2;
+  --ds-primary-fg: #08090a;
   --ds-track: rgba(255, 255, 255, 0.07);
   --ds-track-edge: rgba(255, 255, 255, 0.05);
-  --ds-focus: rgba(134, 165, 244, 0.6);
-  --ds-focus-ring: rgba(134, 165, 244, 0.14);
+  --ds-focus: rgba(208, 214, 224, 0.6);       /* "border brightens to mist" — literal spec */
+  --ds-focus-ring: rgba(208, 214, 224, 0.14);
   --ds-logo-tile: #e6e6ea;
-  --ds-term: #0f0f11;
-  --ds-term-border: rgba(255, 255, 255, 0.08);
-  --ds-glass: rgba(20, 20, 22, 0.82);
+  --ds-term: #08090a;
+  --ds-term-border: #23252a;
+  --ds-glass: rgba(15, 16, 17, 0.86);
 }
 
 /* ---------------------------------------------------------------- tokens · light */
@@ -117,6 +133,9 @@
   --accent-soft: rgba(53, 96, 208, 0.08);
   --accent-fg: #ffffff;
   --accent-active: #2a4fb2;
+  --cta-bg: var(--accent-strong);
+  --cta-bg-hover: var(--accent-active);
+  --cta-fg: #ffffff;
   --sidebar: #f4f4f2;
   --ink: #1c1c1b;
   --ink-fg: #ffffff;
@@ -351,6 +370,7 @@
   background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
   padding: 18px 20px; box-shadow: none;
 }
+:root[data-ds]:not([data-theme="light"]) .card { border-radius: 12px; }
 :root[data-ds] .card:hover { border-color: var(--line); }
 :root[data-ds] .card .card,
 :root[data-ds] .drawer .card { background: var(--ds-hover); border-color: var(--line); }
@@ -465,7 +485,7 @@
 
 /* ---------------------------------------------------------------- controls */
 :root[data-ds] .btn {
-  gap: 6px; padding: 6px 12px; border-radius: 7px;
+  gap: 6px; padding: 6px 12px; border-radius: 6px;
   border: 1px solid var(--ds-border); background: var(--ds-fill);
   color: var(--fg); font-size: 12.5px; font-weight: 500; box-shadow: none;
   transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s, transform 0.08s;
@@ -474,11 +494,13 @@
 :root[data-ds] .btn:active { transform: scale(0.985); }
 :root[data-ds] .btn:disabled { opacity: 0.4; }
 :root[data-ds] .btn-sm { padding: 4px 9px; border-radius: 6px; font-size: 12px; }
-:root[data-ds] .btn-lg { height: 36px; padding: 0 15px; border-radius: 8px; font-size: 13px; }
+:root[data-ds] .btn-lg { height: 36px; padding: 0 15px; border-radius: 6px; font-size: 13px; }
 :root[data-ds] .btn-primary { background: var(--ds-primary); border-color: var(--ds-primary); color: var(--ds-primary-fg); }
 :root[data-ds] .btn-primary:hover { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); box-shadow: none; }
-:root[data-ds] .btn-accent { background: var(--accent-strong); border-color: var(--accent-strong); color: #ffffff; box-shadow: none; }
-:root[data-ds] .btn-accent:hover { background: color-mix(in oklab, var(--accent-strong) 88%, #ffffff); border-color: color-mix(in oklab, var(--accent-strong) 88%, #ffffff); filter: none; }
+:root[data-ds] .btn-accent { background: var(--cta-bg); border-color: var(--cta-bg); color: var(--cta-fg); box-shadow: none; font-weight: 500; }
+:root[data-ds] .btn-accent:hover { background: var(--cta-bg-hover); border-color: var(--cta-bg-hover); filter: none; }
+/* The one place Linear applies a real shadow to a chrome element — a faint gloss on the lime CTA. */
+:root[data-ds]:not([data-theme="light"]) .btn-accent { box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.1), inset 0 -1px 1px rgba(255, 255, 255, 0.25); }
 :root[data-ds] .btn-good { background: #2c8a5e; border-color: #2c8a5e; color: #ffffff; }
 :root[data-ds] .btn-good:hover { background: #33976a; border-color: #33976a; filter: none; }
 :root[data-ds] .btn-danger { background: transparent; border-color: color-mix(in oklab, var(--block) 35%, transparent); color: var(--block); }
@@ -492,8 +514,8 @@
 :root[data-ds] .input,
 :root[data-ds] .select,
 :root[data-ds] textarea.input {
-  padding: 7px 10px; border-radius: 7px; font-size: 13px;
-  background: var(--ds-fill); border: 1px solid var(--ds-border);
+  padding: 7px 10px; border-radius: 6px; font-size: 13px;
+  background: var(--ds-input-fill); border: 1px solid var(--ds-border);
 }
 :root[data-ds] .input:hover,
 :root[data-ds] .select:hover { border-color: var(--ds-border-hover); }
@@ -507,7 +529,7 @@
 /* Filter row — native controls straight on the surface, no container box. */
 :root[data-ds] .fbar { gap: 8px; margin-bottom: 16px; padding: 0; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
 :root[data-ds] .fsearch,
-:root[data-ds] .fselect { height: 30px; border-radius: 7px; border: 1px solid var(--ds-border); background: var(--ds-fill); }
+:root[data-ds] .fselect { height: 30px; border-radius: 6px; border: 1px solid var(--ds-border); background: var(--ds-input-fill); }
 :root[data-ds] .fsearch:hover,
 :root[data-ds] .fselect:hover { border-color: var(--ds-border-hover); }
 :root[data-ds] .fsearch { gap: 7px; min-width: 220px; padding: 0 8px 0 10px; color: var(--fg-3); }
@@ -529,7 +551,12 @@
 :root[data-ds] .segmented button.on { background: var(--ds-fill); color: var(--fg); box-shadow: inset 0 0 0 1px var(--ds-border); font-weight: 500; }
 
 /* Chips — small, calm, with a hairline of their own tone. */
-:root[data-ds] .chip {
+:root[data-ds]:not([data-theme="light"]) .chip {
+  gap: 5px; padding: 1px 7px; border-radius: 4px; line-height: 1.55;
+  font-size: 11px; font-weight: 550; letter-spacing: 0.01em;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, currentColor 14%, transparent);
+}
+:root[data-ds][data-theme="light"] .chip {
   gap: 5px; padding: 1px 7px; border-radius: 5px; line-height: 1.55;
   font-size: 11px; font-weight: 550; letter-spacing: 0.01em;
   box-shadow: inset 0 0 0 1px color-mix(in oklab, currentColor 14%, transparent);
@@ -649,6 +676,7 @@
 :root[data-ds] .attach-chip { border-radius: 6px; background: var(--ds-fill); border-color: var(--line-strong); }
 
 /* Agent terminal — a graphite terminal window. */
+:root[data-ds]:not([data-theme="light"]) .aterm-line.info .dot { background: var(--constrain); } /* "informational icon fills" */
 :root[data-ds] .aterm { border-radius: 12px; background: var(--ds-term); border: 1px solid var(--ds-term-border); color: #e4e4e8; }
 :root[data-ds] .aterm-bar { height: 40px; border-bottom-color: rgba(255, 255, 255, 0.06); }
 :root[data-ds] .aterm-bar .lights i { width: 10px; height: 10px; }
@@ -696,6 +724,31 @@
 :root[data-ds]:not([data-theme="light"]) .start-banner::after {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), inset 0 -28px 34px -24px rgba(0, 0, 0, 0.5), inset 0 22px 30px -26px rgba(0, 0, 0, 0.38);
 }
+/* Linear caps card/panel radius at 12px even for floating windows — tighten
+   the drawer/modal/palette/menus from our 14px in dark only (light unchanged). */
+:root[data-ds]:not([data-theme="light"]) .drawer,
+:root[data-ds]:not([data-theme="light"]) .modal,
+:root[data-ds]:not([data-theme="light"]) .palette,
+:root[data-ds]:not([data-theme="light"]) .ws-pop,
+:root[data-ds]:not([data-theme="light"]) .start-banner { border-radius: 12px; }
+
+/* ---------------------------------------------------------------- typography
+   Inter's own alternate-glyph stylistic sets (single-story a/g variants, etc.)
+   plus the reference's tight display tracking. Berkeley Mono's stand-in here is
+   already JetBrains Mono (Linear's own listed substitute) — just add its tracking. */
+:root[data-ds]:not([data-theme="light"]) body {
+  font-feature-settings: "cv01" 1, "ss03" 1, "zero" 1;
+}
+:root[data-ds]:not([data-theme="light"]) .page-title { letter-spacing: -0.022em; font-weight: 500; }
+:root[data-ds]:not([data-theme="light"]) .step-title { letter-spacing: -0.022em; font-weight: 500; }
+:root[data-ds]:not([data-theme="light"]) .start-hero-title { letter-spacing: -0.022em !important; font-weight: 500 !important; }
+:root[data-ds]:not([data-theme="light"]) .section-title,
+:root[data-ds]:not([data-theme="light"]) .ecard-title,
+:root[data-ds]:not([data-theme="light"]) .card-title { letter-spacing: -0.012em; }
+:root[data-ds]:not([data-theme="light"]) code,
+:root[data-ds]:not([data-theme="light"]) .mono,
+:root[data-ds]:not([data-theme="light"]) .kbd { letter-spacing: -0.013em; }
+
 @media (prefers-reduced-motion: reduce) {
   :root[data-ds] .start-banner { animation: none; }
   :root[data-ds] .start-banner img { transform: scale(1.16); }
