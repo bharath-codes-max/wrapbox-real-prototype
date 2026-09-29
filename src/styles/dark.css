@@ -605,6 +605,7 @@
 @media (max-width: 860px) {
   :root:not([data-theme="light"]) .shell { padding: 0 6px 6px; }
   :root:not([data-theme="light"]) .sidebar { width: 100%; border-bottom: 0; }
+  :root:not([data-theme="light"]) .sidebar-bottom { display: none; }
   :root:not([data-theme="light"]) .topbar { height: 56px; padding: 0 12px; }
   :root:not([data-theme="light"]) .demo-bar { left: 7px; right: 7px; bottom: 7px; }
 }
