@@ -802,160 +802,51 @@
   color: #23824f !important;
 }
 
-/* Get Started — agent activity heatmap (GitHub contribution-graph grammar,
-   multi-tone): rows are agents, columns are time buckets, colour is the most
-   severe decision in the cell, shade is volume. Desktop only — hidden below
-   860px with the other hover-only widgets further down this file. */
-:root[data-ds]:not([data-theme="light"]) { --heat-empty: #1f2023; --heat-empty-edge: rgba(255, 255, 255, 0.03); }
-:root[data-ds][data-theme="light"] { --heat-empty: #ebedf0; --heat-empty-edge: rgba(0, 0, 0, 0.04); }
-:root[data-ds] .heat { margin-top: 28px; }
-:root[data-ds] .heat-board {
-  position: relative; padding: 18px 22px 16px; border: 1px solid var(--line);
-  border-radius: 12px; background: var(--surface);
+/* Get Started — decorative activity grid: square cells, GitHub's green scale
+   (official contribution-graph tints per theme), about half lit, a few twinkle.
+   Desktop only — hidden below 860px further down this file. */
+:root[data-ds]:not([data-theme="light"]) {
+  --g0: #1f2023; --g1: #0e4429; --g2: #006d32; --g3: #26a641; --g4: #39d353;
 }
-:root[data-ds] .heat-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-:root[data-ds] .heat-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
-:root[data-ds] .heat-title-main { font-size: 14px; font-weight: 600; letter-spacing: -0.006em; white-space: nowrap; }
-:root[data-ds] .heat-title-sub { font-size: 12.5px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-:root[data-ds] .heat-head-right { display: flex; align-items: center; gap: 10px; }
-:root[data-ds] .heat-live { display: inline-flex; align-items: center; gap: 6px; font: 600 10px var(--mono); letter-spacing: 0.08em; color: var(--fg-3); }
-:root[data-ds] .heat-live i {
-  width: 6px; height: 6px; border-radius: 50%; background: var(--allow);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--allow) 20%, transparent);
-  animation: heat-pulse 1.8s ease-in-out infinite;
+:root[data-ds][data-theme="light"] {
+  --g0: #ebedf0; --g1: #9be9a8; --g2: #40c463; --g3: #30a14e; --g4: #216e39;
 }
-@keyframes heat-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+:root[data-ds] .heat { margin-top: 24px; }
+:root[data-ds] .heat-board { padding: 14px 18px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+:root[data-ds] .heat-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+:root[data-ds] .heat-title-main { font-size: 13.5px; font-weight: 600; letter-spacing: -0.006em; }
+:root[data-ds] .heat-grid { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 3px; }
+:root[data-ds] .heat-cell {
+  display: block; aspect-ratio: 1 / 1; min-width: 0; border-radius: 2px; background: var(--g0);
+  outline: 1px solid rgba(127, 127, 127, 0.06); outline-offset: -1px;
+  transition: transform 0.12s var(--ease), filter 0.12s var(--ease);
+}
+:root[data-ds] .heat-cell.g-1 { background: var(--g1); }
+:root[data-ds] .heat-cell.g-2 { background: var(--g2); }
+:root[data-ds] .heat-cell.g-3 { background: var(--g3); }
+:root[data-ds] .heat-cell.g-4 { background: var(--g4); }
+:root[data-ds] .heat-grid .heat-cell:hover { transform: scale(1.4); filter: brightness(1.25); position: relative; z-index: 1; }
+:root[data-ds] .heat-grid .heat-cell.tw { animation: heat-twinkle 3.6s ease-in-out infinite; animation-delay: calc(var(--d) * -90ms); }
+@keyframes heat-twinkle { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+:root[data-ds] .heat-legend { display: flex; align-items: center; justify-content: flex-end; gap: 3px; margin-top: 8px; font-size: 11px; color: var(--fg-3); }
+:root[data-ds] .heat-legend .heat-cell { width: 10px; }
+:root[data-ds] .heat-legend span:first-child { margin-right: 4px; }
+:root[data-ds] .heat-legend span:last-child { margin-left: 4px; }
+:root[data-ds] .heat-sound { display: inline-flex; align-items: center; gap: 8px; }
+:root[data-ds] .heat-sound-hint { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--fg-3); white-space: nowrap; }
+:root[data-ds] .heat-sound-hint i { width: 6px; height: 6px; border-radius: 50%; background: var(--g3); animation: heat-twinkle 1.4s ease-in-out infinite; }
 :root[data-ds] .heat-mute {
   width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid var(--line);
   border-radius: 7px; background: var(--ds-fill); color: var(--fg-3); cursor: pointer;
-  transition: background-color 0.15s var(--ease), color 0.15s var(--ease);
 }
 :root[data-ds] .heat-mute:hover { background: var(--ds-fill-hover); color: var(--fg); }
-:root[data-ds] .heat-grid {
-  display: grid; grid-template-columns: 132px repeat(var(--cols), minmax(0, 1fr));
-  gap: 4px; align-items: center;
-}
-:root[data-ds] .heat-col-label { height: 14px; font-size: 11px; color: var(--fg-3); white-space: nowrap; overflow: visible; line-height: 14px; }
-:root[data-ds] .heat-row-label {
-  display: flex; align-items: center; gap: 7px; min-width: 0; padding-right: 10px;
-  font-size: 11.5px; color: var(--fg-2);
-}
-:root[data-ds] .heat-row-label > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-:root[data-ds] .heat-row-label .logo-img { flex-shrink: 0; background: transparent; padding: 0; }
-:root[data-ds] .heat-cell {
-  display: block; aspect-ratio: 1; width: 100%; min-width: 0; padding: 0; border: 0;
-  border-radius: 3px; background: var(--heat-empty); box-shadow: inset 0 0 0 1px var(--heat-empty-edge);
-}
-:root[data-ds] .heat-cell { position: relative; transition: transform 0.14s var(--ease), opacity 0.18s var(--ease), box-shadow 0.14s var(--ease); }
-:root[data-ds] .heat-grid.is-map .heat-cell,
-:root[data-ds] .heat-cell.has { cursor: pointer; }
-/* Filled cells carry a soft glow in their own tone. */
-:root[data-ds] .heat-grid.is-map .heat-cell[class*=" t-"],
-:root[data-ds] .heat-cell.has { box-shadow: 0 0 7px -1px color-mix(in oklab, var(--tone) 55%, transparent); }
-/* Crosshair focus: the hovered row and column stay lit, everything else steps back. */
-:root[data-ds] .heat-grid.hovering .heat-cell:not(.x) { opacity: 0.38; }
-:root[data-ds] .heat-grid.hovering .heat-cell.x { opacity: 1; }
-:root[data-ds] .heat-cell:hover {
-  transform: scale(1.35); z-index: 3; opacity: 1 !important;
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--fg), 0 0 18px 2px color-mix(in oklab, var(--tone, var(--fg-3)) 70%, transparent);
-}
-:root[data-ds] .heat-cell.lit { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--fg), 0 0 16px 2px color-mix(in oklab, var(--tone, var(--fg)) 65%, transparent); transform: scale(1.18); z-index: 2; }
-/* The scenario's own agent — a small inner pip. */
-:root[data-ds] .heat-cell.authored::after,
-:root[data-ds] .heat-swatch.authored::after {
-  content: ""; position: absolute; inset: 0; margin: auto; width: 32%; height: 32%;
-  border-radius: 50%; background: rgba(255, 255, 255, 0.92); box-shadow: 0 0 4px rgba(255, 255, 255, 0.6);
-}
-:root[data-ds] .heat-swatch.authored { position: relative; }
-/* Motion (presentation only): a scan sweeps across the columns; blocks and reviews breathe. */
-:root[data-ds] .heat-grid.animate .heat-cell[class*=" t-"] {
-  animation: heat-scan 5.2s linear infinite;
-  animation-delay: calc(var(--c) * 55ms);
-}
-:root[data-ds] .heat-grid.animate .heat-cell.t-block {
-  animation: heat-scan 5.2s linear infinite, heat-breathe 2.4s ease-in-out infinite;
-  animation-delay: calc(var(--c) * 55ms), calc(var(--d) * -100ms);
-}
-:root[data-ds] .heat-grid.animate .heat-cell.t-review {
-  animation: heat-scan 5.2s linear infinite, heat-breathe 3.4s ease-in-out infinite;
-  animation-delay: calc(var(--c) * 55ms), calc(var(--d) * -140ms);
-}
-:root[data-ds] .heat-grid.animate .heat-cell:hover { animation: none; }
-@keyframes heat-scan {
-  0% { filter: brightness(1.9) saturate(1.35); }
-  6% { filter: brightness(1.15); }
-  12%, 100% { filter: none; }
-}
-@keyframes heat-breathe {
-  0%, 100% { box-shadow: 0 0 5px -1px color-mix(in oklab, var(--tone) 45%, transparent); }
-  50% { box-shadow: 0 0 14px 1px color-mix(in oklab, var(--tone) 85%, transparent); }
-}
-@media (prefers-reduced-motion: reduce) {
-  :root[data-ds] .heat-grid .heat-cell, :root[data-ds] .heat-live i, :root[data-ds] .heat-sound-hint i { animation: none !important; }
-}
-:root[data-ds] .heat-group {
-  position: relative; padding-bottom: 5px; font-size: 11px; font-weight: 500; color: var(--fg-3);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.15s var(--ease);
-  border-bottom: 1px solid var(--line); text-overflow: clip;
-}
-:root[data-ds] .heat-group.hot { color: var(--fg); border-bottom-color: var(--fg-3); }
-:root[data-ds] .heat-row-label.hot { color: var(--fg); }
-:root[data-ds] .heat-tabs { display: inline-flex; padding: 2px; gap: 2px; border-radius: 8px; background: var(--ds-quiet); }
-:root[data-ds] .heat-tabs button {
-  height: 24px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent;
-  font: 500 12px var(--sans); color: var(--fg-3); cursor: pointer; transition: background-color 0.15s var(--ease), color 0.15s var(--ease);
-}
-:root[data-ds] .heat-tabs button:hover { color: var(--fg); }
-:root[data-ds] .heat-tabs button.on { background: var(--surface); color: var(--fg); box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgba(0, 0, 0, 0.12); }
-:root[data-ds] .heat-sound { display: inline-flex; align-items: center; gap: 8px; }
-:root[data-ds] .heat-sound-hint { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--fg-3); white-space: nowrap; }
-:root[data-ds] .heat-sound-hint i { width: 6px; height: 6px; border-radius: 50%; background: var(--review); animation: heat-pulse 1.4s ease-in-out infinite; }
-:root[data-ds] .heat-mute.locked { box-shadow: 0 0 0 3px color-mix(in oklab, var(--review) 22%, transparent); color: var(--fg-2); }
-:root[data-ds] .heat-tip-why { margin-top: 6px; font-size: 12px; line-height: 1.45; color: var(--fg-3); }
-:root[data-ds] .heat-scale-sep { color: var(--fg-4); }
-:root[data-ds] .heat .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-:root[data-ds] .heat-swatch {
-  display: inline-block; width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0;
-  background: var(--heat-empty); box-shadow: inset 0 0 0 1px var(--heat-empty-edge);
-}
-:root[data-ds] .t-allow { --tone: var(--allow); }
-:root[data-ds] .t-constrain { --tone: var(--constrain); }
-:root[data-ds] .t-review { --tone: var(--review); }
-:root[data-ds] .t-block { --tone: var(--block); }
-:root[data-ds] .t-neutral { --tone: var(--fg-2); }
-:root[data-ds] .l-1 { background: color-mix(in oklab, var(--tone) 32%, var(--heat-empty)); }
-:root[data-ds] .l-2 { background: color-mix(in oklab, var(--tone) 55%, var(--heat-empty)); }
-:root[data-ds] .l-3 { background: color-mix(in oklab, var(--tone) 78%, var(--heat-empty)); }
-:root[data-ds] .l-4 { background: var(--tone); }
-:root[data-ds] .heat-legend { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; padding-left: 136px; }
-:root[data-ds] .heat-key { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--fg-3); }
-:root[data-ds] .heat-key-item { display: inline-flex; align-items: center; gap: 6px; }
-:root[data-ds] .heat-key-item b { font-weight: 600; color: var(--fg); font-variant-numeric: tabular-nums; }
-:root[data-ds] .heat-scale { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--fg-3); }
-:root[data-ds] .heat-scale span:first-child { margin-right: 3px; }
-:root[data-ds] .heat-scale span:last-child { margin-left: 3px; }
-:root[data-ds] .heat-tip {
-  position: absolute; z-index: 5; transform: translate(-50%, calc(-100% - 10px));
-  width: 260px; padding: 11px 13px; border: 1px solid var(--line-strong); border-radius: 10px;
-  background: var(--ds-sheet); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22); pointer-events: none;
-}
-:root[data-ds] .heat-tip-head { display: flex; align-items: baseline; gap: 6px; font-size: 12.5px; }
-:root[data-ds] .heat-tip-head b { font-weight: 600; }
-:root[data-ds] .heat-tip .dim { color: var(--fg-3); }
-:root[data-ds] .heat-tip-time { margin-top: 2px; font: 500 10.5px var(--mono); color: var(--fg-4); }
-:root[data-ds] .heat-tip-body { margin-top: 7px; font-size: 12.5px; line-height: 1.45; color: var(--fg-2); }
-:root[data-ds] .heat-tip-mix { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 7px; font-size: 11.5px; color: var(--fg-3); }
-:root[data-ds] .heat-tip-mix span { display: inline-flex; align-items: center; gap: 5px; }
-:root[data-ds] .heat-tip-mix .heat-swatch { width: 9px; height: 9px; border-radius: 2px; }
-:root[data-ds] .heat-tip-foot {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line);
-  font: 500 9.5px var(--mono); letter-spacing: 0.04em; color: var(--fg-4);
-}
-:root[data-ds] .heat-tip-foot-r { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-:root[data-ds] .heat-foot { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 12.5px; color: var(--fg-3); }
+:root[data-ds] .heat-mute.locked { box-shadow: 0 0 0 3px color-mix(in oklab, var(--g3) 25%, transparent); }
+:root[data-ds] .heat-foot { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12.5px; color: var(--fg-3); }
 :root[data-ds] .heat-foot .dim { color: var(--fg-4); }
 :root[data-ds] .heat-foot .btn { margin-left: auto; }
+@media (prefers-reduced-motion: reduce) {
+  :root[data-ds] .heat-grid .heat-cell, :root[data-ds] .heat-sound-hint i { animation: none !important; }
+}
 
 /* Policy Simulator — the three acts as columns, separated by hairlines. */
 :root[data-ds] .sim-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(250px, 0.8fr); align-items: start; }
