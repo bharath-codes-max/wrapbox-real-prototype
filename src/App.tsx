@@ -31,6 +31,7 @@ import { StartPage } from "./pages/start";
 import { AdminOnboarding } from "./pages/onboarding-admin";
 import { EmployeeOnboarding } from "./pages/onboarding-employee";
 import { DemoBar, DEMO_SCRIPT } from "./pages/demo";
+import { DESKTOP_SHELL } from "./ui/shell";
 
 export type Route = string;
 
@@ -534,7 +535,8 @@ export function App() {
   const activeRules = state.contracts.filter((c) => c.status === "ACTIVE").reduce((n, c) => n + c.clauses.length, 0);
 
   // Light theme swaps to the mega-menu header + icon rail; dark keeps the classic sidebar.
-  if (light) {
+  // The live prototype (DESKTOP_SHELL) uses the sidebar shell in both themes.
+  if (light && !DESKTOP_SHELL) {
     return (
       <div className="shell-col light-shell">
         <Topbar nav={nav} onPalette={() => setPalette(true)} />
@@ -573,7 +575,7 @@ export function App() {
                       it={it}
                       active={base === it.route}
                       onClick={() => nav(it.route)}
-                      badge={it.route === "reviews" ? m.pendingReviews : undefined}
+                      badge={it.route === "reviews" ? m.pendingReviews : it.route === "safety" && pendingRelease(state.kernel) ? "Update" : undefined}
                     />
                   ))}
                 </div>

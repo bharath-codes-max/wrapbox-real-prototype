@@ -12,6 +12,7 @@ import { describe } from "../ui/describe";
 import { userById } from "../model/org";
 import type { Decision, IntentContract, SimulationEvent } from "../model/types";
 import { History, Library, GitCompare, ShieldAlert, ArrowRight, Info } from "lucide-react";
+import { DESKTOP_SHELL } from "../ui/shell";
 
 type Source = "history" | "library";
 
@@ -143,34 +144,33 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
     </>
   );
 
-  return (
-    <div className="page page-wide">
-      <PageHead
-        eyebrow="Policy"
-        title="Policy Simulator"
-        sub="Try a rule change safely: see what would have happened across your company's real history before you switch anything on or off. This page is a preview — nothing is enforced or recorded here."
-        right={<SimNote>Replays run through the live Core Brain — nothing is recorded</SimNote>}
-      />
+  // The prototype lays the three acts out as columns (propose · impact · apply); the
+  // decks keep them as tabs, so the tab markup below is unchanged.
+  const narrow = DESKTOP_SHELL;
+  const proposeIntro = "Untick a rule to try switching it off. Tick a switched-off contract to try switching it on.";
+  const impactIntro = "Every action replayed under your rules today and under your proposal.";
+  const applyIntro = "This page never changes enforcement. When you're happy with the result, switch the rules on or off in Intent Studio.";
+  const editsChip = edits ? (
+    <Chip tone="review">
+      {edits} change{edits === 1 ? "" : "s"} staged
+    </Chip>
+  ) : (
+    <span className="faint small">No changes staged</span>
+  );
+  const sourceTabs = (
+    <div className="tabs" style={{ marginBottom: 0, borderBottom: "none" }}>
+      <button className={`tab ${source === "history" ? "active" : ""}`} onClick={() => setSource("history")}>
+        <History size={14} /> Your history <span className="tab-count tnum">{history.length}</span>
+      </button>
+      <button className={`tab ${source === "library" ? "active" : ""}`} onClick={() => setSource("library")}>
+        <Library size={14} /> Scenario library <span className="tab-count tnum">{SCENARIOS.length}</span>
+      </button>
+    </div>
+  );
 
-      <PageTabs
-        storageKey="simulator"
-        tabs={[
-          {
-            id: "propose",
-            label: "1 · Propose a change",
-            count: edits,
-            content: (
+  const proposeBody = (
       <div>
-        {tabIntro(
-          "Untick a rule to try switching it off. Tick a switched-off contract to try switching it on.",
-          edits ? (
-            <Chip tone="review">
-              {edits} change{edits === 1 ? "" : "s"} staged
-            </Chip>
-          ) : (
-            <span className="faint small">No changes staged</span>
-          )
-        )}
+        {!narrow && tabIntro(proposeIntro, editsChip)}
 
         {active.length === 0 && inactive.length === 0 && (
           <div className="card empty">
@@ -178,7 +178,7 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
           </div>
         )}
 
-        <CardGrid>
+        <CardGrid cols={narrow ? 1 : 2}>
           {active.map((c) => (
             <EntityCard
               key={c.id}
@@ -260,25 +260,11 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
           ))}
         </CardGrid>
       </div>
-            ),
-          },
-          {
-            id: "impact",
-            label: "2 · See what would happen",
-            count: changed.length,
-            content: (
+  );
+
+  const impactBody = (
       <div>
-        {tabIntro(
-          "Every action replayed under your rules today and under your proposal.",
-          <div className="tabs" style={{ marginBottom: 0, borderBottom: "none" }}>
-            <button className={`tab ${source === "history" ? "active" : ""}`} onClick={() => setSource("history")}>
-              <History size={14} /> Your history <span className="tab-count tnum">{history.length}</span>
-            </button>
-            <button className={`tab ${source === "library" ? "active" : ""}`} onClick={() => setSource("library")}>
-              <Library size={14} /> Scenario library <span className="tab-count tnum">{SCENARIOS.length}</span>
-            </button>
-          </div>
-        )}
+        {!narrow && tabIntro(impactIntro, sourceTabs)}
 
         {/* Before / after decision-mix — same width, side by side, for a clean diff */}
         <div className="card">
@@ -295,7 +281,7 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
             </span>
           </div>
 
-          <div className="grid g2" style={{ gap: "24px 40px" }}>
+          <div className={narrow ? "grid" : "grid g2"} style={{ gap: narrow ? "20px" : "24px 40px" }}>
             <div>
               <div className="spread" style={{ marginBottom: 10 }}>
                 <b className="small">Your rules today</b>
@@ -339,7 +325,7 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
         {rf.filtered.length === 0 ? (
           <div className="card empty">No replayed actions match these filters.</div>
         ) : (
-          <CardGrid>
+          <CardGrid cols={narrow ? 1 : 2}>
             {paged.rows.map((r) => {
               const isChanged = r.current !== r.prop;
               const isWeakened = isChanged && r.prop === "ALLOW" && r.current !== "ALLOW";
@@ -375,16 +361,11 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
         </>
         )}
       </div>
-            ),
-          },
-          {
-            id: "apply",
-            label: "3 · Make it real",
-            content: (
+  );
+
+  const applyLegacy = (
       <div>
-        {tabIntro(
-          "This page never changes enforcement. When you're happy with the result, switch the rules on or off in Intent Studio."
-        )}
+        {tabIntro(applyIntro)}
         <div className="card">
           <div className="spread" style={{ gap: 16 }}>
             <div className="small dim" style={{ lineHeight: 1.55, maxWidth: 620 }}>
@@ -396,8 +377,96 @@ export function PolicySimulator({ nav }: { nav: (r: string) => void }) {
           </div>
         </div>
       </div>
-            ),
-          },
+  );
+
+  if (narrow) {
+    // Column 3 summarises exactly what is staged in the preview — every line is read
+    // from the same removed/added sets the replay above runs on.
+    const stagedOff = active.flatMap((c) => c.clauses.filter((cl) => removed.has(cl.id)).map((cl) => ({ c, cl })));
+    const stagedOn = inactive.filter((c) => added.has(c.id));
+    const colHead = (n: number, title: string, sub: string, right?: ReactNode, count?: ReactNode) => (
+      <div className="sim-col-head">
+        <div className="sim-col-title">
+          <span className="sim-col-n">{n}</span>
+          {title}
+          {count !== undefined && <span className="tab-count tnum">{count}</span>}
+        </div>
+        <div className="section-sub">{sub}</div>
+        {right && <div className="sim-col-right">{right}</div>}
+      </div>
+    );
+    return (
+      <div className="page page-wide">
+        <PageHead
+          eyebrow="Policy"
+          title="Policy Simulator"
+          sub="Try a rule change safely: see what would have happened across your company's real history before you switch anything on or off. This page is a preview — nothing is enforced or recorded here."
+          right={<SimNote>Replays run through the live Core Brain — nothing is recorded</SimNote>}
+        />
+        <div className="sim-cols">
+          <section className="sim-col" aria-label="1 · Propose a change">
+            {colHead(1, "Propose a change", proposeIntro, editsChip, edits)}
+            {proposeBody}
+          </section>
+          <section className="sim-col" aria-label="2 · See what would happen">
+            {colHead(2, "See what would happen", impactIntro, sourceTabs, changed.length)}
+            {impactBody}
+          </section>
+          <section className="sim-col sim-col-apply" aria-label="3 · Make it real">
+            {colHead(3, "Make it real", applyIntro)}
+            <div className="card sim-apply">
+              <div className="sim-apply-label">Staged in this preview</div>
+              {edits === 0 ? (
+                <div className="small dim" style={{ lineHeight: 1.55 }}>Nothing staged yet — untick a rule or try a switched-off contract in column 1.</div>
+              ) : (
+                <ul className="sim-staged">
+                  {stagedOff.map(({ c, cl }) => (
+                    <li key={cl.id}>
+                      <Chip tone="neutral">Off</Chip>
+                      <span>{cl.text}<span className="faint"> · {c.name}</span></span>
+                    </li>
+                  ))}
+                  {stagedOn.map((c) => (
+                    <li key={c.id}>
+                      <Chip tone="constrain">On</Chip>
+                      <span>{c.name}<span className="faint"> · {c.clauses.length} rule{c.clauses.length === 1 ? "" : "s"}</span></span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="divider" style={{ margin: "16px 0" }} />
+              <dl className="kv sim-apply-kv">
+                <dt>Outcomes that change</dt><dd className="tnum">{changed.length} of {rows.length}</dd>
+                <dt>Protection weakened</dt><dd className="tnum" style={weakened.length ? { color: "var(--bad)" } : undefined}>{weakened.length}</dd>
+              </dl>
+              <div className="small dim" style={{ lineHeight: 1.55, marginTop: 16 }}>
+                Nothing here is enforced or recorded. Intent Studio is where a proposed change becomes a real rule.
+              </div>
+              <button className="btn btn-primary" style={{ marginTop: 14, width: "100%" }} onClick={() => nav("intent")}>
+                Open Intent Studio <ArrowRight size={14} />
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page page-wide">
+      <PageHead
+        eyebrow="Policy"
+        title="Policy Simulator"
+        sub="Try a rule change safely: see what would have happened across your company's real history before you switch anything on or off. This page is a preview — nothing is enforced or recorded here."
+        right={<SimNote>Replays run through the live Core Brain — nothing is recorded</SimNote>}
+      />
+
+      <PageTabs
+        storageKey="simulator"
+        tabs={[
+          { id: "propose", label: "1 · Propose a change", count: edits, content: proposeBody },
+          { id: "impact", label: "2 · See what would happen", count: changed.length, content: impactBody },
+          { id: "apply", label: "3 · Make it real", content: applyLegacy },
         ]}
       />
     </div>

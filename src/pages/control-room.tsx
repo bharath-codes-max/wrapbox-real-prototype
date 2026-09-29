@@ -13,6 +13,8 @@ import { CAPABILITIES } from "../model/registries";
 import { buildCoverageMatrix } from "../engine/coverage";
 import type { CoverageStatus, Decision } from "../model/types";
 import { ShieldCheck, Network, Server, ArrowRight, Link2, Globe, Cloud, OctagonX } from "lucide-react";
+import { AGENT_LOGOS } from "../ui/logos";
+import { DESKTOP_SHELL } from "../ui/shell";
 
 const DECISIONS = [
   { key: "ALLOW", label: "Allowed", tone: "allow", route: "live", note: "flowed automatically" },
@@ -203,7 +205,9 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {governed.map((a) => (
                   <span key={a.id} title={`${a.name} · ${a.provider}`} style={{ width: 40, height: 40, borderRadius: 11, background: "var(--surface-2)", border: "1px solid var(--line)", display: "grid", placeItems: "center" }}>
-                    <AgentMark agentId={a.id} size={20} />
+                    {DESKTOP_SHELL && !AGENT_LOGOS[a.id]
+                      ? <span className="agent-mono">{a.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("")}</span>
+                      : <AgentMark agentId={a.id} size={20} />}
                   </span>
                 ))}
                 {discovered > 0 && (
@@ -243,8 +247,8 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
                       <span className="small" style={{ color: "var(--fg-2)" }}>{r.label} <span className="faint">· {r.note}</span></span>
                       <span className="tnum small" style={{ fontWeight: 600, color: `var(--${r.tone})` }}>{c}</span>
                     </div>
-                    <div style={{ height: 6, borderRadius: 3, background: "var(--surface-2)", overflow: "hidden" }} aria-hidden="true">
-                      <div style={{ width: `${w}%`, height: "100%", background: `var(--${r.tone})`, borderRadius: 3, transition: "width 0.6s cubic-bezier(0.16,1,0.3,1)" }} />
+                    <div className="meter" style={{ height: 6, borderRadius: 3, background: "var(--surface-2)", overflow: "hidden" }} aria-hidden="true">
+                      <div className="meter-fill" style={{ width: `${w}%`, height: "100%", background: `var(--${r.tone})`, borderRadius: 3, transition: "width 0.6s cubic-bezier(0.16,1,0.3,1)" }} />
                     </div>
                   </div>
                 );
