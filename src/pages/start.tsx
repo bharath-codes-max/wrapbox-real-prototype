@@ -309,9 +309,12 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
       <section
         onMouseMove={onHeroMove}
         onMouseLeave={onHeroLeave}
-        style={{ position: "relative", padding: "clamp(12px, 2.6vw, 36px) 0 0" }}
+        style={{ position: "relative", padding: DESKTOP_SHELL ? 0 : "clamp(12px, 2.6vw, 36px) 0 0" }}
       >
-        {/* The prototype opens with the permit-checkpoint illustration — one per theme. */}
+        {/* The prototype opens with the permit-checkpoint illustration — one per theme.
+            It eases in on load and drifts opposite the scroll (--sy, set once on .main
+            in App.tsx) for a touch of depth; a themed overlay keeps it from looking like
+            a flat pasted image. */}
         {DESKTOP_SHELL && (
           <figure className="start-banner">
             <img
