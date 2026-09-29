@@ -733,13 +733,14 @@
   transform: scale(1.16) translateY(clamp(-6px, calc(var(--sy, 0) * -0.035px), 6px));
   will-change: transform;
 }
-/* The light "gate" banner carries its headline inside the artwork, so it is shown
-   whole at its own 4:1 shape: a 4% scale gives 2% overscan per edge, and the
-   parallax is capped at 1% (of the image's own height) — always inside that. */
-:root[data-ds] .start-banner.start-banner-gate { height: auto; aspect-ratio: 4 / 1; }
+/* The "gate" banner (both themes) carries its headline inside the artwork. The
+   4:1 source is shown at 4.5:1, capped at 236px — only the floor reflection
+   below goes; the sun, permit bubble, headline, robots and ground line stay.
+   A 2% scale gives 1% overscan per edge; the parallax is capped at 0.5%. */
+:root[data-ds] .start-banner.start-banner-gate { width: 100%; height: auto; aspect-ratio: 4.5 / 1; max-height: 236px; }
 :root[data-ds] .start-banner.start-banner-gate img {
-  object-position: 50% 50%;
-  transform: scale(1.04) translateY(clamp(-1%, calc(var(--sy, 0) * -0.02px), 1%));
+  object-position: 50% 12%;
+  transform: scale(1.02) translateY(clamp(-0.5%, calc(var(--sy, 0) * -0.02px), 0.5%));
 }
 /* A quiet vignette so the illustration reads as part of the surface, not a pasted sticker. */
 :root[data-ds] .start-banner::after {
@@ -777,7 +778,7 @@
 @media (prefers-reduced-motion: reduce) {
   :root[data-ds] .start-banner { animation: none; }
   :root[data-ds] .start-banner img { transform: scale(1.16); }
-  :root[data-ds] .start-banner.start-banner-gate img { transform: scale(1.04); }
+  :root[data-ds] .start-banner.start-banner-gate img { transform: scale(1.02); }
 }
 :root[data-ds] .glow { border-radius: 12px; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: none; }
 :root[data-ds] .glow-soft { box-shadow: none; }
