@@ -35,8 +35,8 @@
    Linear equivalent and keeps its existing muted amber. */
 :root[data-ds]:not([data-theme="light"]) {
   color-scheme: dark;
-  --ds-chrome: #18181c;      /* reference panel — window chrome: sidebar, topbar, shell */
-  --bg: #18181c;             /* reference panel — page canvas */
+  --ds-chrome: #000000;      /* heavy black — window chrome: sidebar, topbar, shell */
+  --bg: #000000;             /* heavy black — page canvas */
   --surface: #242426;        /* reference card — every card, on every page */
   --surface-2: #161718;      /* obsidian — elevated panels */
   --surface-3: #23252a;      /* graphite — interactive surface tint */
@@ -58,8 +58,8 @@
   --cta-bg: #e4f222;
   --cta-bg-hover: #eaf655;
   --cta-fg: #08090a;
-  --header: #18181c;
-  --sidebar: #18181c;
+  --header: #000000;
+  --sidebar: #000000;
   --ink: #ffffff;
   --ink-fg: #08090a;
   --allow: #27a644;          /* pulse green */
@@ -739,10 +739,10 @@
   transform: scale(1.16) translateY(clamp(-6px, calc(var(--sy, 0) * -0.035px), 6px));
   will-change: transform;
 }
-/* The gate banners are shown whole, uncropped, at their own 4:1 shape — no zoom
-   or parallax, so every robot and the full sky stay in frame. */
-:root[data-ds] .start-banner.start-banner-gate { width: 100%; height: auto; aspect-ratio: 4 / 1; }
-:root[data-ds] .start-banner.start-banner-gate img { object-fit: contain; object-position: 50% 50%; transform: none; }
+/* The gate banners at 4.5:1 (from 4:1): only the plain ground strip at the bottom
+   is trimmed — the sun, headline, bubble and every robot stay whole. No zoom. */
+:root[data-ds] .start-banner.start-banner-gate { width: 100%; height: auto; aspect-ratio: 4.5 / 1; }
+:root[data-ds] .start-banner.start-banner-gate img { object-fit: cover; object-position: 50% 0%; transform: none; }
 :root[data-ds] .start-banner.start-banner-gate::after { display: none; }
 /* A quiet vignette so the illustration reads as part of the surface, not a pasted sticker. */
 :root[data-ds] .start-banner::after {
