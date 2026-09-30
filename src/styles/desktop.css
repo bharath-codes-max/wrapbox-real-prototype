@@ -37,7 +37,7 @@
   color-scheme: dark;
   --ds-chrome: #161718;      /* obsidian — window chrome: sidebar, topbar, shell */
   --bg: #161718;             /* obsidian — page canvas */
-  --surface: #161718;        /* obsidian — card surfaces */
+  --surface: #333333;        /* carbon black — every card, on every page */
   --surface-2: #161718;      /* obsidian — elevated panels */
   --surface-3: #23252a;      /* graphite — interactive surface tint */
   --line: #23252a;           /* graphite — hairline borders */
@@ -95,7 +95,7 @@
   --ds-chrome-line: #23252a;
   --ds-panel-border: #23252a;
   --ds-panel-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --ds-row-hover: #17181a;
+  --ds-row-hover: #3a3a3a;
   --ds-overlay: rgba(15, 16, 17, 0.88);
   --ds-sheet: #161718;       /* obsidian — the floating drawer/modal panel */
   --ds-sheet-border: #23252a;
@@ -472,12 +472,19 @@
 :root[data-ds] .progress.tone-block .progress-fill { border-radius: 999px; background: var(--pb-fill); box-shadow: none; }
 :root[data-ds] .progress-fill::after { display: none; }
 
+/* Stacked bars, their legends and the Decisions tile use the reference usage-meter
+   palette (lilac · orange · blue, plus a rose from the same family for block).
+   Remapped only inside these containers — chips and badges keep decision colours. */
+:root[data-ds] .decision-track,
+:root[data-ds] .decision-legend,
+:root[data-ds] .ftile:has(.decision-track) {
+  --allow: #7aafdf; --constrain: #b99ac3; --review: #d79a73; --block: #d9787f;
+}
 /* Segmented meters (decision mix, coverage posture, the simulator's before/after):
    the same track, segments separated by 2px, numbers carried by the legend. */
 :root[data-ds] .decision-track {
-  height: 10px !important; border-radius: 3px !important; gap: 2px;
-  background: var(--ds-track); box-shadow: none;
-  outline: 1px solid var(--ds-track-edge); outline-offset: -1px;
+  height: 8px !important; border-radius: 999px !important; gap: 2px; overflow: hidden;
+  background: var(--pb-track); box-shadow: none; outline: none;
 }
 :root[data-ds] .decision-seg { min-width: 3px; }
 :root[data-ds] .decision-seg + .decision-seg { box-shadow: none; }
