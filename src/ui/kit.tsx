@@ -6,6 +6,8 @@ import type { Decision, SimulationEvent } from "../model/types";
 import { agentById, resourceById, userById } from "../model/org";
 import { destById } from "../model/registries";
 import { AGENT_LOGOS, DEST_LOGOS, logoUrl, photoOf } from "./logos";
+import { DESKTOP_SHELL } from "./shell";
+import { Breadcrumb, PageIcon, currentPage } from "./page-meta";
 
 const AVATAR_COLORS = ["#1848ff", "#6b45e0", "#0a8a5c", "#b26500"];
 export function Avatar({ userId, size = 22 }: { userId: string; size?: number }) {
@@ -354,6 +356,22 @@ export function FilterBar({
 }
 
 export function PageHead({ title, sub, right, eyebrow }: { title: string; sub?: string; right?: React.ReactNode; eyebrow?: string }) {
+  const meta = DESKTOP_SHELL ? currentPage() : undefined;
+  if (meta) {
+    // Live prototype: breadcrumb, then the page's gradient icon beside its title — no description.
+    return (
+      <div className="page-head page-head-ds">
+        <div style={{ minWidth: 0 }}>
+          <Breadcrumb meta={meta} title={title} />
+          <div className="page-title-row">
+            <PageIcon meta={meta} />
+            <h1 className="page-title">{title}</h1>
+          </div>
+        </div>
+        {right && <div className="row" style={{ flexShrink: 0 }}>{right}</div>}
+      </div>
+    );
+  }
   return (
     <div className="page-head">
       <div style={{ minWidth: 0 }}>

@@ -358,6 +358,31 @@
   letter-spacing: 0; text-transform: none; color: var(--fg-3);
 }
 :root[data-ds] .page-title { font-size: 24px; font-weight: 600; letter-spacing: -0.022em; line-height: 1.2; }
+/* Page header (live prototype): breadcrumb → gradient icon + title, no description.
+   Icon circles are the reference timeline's: a light-to-dark gradient per tone, a soft
+   top highlight and a white glyph. */
+:root[data-ds] .page-head-ds { align-items: flex-end; }
+:root[data-ds] .crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; margin-bottom: 12px; font-size: 12.5px; color: var(--fg-3); }
+:root[data-ds] .crumb { display: inline-flex; align-items: center; gap: 2px; }
+:root[data-ds] .crumb-sep { color: var(--fg-4); margin: 0 3px; }
+:root[data-ds] .crumb-cur { color: var(--fg); font-weight: 500; }
+:root[data-ds] .page-title-row { display: flex; align-items: center; gap: 12px; }
+:root[data-ds] .start-title-row { align-items: flex-start; gap: 16px; }
+:root[data-ds] .start-title-row .page-icon { margin-top: 6px; }
+:root[data-ds] .page-icon {
+  flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; color: #ffffff;
+  background: linear-gradient(145deg, var(--pi-a), var(--pi-b));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 2px 8px -2px color-mix(in oklab, var(--pi-b) 55%, transparent);
+}
+:root[data-ds] .page-icon svg { filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.12)); }
+:root[data-ds] .page-icon.tone-blue { --pi-a: #4d8ff6; --pi-b: #2e6fe0; }
+:root[data-ds] .page-icon.tone-amber { --pi-a: #f7c531; --pi-b: #eaa406; }
+:root[data-ds] .page-icon.tone-green { --pi-a: #4cdc80; --pi-b: #26b058; }
+:root[data-ds] .page-icon.tone-teal { --pi-a: #31cdb9; --pi-b: #0ea597; }
+:root[data-ds] .page-icon.tone-gray { --pi-a: #979eaa; --pi-b: #5e6572; }
+:root[data-ds] .page-icon.tone-red { --pi-a: #f47570; --pi-b: #dc3736; }
+:root[data-ds] .page-icon.tone-cyan { --pi-a: #2ccbe6; --pi-b: #07a2c0; }
+:root[data-ds] .page-icon.tone-lime { --pi-a: #9edb33; --pi-b: #71ad1d; }
 :root[data-ds] .page-sub { margin-top: 7px; max-width: 72ch; font-size: 13.5px; line-height: 1.6; color: var(--fg-2); }
 :root[data-ds] .section { margin-top: 36px; }
 :root[data-ds] .section-head { margin-bottom: 12px; }
@@ -741,7 +766,7 @@
 }
 /* The gate banners at 4.5:1 (from 4:1): only the plain ground strip at the bottom
    is trimmed — the sun, headline, bubble and every robot stay whole. No zoom. */
-:root[data-ds] .start-banner.start-banner-gate { width: 100%; height: auto; aspect-ratio: 4.5 / 1; }
+:root[data-ds] .start-banner.start-banner-gate { width: 100%; height: auto; aspect-ratio: 4.5 / 1; margin: 28px 0 0; }
 :root[data-ds] .start-banner.start-banner-gate img { object-fit: cover; object-position: 50% 0%; transform: none; }
 :root[data-ds] .start-banner.start-banner-gate::after { display: none; }
 /* A quiet vignette so the illustration reads as part of the surface, not a pasted sticker. */

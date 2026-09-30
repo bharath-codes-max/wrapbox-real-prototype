@@ -17,6 +17,7 @@ import type { ContractClause, DecidedBy, Plane, SimulationEvent } from "../model
 import { AgentMark, Avatar, Chip, DecisionChip, timeAgo, Progress } from "../ui/kit";
 import { describe } from "../ui/describe";
 import { DESKTOP_SHELL } from "../ui/shell";
+import { Breadcrumb, PageIcon, currentPage } from "../ui/page-meta";
 import { sfx } from "../ui/sfx";
 import gateBanner from "../assets/illustrations/gate-banner.webp";
 import gateBannerDark from "../assets/illustrations/gate-banner-dark.webp";
@@ -298,6 +299,7 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
   const governs = AGENTS.filter((a) => !a.discovered && a.kind !== "internal");
   // A Safety Kernel release this workspace has not installed yet — the "New:" link is omitted otherwise.
   const release = pendingRelease(s.kernel);
+  const startMeta = DESKTOP_SHELL ? currentPage() : undefined;
 
   return (
     <div className="page page-wide">
@@ -308,33 +310,20 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
         onMouseLeave={onHeroLeave}
         style={{ position: "relative", padding: DESKTOP_SHELL ? 0 : "clamp(12px, 2.6vw, 36px) 0 0" }}
       >
-        {/* The prototype opens with the permit-checkpoint illustration — one per theme.
-            It eases in on load and drifts opposite the scroll (--sy, set once on .main
-            in App.tsx) for a touch of depth; a themed overlay keeps it from looking like
-            a flat pasted image. */}
-        {DESKTOP_SHELL && (
-          <figure className="start-banner start-banner-gate">
-            <img
-              src={isLight ? gateBanner : gateBannerDark}
-              width={2000}
-              height={500}
-              decoding="async"
-              alt={isLight
-                ? "Agent security platform — every agent gets checked at the gate. Verify, permit and monitor every AI agent before it acts. AI agents queue at a checkpoint; one is turned away, one passes with an approved permit."
-                : "AI agents queue at a checkpoint that asks each one for a permit: one is turned away, one passes the barrier with an approved permit."}
-            />
-          </figure>
-        )}
         {bigComposer ? (
           <GovernedBanner s={s} nav={nav} />
         ) : (
         <div style={{ maxWidth: 820, ...depth(-2) }}>
+          {DESKTOP_SHELL && startMeta && <Breadcrumb meta={startMeta} />}
+          <div className={DESKTOP_SHELL ? "page-title-row start-title-row" : undefined}>
+          {DESKTOP_SHELL && startMeta && <PageIcon meta={startMeta} size={44} />}
           <h1 className="start-hero-title" style={{
             fontSize: "clamp(36px, 4.4vw, 58px)", lineHeight: 1.02, letterSpacing: "-0.04em",
             fontWeight: 600, margin: 0, color: "var(--fg)", textWrap: "balance",
           }}>
             Runtime authorization for every AI agent, from laptop to cloud.
           </h1>
+          </div>
           <p className="start-hero-sub" style={{ margin: "18px 0 0", fontSize: 16.5, lineHeight: 1.5, color: "var(--fg-2)", maxWidth: "62ch" }}>
             Claude Code, Codex, ChatGPT, your own agents — Wrapbox decides whether each action is safe from its action, environment, data, destination and blast radius, and returns ALLOW, CONSTRAIN, REVIEW or BLOCK.
           </p>
@@ -364,6 +353,21 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
             </button>
           )}
         </div>
+
+        {/* The permit-checkpoint illustration, one per theme, below the hero copy and actions. */}
+        {DESKTOP_SHELL && (
+          <figure className="start-banner start-banner-gate">
+            <img
+              src={isLight ? gateBanner : gateBannerDark}
+              width={2000}
+              height={500}
+              decoding="async"
+              alt={isLight
+                ? "Agent security platform — every agent gets checked at the gate. Verify, permit and monitor every AI agent before it acts. AI agents queue at a checkpoint; one is turned away, one passes with an approved permit."
+                : "AI agents queue at a checkpoint that asks each one for a permit: one is turned away, one passes the barrier with an approved permit."}
+            />
+          </figure>
+        )}
 
         {DESKTOP_SHELL && <AgentFactory s={s} nav={nav} />}
 
