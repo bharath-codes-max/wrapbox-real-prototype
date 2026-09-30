@@ -766,7 +766,7 @@
 }
 /* The gate banners at 4.5:1 (from 4:1): only the plain ground strip at the bottom
    is trimmed — the sun, headline, bubble and every robot stay whole. No zoom. */
-:root[data-ds] .start-banner.start-banner-gate { width: 100%; height: auto; aspect-ratio: 4.5 / 1; margin: 28px 0 0; }
+:root[data-ds] .start-banner.start-banner-gate { width: 100%; height: auto; aspect-ratio: 4.5 / 1; margin: 0 0 26px; }
 :root[data-ds] .start-banner.start-banner-gate img { object-fit: cover; object-position: 50% 0%; transform: none; }
 :root[data-ds] .start-banner.start-banner-gate::after { display: none; }
 /* A quiet vignette so the illustration reads as part of the surface, not a pasted sticker. */
