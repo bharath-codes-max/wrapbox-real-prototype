@@ -35,9 +35,9 @@
    Linear equivalent and keeps its existing muted amber. */
 :root[data-ds]:not([data-theme="light"]) {
   color-scheme: dark;
-  --ds-chrome: #161718;      /* obsidian — window chrome: sidebar, topbar, shell */
-  --bg: #161718;             /* obsidian — page canvas */
-  --surface: #333333;        /* carbon black — every card, on every page */
+  --ds-chrome: #000000;      /* black — window chrome: sidebar, topbar, shell */
+  --bg: #000000;             /* black — page canvas */
+  --surface: #1e1e1d;        /* onyx — every card, on every page */
   --surface-2: #161718;      /* obsidian — elevated panels */
   --surface-3: #23252a;      /* graphite — interactive surface tint */
   --line: #23252a;           /* graphite — hairline borders */
@@ -58,8 +58,8 @@
   --cta-bg: #e4f222;
   --cta-bg-hover: #eaf655;
   --cta-fg: #08090a;
-  --header: #161718;
-  --sidebar: #161718;
+  --header: #000000;
+  --sidebar: #000000;
   --ink: #ffffff;
   --ink-fg: #08090a;
   --allow: #27a644;          /* pulse green */
@@ -95,7 +95,7 @@
   --ds-chrome-line: #23252a;
   --ds-panel-border: #23252a;
   --ds-panel-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --ds-row-hover: #3a3a3a;
+  --ds-row-hover: #262625;
   --ds-overlay: rgba(15, 16, 17, 0.88);
   --ds-sheet: #161718;       /* obsidian — the floating drawer/modal panel */
   --ds-sheet-border: #23252a;
