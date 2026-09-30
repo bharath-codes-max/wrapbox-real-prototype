@@ -350,8 +350,9 @@
 :root[data-ds] .shell > .main:first-child { margin-left: 8px; } /* setup wizard: no sidebar */
 
 /* ---------------------------------------------------------------- page scaffolding */
-:root[data-ds] .main .page { padding: 32px 48px 96px; max-width: 1320px; }
-:root[data-ds] .main .page.page-wide { max-width: 1560px; }
+/* One page width for every screen, so the body's left edge never moves between pages. */
+:root[data-ds] .main .page,
+:root[data-ds] .main .page.page-wide { padding: 32px 48px 96px; max-width: 1480px; margin: 0 auto; box-sizing: border-box; }
 :root[data-ds] .page-head { margin-bottom: 26px; gap: 16px; }
 :root[data-ds] .page-eyebrow {
   margin-bottom: 6px; font-size: 12px; font-weight: 500;

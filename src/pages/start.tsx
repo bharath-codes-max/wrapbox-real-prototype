@@ -324,7 +324,7 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
         {bigComposer ? (
           <GovernedBanner s={s} nav={nav} />
         ) : (
-        <div style={{ maxWidth: 820, ...depth(-2) }}>
+        <div style={{ maxWidth: 820, ...(DESKTOP_SHELL ? {} : depth(-2)) }}>
           {DESKTOP_SHELL && startMeta && <Breadcrumb meta={startMeta} />}
           <div className={DESKTOP_SHELL ? "page-title-row start-title-row" : undefined}>
           {DESKTOP_SHELL && startMeta && <PageIcon meta={startMeta} size={44} />}
