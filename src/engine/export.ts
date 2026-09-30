@@ -21,7 +21,7 @@
 // ============================================================================
 
 import type { Decision, SimulationEvent } from "../model/types";
-import { agentById, deviceById, resourceById, supplierById, userById } from "../model/org";
+import { ORG, agentById, deviceById, resourceById, supplierById, userById } from "../model/org";
 import { destById, mcpServerById } from "../model/registries";
 
 export const OCSF_VERSION = "1.3.0";
@@ -175,7 +175,7 @@ export function toOcsf(e: SimulationEvent): Record<string, unknown> {
   // The service provider behind the gateway call (OCSF cloud.provider).
   const VENDOR: Record<string, string> = { "GitHub MCP": "GitHub", "Stripe API": "Stripe", "Support SaaS API": "Salesforce", "AWS API": "AWS", "AgentCore Gateway": "AWS" };
   const provider = plane === "HOSTED" || kind === "cloud" ? "AWS"
-    : VENDOR[e.application ?? ""] ?? (kind === "database" ? "Veridian (self-hosted PostgreSQL)" : e.application ?? "Unknown");
+    : VENDOR[e.application ?? ""] ?? (kind === "database" ? `${ORG.short} (self-hosted PostgreSQL)` : e.application ?? "Unknown");
   return {
     ...base,
     metadata: { version: OCSF_VERSION, product: PRODUCT, uid: e.id },

@@ -4,6 +4,7 @@
 // ============================================================================
 
 import type { IntentContract } from "./types";
+import { ORG } from "./org";
 
 const now = Date.now();
 const d = 24 * 3600 * 1000;
@@ -71,7 +72,7 @@ export const SEED_CONTRACTS: IntentContract[] = [
     version: 2,
     status: "ACTIVE",
     sourceText:
-      "Veridian customer identifiers and account numbers must not leave the company unprotected. Bulk export of customer records requires security review. Payment card data must never leave approved payment systems.",
+      `${ORG.short} customer identifiers and account numbers must not leave the company unprotected. Bulk export of customer records requires security review. Payment card data must never leave approved payment systems.`,
     clauses: [
       {
         id: "cl-cd-1",

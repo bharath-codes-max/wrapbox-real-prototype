@@ -10,6 +10,7 @@ import { EventDetail } from "../ui/event-detail";
 import { destById } from "../model/registries";
 import type { RestoreRecord, SimulationEvent } from "../model/types";
 import { Vault, ShieldCheck, ShieldX, Globe, KeyRound, History } from "lucide-react";
+import { ORG } from "../model/org";
 
 /** Show enough to recognise a value without revealing it. */
 function mask(v: string): string {
@@ -23,7 +24,7 @@ function mask(v: string): string {
 }
 
 const scopeLabel = (scope: string) =>
-  scope === "veridian-internal" || scope.startsWith("restore:") ? "Veridian internal only" : scope;
+  scope === "veridian-internal" || scope.startsWith("restore:") ? `${ORG.short} internal only` : scope;
 
 export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
   const s = useAppState();
@@ -48,13 +49,13 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
   const allowedCount = s.restorations.filter((r) => r.allowed).length;
   const deniedCount = s.restorations.length - allowedCount;
   // The AI's reply, with whatever stands in for the customer's value.
-  const reply = (value: React.ReactNode) => <>Hi {value}, thanks for being a Veridian customer — your renewal quote is attached.</>;
+  const reply = (value: React.ReactNode) => <>Hi {value}, thanks for being a {ORG.short} customer — your renewal quote is attached.</>;
 
   const ask = (who: "inside" | "outside") => {
     if (!token) return;
     const rec = who === "inside"
-      ? restoreToken(token.id, "Priya Menon (inside Veridian)", true)
-      : restoreToken(token.id, `${outsider} (outside Veridian)`, false);
+      ? restoreToken(token.id, `Priya Menon (inside ${ORG.short})`, true)
+      : restoreToken(token.id, `${outsider} (outside ${ORG.short})`, false);
     setLast((m) => ({ ...m, [who]: rec }));
   };
 
@@ -67,7 +68,7 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
     search: (r) => `${r.tokenId} ${r.requester} ${r.reason}`,
     filters: [
       { id: "class", label: "Data class", get: (r) => classOf(r.tokenId) },
-      { id: "scope", label: "Scope", get: (r) => (r.inside ? "Inside Veridian" : "Outside Veridian") },
+      { id: "scope", label: "Scope", get: (r) => (r.inside ? `Inside ${ORG.short}` : `Outside ${ORG.short}`) },
       { id: "result", label: "Result", get: (r) => resultLabel(r.allowed) },
     ],
   });
@@ -123,7 +124,7 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
           band
           items={[
             { label: "Tokens in vault", value: s.tokens.length, note: "private values swapped out" },
-            { label: "Restores allowed", value: allowedCount, tone: "good", note: "inside Veridian" },
+            { label: "Restores allowed", value: allowedCount, tone: "good", note: `inside ${ORG.short}` },
             { label: "Restores denied", value: deniedCount, tone: deniedCount ? "bad" : undefined, note: "asked from outside" },
             { label: "Data types", value: new Set(s.tokens.map((t) => t.dataClass)).size, note: "kinds of private data" },
           ]}
@@ -155,7 +156,7 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
                           <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{outsider}</span>
                         </div>
                         <div className="payload" style={{ marginTop: 10 }}>… <span className="hl-tok">{token.id}</span> …</div>
-                        <div className="small faint" style={{ marginTop: 8 }}>The real value never left Veridian.</div>
+                        <div className="small faint" style={{ marginTop: 8 }}>The real value never left {ORG.short}.</div>
                       </div>
                       <div className="card" style={{ background: "var(--surface-2)" }}>
                         <div className="eyebrow">2 · The AI's reply</div>
@@ -194,7 +195,7 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
                   <div className="card">
                     <CardGrid>
                       {([
-                        { who: "inside" as const, title: "Priya Menon asks", sub: "inside Veridian, reading the AI's reply" },
+                        { who: "inside" as const, title: "Priya Menon asks", sub: `inside ${ORG.short}, reading the AI's reply` },
                         { who: "outside" as const, title: `${outsider} asks`, sub: "the AI that received the token tries to learn the real value" },
                       ]).map((c) => {
                         const r = last[c.who];
@@ -207,7 +208,7 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
                               : origin.event.destination && DEST_LOGOS[origin.event.destination]
                                 ? <DestMark destId={origin.event.destination} size={20} />
                                 : <Globe size={18} className="faint" />}
-                            eyebrow={c.who === "inside" ? "Inside Veridian" : "Outside Veridian"}
+                            eyebrow={c.who === "inside" ? `Inside ${ORG.short}` : `Outside ${ORG.short}`}
                             title={c.title}
                             status={r ? (r.allowed
                               ? <Chip tone="allow"><ShieldCheck size={11} /> ALLOWED</Chip>
@@ -277,7 +278,7 @@ export function TokenVaultPage({ nav }: { nav: (r: string) => void }) {
                                 label: "Who asked",
                                 value: <>{r.inside ? <Avatar userId="u-priya" size={16} /> : <Globe size={13} className="faint" />} {r.requester}</>,
                               },
-                              { label: "Scope", value: r.inside ? "Inside Veridian" : "Outside Veridian" },
+                              { label: "Scope", value: r.inside ? `Inside ${ORG.short}` : `Outside ${ORG.short}` },
                               { label: "Why", value: <span className="dim">{r.reason}</span> },
                             ]}
                           />

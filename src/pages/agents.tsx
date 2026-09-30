@@ -5,7 +5,7 @@ import { useAppState, stopAgent, resumeAgent, stopOf, taintOf } from "../state/s
 import { PageHead, SectionHead, MetricBar, Chip, RiskChip, SimNote, Drawer, DecisionChip, timeAgo, AgentMark, DestMark, Avatar, PageTabs, usePaged, Pager, EntityCard, CardGrid, FilterBar, useCardFilters } from "../ui/kit";
 import { EventStream } from "../ui/event-stream";
 import { describe } from "../ui/describe";
-import { AGENTS, SUPPLIERS, deviceById, resourceById, supplierActive, supplierById, userById, type OrgAgent } from "../model/org";
+import { ORG, AGENTS, SUPPLIERS, deviceById, resourceById, supplierActive, supplierById, userById, type OrgAgent } from "../model/org";
 import { destById } from "../model/registries";
 import { ShieldAlert, ShieldCheck, Activity, ArrowRight, OctagonX, Play, Eye, Building2 } from "lucide-react";
 
@@ -273,7 +273,7 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
           count: SUPPLIERS.length,
           content: (
             <>
-              <SectionHead title="Supplier agents" sub="Third parties whose agents act inside Veridian's systems. The contract is their authority: nothing outside its scope, and nothing at all once it ends." />
+              <SectionHead title="Supplier agents" sub={`Third parties whose agents act inside ${ORG.short}'s systems. The contract is their authority: nothing outside its scope, and nothing at all once it ends.`} />
               <CardGrid>
                 {SUPPLIERS.map((sp) => {
                   const theirs = AGENTS.filter((a) => a.operator === sp.id);
@@ -333,7 +333,7 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
               <Eye size={14} /> Under closer watch: read {t.label} {timeAgo(t.at)} — its risky actions go to a person until {new Date(t.expiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.
             </div>) : null; })()}
           <dl className="kv">
-            <dt>{open.operator ? "Sponsor" : "Owner"}</dt><dd>{open.owner ? `${userById(open.owner)?.name} (${open.operator ? "Veridian sponsor, accountable" : "registered it, accountable"})` : "unknown — no registered owner"}</dd>
+            <dt>{open.operator ? "Sponsor" : "Owner"}</dt><dd>{open.owner ? `${userById(open.owner)?.name} (${open.operator ? "${ORG.short} sponsor, accountable" : "registered it, accountable"})` : "unknown — no registered owner"}</dd>
             {open.operator && (() => { const sp = supplierById(open.operator)!; return <><dt>Operated by</dt><dd>{sp.name} · {sp.service} · {supplierActive(sp) ? `contract until ${sp.contractEnds}` : `contract ended ${sp.contractEnds} — no authority`} · scope {sp.scopeActions.join("/")} on {sp.scopeResources.map((r) => resourceById(r)?.name ?? r).join(", ")}</dd></>; })()}
             <dt>{open.discovered ? "Seen on" : open.location && open.location !== "laptop" ? "Runs on" : "Registered on"}</dt><dd>{open.device ? deviceById(open.device)?.name : "—"}</dd>
             <dt>Used by</dt>

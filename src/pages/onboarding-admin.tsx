@@ -11,6 +11,7 @@ import type { AdminDraft, AdminStepProps } from "./onboarding/types";
 import { Step1Workspace, Step2Discover, Step3Contract, Step4Rollout } from "./onboarding/admin-steps-a";
 import { Step5Approvers, Step6Team, Step7GoLive } from "./onboarding/admin-steps-b";
 import { Info } from "lucide-react";
+import { ORG } from "../model/org";
 
 export const ADMIN_STEPS: SetupStep[] = [
   { title: "Create workspace", sub: "SSO, company, data region" },
@@ -106,7 +107,7 @@ export function AdminOnboarding({ nav }: { nav: (r: string) => void }) {
         <div className="filter-bar" style={{ marginBottom: 16 }}>
           <span className="row" style={{ gap: 8 }}>
             <Info size={14} />
-            You're in the Veridian demo, which is already set up — anything you change here applies to the demo.
+            You're in the {ORG.short} demo, which is already set up — anything you change here applies to the demo.
           </span>
           <button className="btn btn-sm" onClick={() => { switchWorkspace("fresh"); setPos({ step: 0, reached: 0 }); }}>
             Use a fresh workspace instead

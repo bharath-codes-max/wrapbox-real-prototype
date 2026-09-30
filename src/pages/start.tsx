@@ -9,7 +9,7 @@ import {
   useAppState, metrics, switchWorkspace, startFreshWorkspace,
   type AppState, type Region,
 } from "../state/store";
-import { AGENTS, DEVICES, agentById, userById } from "../model/org";
+import { ORG, AGENTS, DEVICES, agentById, userById } from "../model/org";
 import { CAPABILITIES, PLANE_LABEL } from "../model/registries";
 import { ROLLOUT } from "../model/rollout";
 import { pendingRelease } from "../engine/kernel";
@@ -348,7 +348,7 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
               {fresh ? adminCta : "Set up from zero"}
             </button>
             <button className="btn btn-lg" onClick={explore}>
-              Explore the Veridian demo <ArrowRight size={15} />
+              Explore the {ORG.short} demo <ArrowRight size={15} />
             </button>
           </div>
           {release && (
@@ -460,7 +460,7 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
                 background: "var(--surface-2)", border: "1px solid var(--line)",
                 fontSize: 12.5, lineHeight: 1.5, color: "var(--fg-2)",
               }}>
-                Erase the fresh workspace and begin again from day one? The Veridian demo is not touched.
+                Erase the fresh workspace and begin again from day one? The {ORG.short} demo is not touched.
                 <div className="row" style={{ gap: 8, marginTop: 8 }}>
                   <button className="btn btn-danger btn-sm" onClick={startOver}>Erase and start over</button>
                   <button className="btn btn-sm" onClick={() => setConfirmReset(false)}>Cancel</button>
@@ -502,9 +502,9 @@ export function StartPage({ nav }: { nav: (r: string) => void }) {
         <PathCard
           icon={<IconTile tone="constrain"><Building2 size={19} /></IconTile>}
           tag={{ text: "Demo · 3 months in", tone: "neutral" }}
-          title="Explore Veridian Systems"
+          title={`Explore ${ORG.name}`}
           body="A company three months in: real history, reviews, tasks and evidence."
-          cta={fresh ? "Explore Veridian" : "Open the Control Room"}
+          cta={fresh ? `Explore ${ORG.short}` : "Open the Control Room"}
           here={!fresh}
           onCta={explore}
           after={

@@ -8,7 +8,7 @@ import {
   MetricBar, Avatar, AgentMark, DestMark, PageTabs,
   EntityCard, CardGrid, FilterBar, Pager, useCardFilters, usePaged,
 } from "../ui/kit";
-import { RESOURCES, DEVICES, USERS, AGENTS, deviceById, userById, resourceById, agentById } from "../model/org";
+import { ORG, RESOURCES, DEVICES, USERS, AGENTS, deviceById, userById, resourceById, agentById } from "../model/org";
 import { ACTION_NORMALIZATION, CAPABILITIES, MCP_SERVERS } from "../model/registries";
 import { logoUrl } from "../ui/logos";
 import { describe } from "../ui/describe";
@@ -29,7 +29,7 @@ const discovered = AGENTS.filter((a) => a.discovered).length;
 
 const CONNECTIONS: Connection[] = [
   { name: "GitHub Organization", logo: "github_light", kind: "Gateway connector", caps: ["cap-gw-github"],
-    detail: "github.com/veridian · push, PR and branch operations on checkout-service",
+    detail: `github.com/${ORG.slug} · push, PR and branch operations on checkout-service`,
     uses: (e) => e.application === "GitHub MCP" || (e.plane === "GATEWAY" && e.resource === "r-checkout") },
   { name: "PostgreSQL gateway", logo: "postgresql", kind: "Gateway connector", caps: ["cap-gw-sql"],
     detail: "payments-prod, customer-db · query preflight + row estimates",

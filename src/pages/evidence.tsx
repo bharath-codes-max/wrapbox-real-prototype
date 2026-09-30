@@ -6,7 +6,7 @@ import { PageHead, SectionHead, MetricBar, DecisionChip, Chip, SimNote, names, E
 import { describe } from "../ui/describe";
 import { EventDetail } from "../ui/event-detail";
 import type { SimulationEvent } from "../model/types";
-import { userById, AGENTS, USERS, SUPPLIERS } from "../model/org";
+import { ORG, userById, AGENTS, USERS, SUPPLIERS } from "../model/org";
 import { planeLabel } from "../model/registries";
 import { toOcsfBatch, toOtlpLogs, OCSF_VERSION } from "../engine/export";
 import { FileClock, LayoutGrid, GitBranch, Download } from "lucide-react";
@@ -60,7 +60,7 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
       { id: "user", label: "Person", get: (e) => e.user, format: (v) => USERS.find((u) => u.id === v)?.name ?? v },
       { id: "risk", label: "Risk", get: (e) => e.risk, options: ["low", "moderate", "high", "critical"].map((v) => ({ value: v, label: v })) },
       { id: "plane", label: "Plane", get: (e) => e.plane, format: (v) => planeLabel(v as SimulationEvent["plane"]) },
-      { id: "operator", label: "Operated by", get: (e) => e.operator ?? "veridian", format: (v) => v === "veridian" ? "Veridian's own agents" : SUPPLIERS.find((x) => x.id === v)?.name ?? v },
+      { id: "operator", label: "Operated by", get: (e) => e.operator ?? "veridian", format: (v) => v === "veridian" ? `${ORG.short}'s own agents` : SUPPLIERS.find((x) => x.id === v)?.name ?? v },
       { id: "review", label: "Human review", get: (e) => e.reviewState?.status ?? "none",
         options: [...Object.entries(REVIEW_OUTCOME).map(([v, [, label]]) => ({ value: v, label })), { value: "none", label: "No review" }] },
     ],

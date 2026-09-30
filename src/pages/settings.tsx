@@ -3,6 +3,7 @@ import { useState } from "react";
 import { resetDemoData, useAppState, metrics } from "../state/store";
 import { PageHead, SectionHead, MetricBar, SimNote, Chip, PageTabs } from "../ui/kit";
 import { RotateCcw, CheckCircle2, FlaskConical, Server } from "lucide-react";
+import { ORG } from "../model/org";
 
 // Honest map of the prototype — the exact same claims as before, presented as refined rows.
 const REAL: string[] = [
@@ -21,7 +22,7 @@ const SIMULATED: string[] = [
   "Safety Kernel releases ship inside the app — there is no real update server",
   "Notifications (break-glass, approvers) are recorded on the page, never sent",
   "Detector/OCR/semantic analysis results (registry-shaped fixtures)",
-  "Veridian Systems org, users, devices and traffic history",
+  `${ORG.name} org, users, devices and traffic history`,
   "Evidence signing: events are chained with a simple FNV hash for illustration — not a cryptographic signature",
 ];
 
@@ -67,7 +68,7 @@ export function SettingsPage({ nav }: { nav: (r: string) => void }) {
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
             <div className="eyebrow">Workspace</div>
-            <div className="small" style={{ marginTop: 5, color: "var(--fg-2)", fontWeight: 600 }}>Veridian Systems</div>
+            <div className="small" style={{ marginTop: 5, color: "var(--fg-2)", fontWeight: 600 }}>{ORG.name}</div>
           </div>
         </div>
         <div className="overview-sep" />
@@ -126,13 +127,13 @@ export function SettingsPage({ nav }: { nav: (r: string) => void }) {
             content: (
               /* Utility action — destructive and clearly guarded; confirm state lives at page level */
               <div>
-                <SectionHead title="Reset demo data" sub="Go back to Veridian's starting point: the seed history and contracts, Safety Kernel v2026.09.1 (so the 2026.09.2 update box appears again), the seed standing permissions and Autopilot suggestions. Everything you added is discarded." />
+                <SectionHead title="Reset demo data" sub={`Go back to ${ORG.short}'s starting point: the seed history and contracts, Safety Kernel v2026.09.1 (so the 2026.09.2 update box appears again), the seed standing permissions and Autopilot suggestions. Everything you added is discarded.`} />
                 <div className="card">
                   <div className="spread" style={{ gap: 16, alignItems: "center" }}>
                     <div className="row" style={{ gap: 12, minWidth: 0 }}>
                       <span className="stat-icon" style={{ color: "var(--bad)", background: "var(--bad-soft)", flexShrink: 0 }}><RotateCcw size={16} /></span>
                       <div style={{ minWidth: 0 }}>
-                        <div className="small" style={{ fontWeight: 600 }}>Restore Veridian's starting point</div>
+                        <div className="small" style={{ fontWeight: 600 }}>Restore {ORG.short}'s starting point</div>
                         <div className="small faint">Everything you added this session is discarded and cannot be recovered.</div>
                       </div>
                     </div>

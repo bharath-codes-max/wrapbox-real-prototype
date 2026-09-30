@@ -3,7 +3,7 @@ import {
   Bot, BrainCircuit, CirclePlay, FileCheck2, FlaskConical, Hand, KeyRound,
   ArrowRight, Check, ChevronDown, LayoutGrid, ListChecks, ListTree, Moon, Play, Plug, RotateCcw, Rocket, ScrollText, Search, Sun,
   Settings as SettingsIcon, ShieldCheck, Siren, Table2, Timer, Waypoints,
-  type LucideIcon,
+  type LucideIcon, ChevronsUpDown,
 } from "lucide-react";
 import { useAppState, getState, metrics, switchWorkspace, startFreshWorkspace, type Workspace } from "./state/store";
 import { KERNEL_RELEASES, installedRules, pendingRelease } from "./engine/kernel";
@@ -32,6 +32,8 @@ import { AdminOnboarding } from "./pages/onboarding-admin";
 import { EmployeeOnboarding } from "./pages/onboarding-employee";
 import { DemoBar, DEMO_SCRIPT } from "./pages/demo";
 import { DESKTOP_SHELL } from "./ui/shell";
+import { CompanyMark } from "./ui/company-mark";
+import { ORG } from "./model/org";
 
 export type Route = string;
 
@@ -231,20 +233,31 @@ function WorkspaceMenu({ nav }: { nav: (r: string) => void }) {
   };
   return (
     <div className="ws-menu" ref={ref}>
+      {DESKTOP_SHELL ? (
+        <button className="workspace-menu ws-switch" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu">
+          <CompanyMark demo={s.workspace === "demo"} name={s.org.company || "New workspace"} />
+          <span className="ws-switch-name">{s.org.company || "New workspace"}</span>
+          <span className={`ws-switch-tag${s.workspace === "demo" ? "" : " fresh"}`}>{s.workspace === "demo" ? "Demo · 3 months in" : "Day one"}</span>
+          <ChevronsUpDown size={14} className="ws-switch-chev" />
+        </button>
+      ) : (
       <button className="workspace-menu" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu">
         <span className="workspace-dot" />
         {s.org.company || "New workspace"}
         <span className="faint">· {s.workspace === "demo" ? "Demo · 3 months in" : "Fresh workspace"}</span>
         <ChevronDown size={13} />
       </button>
+      )}
       {open && (
         <div className="ws-pop" role="menu">
           <div className="ws-pop-label">Workspaces</div>
           <button className="ws-item" role="menuitem" onClick={() => pick("demo")}>
-            <span><b>Veridian Systems</b><span className="ws-sub">Demo · a company three months in</span></span>
+            {DESKTOP_SHELL && <CompanyMark demo name={ORG.name} size={30} />}
+            <span><b>{ORG.name}</b><span className="ws-sub">Demo · a company three months in</span></span>
             {s.workspace === "demo" && <Check size={14} />}
           </button>
           <button className="ws-item" role="menuitem" onClick={() => pick("fresh")}>
+            {DESKTOP_SHELL && <CompanyMark demo={false} name="Fresh workspace" size={30} />}
             <span><b>Fresh workspace</b><span className="ws-sub">Day one · you set it up from zero</span></span>
             {s.workspace === "fresh" && <Check size={14} />}
           </button>
@@ -255,7 +268,7 @@ function WorkspaceMenu({ nav }: { nav: (r: string) => void }) {
             </button>
           ) : (
             <div className="ws-confirm">
-              Erase the fresh workspace and begin again from day one? The Veridian demo is not touched.
+              Erase the fresh workspace and begin again from day one? The {ORG.short} demo is not touched.
               <div className="row" style={{ gap: 8, marginTop: 8 }}>
                 <button className="btn btn-danger btn-sm" onClick={() => { startFreshWorkspace(); setOpen(false); nav("onboarding/admin"); }}>Start over</button>
                 <button className="btn btn-sm" onClick={() => setConfirmReset(false)}>Cancel</button>

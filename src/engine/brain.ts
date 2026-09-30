@@ -25,7 +25,7 @@ import type {
   SafetyRuleHit, StandingPermission, TaskEnvelope, TransformKind,
 } from "../model/types";
 import { BASELINE_KERNEL, kernelHits, type KernelFacts, type KernelState } from "./kernel";
-import { agentById, resourceById, supplierActive, supplierById, userById } from "../model/org";
+import { ORG, agentById, resourceById, supplierActive, supplierById, userById } from "../model/org";
 import { mcpServerById } from "../model/registries";
 
 export interface ActionRequest {
@@ -550,7 +550,7 @@ function decideOne(req: ActionRequest, contracts: IntentContract[]): BrainResult
   } else if (decidedBy.layer === "injection") {
     safeAlternative = "Safer alternative: the person who asked confirms this action is really theirs, or re-runs it after the watch window.";
   } else if (decidedBy.layer === "supplier" && supplier) {
-    safeAlternative = `Safer alternative: ${userById(supplier.sponsor)?.name ?? "the sponsor"} asks for a contract change with ${supplier.name}, or a Veridian agent does this instead.`;
+    safeAlternative = `Safer alternative: ${userById(supplier.sponsor)?.name ?? "the sponsor"} asks for a contract change with ${supplier.name}, or a ${ORG.short} agent does this instead.`;
   }
 
   return finish(req, {

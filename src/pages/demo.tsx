@@ -2,6 +2,7 @@
 // actual product screens (not a slideshow). Steps navigate, and where marked,
 // run real simulations whose events propagate everywhere.
 import { useAppState, setDemoStep, simulateById, startTask, advanceTask, getState } from "../state/store";
+import { ORG } from "../model/org";
 
 interface DemoStep {
   title: string;
@@ -13,7 +14,7 @@ interface DemoStep {
 const STEPS: DemoStep[] = [
   {
     title: "Welcome to Wrapbox",
-    text: "One brain, five enforcement planes. Every number on this Control Room derives from live event state — nothing is a static mock. This is Veridian Systems, three days into a pilot.",
+    text: `One brain, five enforcement planes. Every number on this Control Room derives from live event state — nothing is a static mock. This is ${ORG.name}, three days into a pilot.`,
     route: "control",
   },
   {

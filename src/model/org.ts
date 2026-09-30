@@ -43,7 +43,12 @@ export interface OrgResource {
   detail: string;
 }
 
-export const ORG = { name: "Veridian Systems", domain: "veridian.example" };
+/** The demo company. The live prototype (index.html sets data-ds="desktop") shows it as
+ *  Glycon; tests and the decks (tour.html) keep Veridian, which their narration uses. */
+const LIVE_PROTOTYPE = typeof document !== "undefined" && document.documentElement.dataset.ds === "desktop";
+export const ORG = LIVE_PROTOTYPE
+  ? { name: "Glycon", short: "Glycon", slug: "glycon", domain: "glycon.example" }
+  : { name: "Veridian Systems", short: "Veridian", slug: "veridian", domain: "veridian.example" };
 
 /** A third party whose agents act inside Veridian's systems (supplier agents).
  *  The contract scope is what Veridian's vendor review approved — the agent
@@ -88,12 +93,12 @@ export const HOSTS: OrgDevice[] = [
 ];
 
 export const USERS: OrgUser[] = [
-  { id: "u-priya", name: "Priya Menon", role: "Admin", email: "priya.menon@veridian.example" },
-  { id: "u-daniel", name: "Daniel Kim", role: "Developer", email: "daniel.kim@veridian.example" },
-  { id: "u-maya", name: "Maya Chen", role: "Security Analyst", email: "maya.chen@veridian.example" },
-  { id: "u-alex", name: "Alex Morgan", role: "Engineering Manager", email: "alex.morgan@veridian.example" },
-  { id: "u-sam", name: "Sam Rivera", role: "Finance Controller", email: "sam.rivera@veridian.example" },
-  { id: "u-jordan", name: "Jordan Lee", role: "Support Lead", email: "jordan.lee@veridian.example" },
+  { id: "u-priya", name: "Priya Menon", role: "Admin", email: `priya.menon@${ORG.domain}` },
+  { id: "u-daniel", name: "Daniel Kim", role: "Developer", email: `daniel.kim@${ORG.domain}` },
+  { id: "u-maya", name: "Maya Chen", role: "Security Analyst", email: `maya.chen@${ORG.domain}` },
+  { id: "u-alex", name: "Alex Morgan", role: "Engineering Manager", email: `alex.morgan@${ORG.domain}` },
+  { id: "u-sam", name: "Sam Rivera", role: "Finance Controller", email: `sam.rivera@${ORG.domain}` },
+  { id: "u-jordan", name: "Jordan Lee", role: "Support Lead", email: `jordan.lee@${ORG.domain}` },
 ];
 
 export const DEVICES: OrgDevice[] = [
@@ -137,13 +142,13 @@ export const AGENTS: OrgAgent[] = [
     discovered: false, trust: "trusted", risk: "low",
   },
   {
-    id: "a-finance", name: "Internal Finance Agent", provider: "Veridian (internal)", kind: "internal",
+    id: "a-finance", name: "Internal Finance Agent", provider: `${ORG.short} (internal)`, kind: "internal",
     owner: "u-alex", device: "d-fin-07", environment: "production",
     tools: ["SQL MCP", "reporting API"], destinations: ["dest-internal"],
     discovered: false, trust: "conditional", risk: "high",
   },
   {
-    id: "a-support", name: "Support Agent", provider: "Veridian (internal)", kind: "internal",
+    id: "a-support", name: "Support Agent", provider: `${ORG.short} (internal)`, kind: "internal",
     owner: "u-maya", device: "d-maya-mbp", environment: "production",
     tools: ["Support SaaS API", "customer-db (read)"], destinations: ["dest-salesforce", "dest-internal"],
     discovered: false, trust: "conditional", risk: "moderate",
@@ -161,7 +166,7 @@ export const AGENTS: OrgAgent[] = [
     discovered: false, trust: "conditional", risk: "moderate",
   },
   {
-    id: "a-billing-hosted", name: "Billing Agent", provider: "Veridian · hosted on AWS AgentCore", kind: "hosted",
+    id: "a-billing-hosted", name: "Billing Agent", provider: `${ORG.short} · hosted on AWS AgentCore`, kind: "hosted",
     owner: "u-sam", device: "host-agentcore", location: "cloud", environment: "production",
     tools: ["AgentCore Gateway", "Stripe refund tool", "SQL tool"], destinations: ["dest-internal"],
     discovered: false, trust: "conditional", risk: "high",
@@ -181,14 +186,14 @@ export const AGENTS: OrgAgent[] = [
 ];
 
 export const RESOURCES: OrgResource[] = [
-  { id: "r-checkout", name: "checkout-service", kind: "repo", environment: "development", sensitivity: "internal", detail: "GitHub · veridian/checkout-service · 214 files" },
+  { id: "r-checkout", name: "checkout-service", kind: "repo", environment: "development", sensitivity: "internal", detail: `GitHub · ${ORG.slug}/checkout-service · 214 files` },
   { id: "r-payments-prod", name: "payments-prod", kind: "database", environment: "production", sensitivity: "customer-impacting", detail: "PostgreSQL 16 · 8,421,392 customer rows" },
   { id: "r-customer-db", name: "customer-db", kind: "database", environment: "production", sensitivity: "customer-impacting", detail: "PostgreSQL 16 · 2,914,006 rows" },
   { id: "r-test-db", name: "scratch-test-db", kind: "database", environment: "test", sensitivity: "disposable", detail: "PostgreSQL 16 · 12 rows · disposable fixture" },
   { id: "r-aws-prod", name: "AWS Production", kind: "cloud", environment: "production", sensitivity: "customer-impacting", detail: "Account 84115520 · us-east-1" },
   { id: "r-aws-staging", name: "AWS Staging", kind: "cloud", environment: "staging", sensitivity: "internal", detail: "Account 84115521 · us-east-1" },
-  { id: "r-github", name: "GitHub Organization", kind: "saas", environment: "production", sensitivity: "sensitive", detail: "github.com/veridian · 38 repos" },
-  { id: "r-stripe", name: "Stripe payments", kind: "saas", environment: "production", sensitivity: "customer-impacting", detail: "Stripe · refunds and charges for Veridian customers" },
+  { id: "r-github", name: "GitHub Organization", kind: "saas", environment: "production", sensitivity: "sensitive", detail: `github.com/${ORG.slug} · 38 repos` },
+  { id: "r-stripe", name: "Stripe payments", kind: "saas", environment: "production", sensitivity: "customer-impacting", detail: `Stripe · refunds and charges for ${ORG.short} customers` },
   { id: "r-support-saas", name: "Support SaaS", kind: "saas", environment: "production", sensitivity: "sensitive", detail: "Salesforce Service Cloud" },
   { id: "r-env-file", name: ".env", kind: "secret", environment: "local", sensitivity: "sensitive", detail: "Local secrets file · 6 credentials" },
   { id: "r-src", name: "src/", kind: "file", environment: "local", sensitivity: "internal", detail: "Local working tree of checkout-service" },

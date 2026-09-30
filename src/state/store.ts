@@ -403,10 +403,10 @@ export function restoreToken(tokenId: string, requester: string, inside: boolean
     id: `rst-${Date.now().toString(36)}-${state.restorations.length}`,
     tokenId, requester, inside, allowed, at: Date.now(),
     reason: !inside
-      ? "Requester is outside Veridian — external parties only ever hold tokens"
+      ? `Requester is outside ${ORG.short} — external parties only ever hold tokens`
       : expired ? "Token has expired"
       : !t.restorable ? "Token is sealed — no restoration permitted"
-      : "Inside Veridian, token in scope",
+      : `Inside ${ORG.short}, token in scope`,
   };
   set({ restorations: [...state.restorations, rec] });
   return rec;

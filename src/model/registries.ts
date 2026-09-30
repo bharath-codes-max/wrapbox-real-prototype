@@ -5,6 +5,7 @@
 // ============================================================================
 
 import type { CoverageStatus, DestinationClass, Plane } from "./types";
+import { ORG } from "./org";
 
 /** One wording for each enforcement plane, used by every screen. */
 export const PLANE_LABEL: Record<Plane, string> = {
@@ -37,7 +38,7 @@ export const DATA_TYPES: DataTypeDef[] = [
   { id: "LEGAL.PRIVILEGED", family: "LEGAL", label: "Privileged material", example: "Attorney-client memo", severity: "high" },
   { id: "COMPANY.ROADMAP", family: "COMPANY", label: "Product roadmap", example: "FY27 roadmap", severity: "high" },
   { id: "COMPANY.TRADE_SECRET", family: "COMPANY", label: "Trade secret", example: "Pricing model", severity: "critical" },
-  { id: "CUSTOM.CUSTOMER_ID", family: "CUSTOM", label: "Veridian customer ID", example: "VRD-CUST-0921", severity: "high" },
+  { id: "CUSTOM.CUSTOMER_ID", family: "CUSTOM", label: `${ORG.short} customer ID`, example: "VRD-CUST-0921", severity: "high" },
 ];
 
 export interface DetectorDef {
@@ -75,8 +76,8 @@ export const DESTINATIONS: DestinationDef[] = [
   { id: "dest-chatgpt", label: "ChatGPT (approved)", class: "APPROVED_AI", host: "chatgpt.com" },
   { id: "dest-claude", label: "Claude (approved)", class: "APPROVED_AI", host: "claude.ai" },
   { id: "dest-unapproved-ai", label: "FreeAIChat (known, unapproved)", class: "UNAPPROVED_AI", host: "freeaichat.example" },
-  { id: "dest-salesforce", label: "Salesforce (approved SaaS)", class: "APPROVED_SAAS", host: "veridian.my.salesforce.com" },
-  { id: "dest-internal", label: "Internal analytics", class: "INTERNAL", host: "analytics.veridian.internal" },
+  { id: "dest-salesforce", label: "Salesforce (approved SaaS)", class: "APPROVED_SAAS", host: `${ORG.slug}.my.salesforce.com` },
+  { id: "dest-internal", label: "Internal analytics", class: "INTERNAL", host: `analytics.${ORG.slug}.internal` },
   { id: "dest-partner", label: "Meridian Partners portal", class: "PARTNER", host: "portal.meridianpartners.example" },
   { id: "dest-generic", label: "Generic external site", class: "GENERIC_EXTERNAL", host: "filedrop.example.org" },
   { id: "dest-unknown", label: "Unknown external endpoint", class: "UNKNOWN_EXTERNAL", host: "185.220.101.42" },
