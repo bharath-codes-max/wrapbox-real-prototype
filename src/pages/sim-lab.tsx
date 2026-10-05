@@ -16,16 +16,22 @@ import { destById, planeLabel } from "../model/registries";
 import { Network, Server, ShieldCheck, Layers, Cpu, Play, Pause, StepForward, RotateCcw, ArrowRight, Plug, Globe, Workflow, OctagonX, Eye } from "lucide-react";
 import { DESKTOP_SHELL } from "../ui/shell";
 
-const GROUPS = [
+const ALL_GROUPS = [
   { key: "NETWORK", label: "Network" },
   { key: "ENDPOINT", label: DESKTOP_SHELL ? "Device" : "Endpoint" },
   { key: "GATEWAY", label: "Gateway" },
   { key: "MCP", label: "MCP tools" },
-  { key: "BROWSER_HOSTED", label: DESKTOP_SHELL ? "Browser & hosted agents" : "Browser & hosted" },
+  { key: "BROWSER_HOSTED", label: "Browser & hosted" },
   { key: "AGENTIC", label: "Agentic risks" },
   { key: "CONTEXT", label: "Context" },
   { key: "SAFETY", label: "Safety Kernel" },
 ] as const;
+/** The live prototype has three places, so browser scenarios sit under Device and
+ *  hosted-agent scenarios under Gateway instead of in a tab of their own. */
+const GROUPS = DESKTOP_SHELL ? ALL_GROUPS.filter((g) => g.key !== "BROWSER_HOSTED") : ALL_GROUPS;
+const inTab = (x: { group: string; plane: string }, tab: string) =>
+  x.group === tab ||
+  (DESKTOP_SHELL && x.group === "BROWSER_HOSTED" && ((tab === "ENDPOINT" && x.plane === "BROWSER") || (tab === "GATEWAY" && x.plane === "HOSTED")));
 
 const GROUP_ICON: Record<string, JSX.Element> = {
   NETWORK: <Network size={13} />,
@@ -51,7 +57,7 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
   const s = useAppState();
   const sub = route.split("/")[1]?.toUpperCase();
   const [group, setGroup] = useState<string>(GROUPS.some((g) => g.key === sub) ? sub! : "NETWORK");
-  const [scenarioId, setScenarioId] = useState<string>(() => SCENARIOS.find((x) => x.group === (GROUPS.some((g) => g.key === sub) ? sub : "NETWORK"))!.id);
+  const [scenarioId, setScenarioId] = useState<string>(() => SCENARIOS.find((x) => inTab(x, GROUPS.some((g) => g.key === sub) ? sub! : "NETWORK"))!.id);
   const sc = SCENARIOS.find((x) => x.id === scenarioId)!;
 
   const [event, setEvent] = useState<SimulationEvent | null>(null);
@@ -63,7 +69,7 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
 
   const pick = (g: string) => {
     setGroup(g);
-    const first = SCENARIOS.find((x) => x.group === g)!;
+    const first = SCENARIOS.find((x) => inTab(x, g))!;
     setScenarioId(first.id);
     reset();
   };
@@ -108,7 +114,7 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
   const liveEvent = event ? s.events.find((e) => e.id === event.id) ?? event : null;
   const inspectionPreview = useMemo(() => buildInspection(sc), [sc]);
 
-  const groupScenarios = SCENARIOS.filter((x) => x.group === group);
+  const groupScenarios = SCENARIOS.filter((x) => inTab(x, group));
   const groupLabel = GROUPS.find((g) => g.key === group)?.label ?? "";
   // What each scenario resolves to under the rules active right now, vs the
   // original demo policy — a pure what-if through the same Core Brain.
@@ -144,7 +150,7 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
       {/* Enforcement plane — one plane at a time, tab-style */}
       <div className="tabs" role="tablist" aria-label="Enforcement plane">
         {GROUPS.map((g) => {
-          const count = SCENARIOS.filter((x) => x.group === g.key).length;
+          const count = SCENARIOS.filter((x) => inTab(x, g.key)).length;
           return (
             <button
               key={g.key}
