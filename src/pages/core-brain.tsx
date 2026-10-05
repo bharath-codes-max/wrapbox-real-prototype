@@ -8,6 +8,7 @@ import { describe } from "../ui/describe";
 import type { DecidedBy } from "../model/types";
 import { DETECTORS, CAPABILITIES, TRANSFORMS, PLACES, PLACE_LABEL, placeOf } from "../model/registries";
 import { detectorUsage } from "../engine/usage";
+import { DecisionInputs } from "./decision-inputs";
 import { userById } from "../model/org";
 import { DESKTOP_SHELL } from "../ui/shell";
 import { useMemo } from "react";
@@ -248,7 +249,12 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
             </div>
           </div>
         ) },
-        { id: "inputs", label: "Decision inputs", count: INPUTS.length, content: (
+        { id: "inputs", label: "Decision inputs", count: INPUTS.length, content: ( DESKTOP_SHELL ? (
+          <div>
+            <SectionHead title="Decision inputs" sub="Pick any recorded action to see the 15 facts Wrapbox weighed for it, and the decision that came out" />
+            <DecisionInputs s={s} nav={nav} />
+          </div>
+        ) : (
           <div>
             <SectionHead title="Decision inputs" sub="Every consequential action is judged against this full set of signals" />
             <div className="card">
@@ -265,7 +271,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
               </div>
             </div>
           </div>
-        ) },
+        )) },
         { id: "detectors", label: "Detectors", count: DETECTORS.length, content: (
           <div>
             <SectionHead title="Detector Registry" sub="Pluggable analyzers that classify content into typed data findings" right={<span className="row" style={{ gap: 6 }}><ScanSearch size={13} /><span className="small dim">{DETECTORS.length} registered</span></span>} />

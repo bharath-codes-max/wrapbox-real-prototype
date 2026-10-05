@@ -931,6 +931,73 @@
   :root[data-ds] .heat-code-line { animation: none !important; opacity: 1; }
 }
 
+/* Core Brain → Decision inputs: an action list beside the 15-input sheet for the picked action. */
+:root[data-ds] .din { display: grid; grid-template-columns: minmax(250px, 320px) minmax(0, 1fr); gap: 16px; align-items: start; }
+:root[data-ds] .din-list { position: sticky; top: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+:root[data-ds] .din-list-head { display: flex; align-items: baseline; justify-content: space-between; padding: 13px 14px 8px; }
+:root[data-ds] .din-list-title { font-size: 13px; font-weight: 600; }
+:root[data-ds] .din-filters { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 12px 10px; border-bottom: 1px solid var(--line); }
+:root[data-ds] .din-filter {
+  display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border-radius: 999px;
+  border: 1px solid var(--ds-border); background: transparent; color: var(--fg-3); font: 500 11.5px var(--sans); cursor: pointer;
+}
+:root[data-ds] .din-filter span { color: var(--fg-4); font-variant-numeric: tabular-nums; }
+:root[data-ds] .din-filter:hover { color: var(--fg); border-color: var(--ds-border-hover); }
+:root[data-ds] .din-filter.on { background: var(--ds-selected); color: var(--fg); border-color: var(--line-strong); }
+:root[data-ds] .din-items { max-height: 640px; overflow-y: auto; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+:root[data-ds] .din-item {
+  position: relative; display: flex; flex-direction: column; gap: 5px; width: 100%; padding: 9px 10px 9px 13px; text-align: left;
+  border: 0; border-radius: 8px; background: transparent; color: var(--fg); font-family: var(--sans); cursor: pointer;
+  transition: background-color 0.12s var(--ease);
+}
+:root[data-ds] .din-item::before { content: ""; position: absolute; left: 4px; top: 9px; bottom: 9px; width: 2px; border-radius: 2px; background: var(--din-tone); opacity: 0.55; }
+:root[data-ds] .din-item:hover { background: var(--ds-hover); }
+:root[data-ds] .din-item.on { background: var(--ds-selected); }
+:root[data-ds] .din-item.on::before { opacity: 1; width: 3px; }
+:root[data-ds] .din-item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+:root[data-ds] .din-item-time { font-size: 11px; color: var(--fg-4); }
+:root[data-ds] .din-item-text { font-size: 12.5px; font-weight: 500; line-height: 1.4; }
+:root[data-ds] .din-item-meta { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root[data-ds] .din .t-allow { --din-tone: var(--allow); }
+:root[data-ds] .din .t-constrain { --din-tone: var(--constrain); }
+:root[data-ds] .din .t-review { --din-tone: var(--review); }
+:root[data-ds] .din .t-block { --din-tone: var(--block); }
+:root[data-ds] .din-sheet { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 18px 20px 20px; border-top: 2px solid var(--din-tone); }
+:root[data-ds] .din-head { display: flex; align-items: center; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+:root[data-ds] .din-head-mark { width: 38px; height: 38px; flex-shrink: 0; display: grid; place-items: center; border-radius: 10px; background: var(--ds-logo-tile); box-shadow: inset 0 0 0 1px var(--line); }
+:root[data-ds] .din-head-mark .logo-img { background: transparent; padding: 0; }
+:root[data-ds] .din-head-title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.35; }
+:root[data-ds] .din-head-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; font-size: 12px; color: var(--fg-3); }
+:root[data-ds] .din-head-meta b { color: var(--fg); font-weight: 600; }
+:root[data-ds] .din-group { margin-top: 18px; }
+:root[data-ds] .din-group-title { margin-bottom: 8px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg-3); }
+:root[data-ds] .din-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+:root[data-ds] .din-cell { min-width: 0; padding: 11px 12px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--ds-hover); }
+:root[data-ds] .din-cell-top { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+:root[data-ds] .din-cell-n { font: 500 10.5px var(--mono); color: var(--fg-4); }
+:root[data-ds] .din-cell-label { font-size: 11.5px; font-weight: 500; color: var(--fg-3); }
+:root[data-ds] .din-cell-seen { margin-left: auto; font-size: 10.5px; color: var(--fg-4); white-space: nowrap; }
+:root[data-ds] .din-cell-value { font-size: 13.5px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+:root[data-ds] .din-cell-detail { margin-top: 3px; font-size: 12px; line-height: 1.45; color: var(--fg-3); overflow-wrap: anywhere; }
+:root[data-ds] .din-cell-code { margin: 6px 0 2px; padding: 6px 8px; border-radius: 6px; background: var(--code-bg); color: #e6edf3; font: 400 11.5px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+:root[data-ds] .din-cell.absent { background: transparent; border-style: dashed; }
+:root[data-ds] .din-cell.absent .din-cell-value { font-weight: 500; color: var(--fg-3); }
+:root[data-ds] .din-cell.absent .din-cell-detail { color: var(--fg-4); }
+:root[data-ds] .din-cell.decided { border-color: color-mix(in oklab, var(--din-tone) 60%, transparent); background: color-mix(in oklab, var(--din-tone) 9%, transparent); box-shadow: inset 3px 0 0 var(--din-tone); }
+:root[data-ds] .din-cell-tag { margin-left: auto; padding: 1px 7px; border-radius: 999px; font: 600 10px var(--mono); letter-spacing: 0.03em; text-transform: uppercase; color: var(--din-tone); background: color-mix(in oklab, var(--din-tone) 14%, transparent); white-space: nowrap; }
+:root[data-ds] .din-arrow { display: grid; place-items: center; height: 34px; color: var(--fg-4); }
+:root[data-ds] .din-out { padding: 14px 16px 16px; border-radius: 10px; border: 1px solid color-mix(in oklab, var(--din-tone) 40%, transparent); background: color-mix(in oklab, var(--din-tone) 7%, transparent); }
+:root[data-ds] .din-out-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+:root[data-ds] .din-out-label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg-3); }
+:root[data-ds] .din-out-by { font-size: 13.5px; font-weight: 600; min-width: 0; }
+:root[data-ds] .din-out-reasons { margin: 10px 0 12px; padding-left: 18px; font-size: 13px; line-height: 1.55; color: var(--fg-2); }
+:root[data-ds] .din-out-alt { margin: -4px 0 12px; font-size: 12.5px; line-height: 1.5; color: var(--fg-2); }
+@media (max-width: 1100px) {
+  :root[data-ds] .din { grid-template-columns: minmax(0, 1fr); }
+  :root[data-ds] .din-list { position: static; }
+  :root[data-ds] .din-items { max-height: 260px; }
+}
+
 /* Standing Permissions — the grant form. */
 :root[data-ds] .grant { padding: 22px 24px 20px; display: flex; flex-direction: column; gap: 16px; max-height: 86vh; overflow-y: auto; }
 :root[data-ds] .grant-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
