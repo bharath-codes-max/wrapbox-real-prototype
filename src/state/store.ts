@@ -584,6 +584,17 @@ export function shadowEvent(
   return out.event;
 }
 
+/** For each check, a scenario the live engine would decide at that check right now
+ *  (same inputs a real Run uses). A check with no entry needs setup first. */
+export function scenariosByCheck(): Partial<Record<NonNullable<SimulationEvent["decidedBy"]>["layer"], Scenario>> {
+  const out: Partial<Record<NonNullable<SimulationEvent["decidedBy"]>["layer"], Scenario>> = {};
+  for (const sc of SCENARIOS) {
+    const layer = shadowEvent(sc, state.contracts, state.kernel, state.standing, { withLiveOverride: true }).decidedBy?.layer ?? "default";
+    if (!out[layer]) out[layer] = sc;
+  }
+  return out;
+}
+
 export function shadowEvaluate(sc: Scenario, contracts: IntentContract[], kernel?: KernelState, standing?: StandingPermission[]): Decision {
   return shadowEvent(sc, contracts, kernel, standing).decision;
 }

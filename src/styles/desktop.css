@@ -1134,3 +1134,75 @@
   :root[data-ds] .palette,
   :root[data-ds] .ws-pop { animation: none !important; }
 }
+
+/* ── Core Brain → The checks ─────────────────────────────────────────────── */
+:root[data-ds] .chk .t-allow { --chk-tone: var(--allow); }
+:root[data-ds] .chk .t-constrain { --chk-tone: var(--constrain); }
+:root[data-ds] .chk .t-review { --chk-tone: var(--review); }
+:root[data-ds] .chk .t-block { --chk-tone: var(--block); }
+:root[data-ds] .chk-lit { font-size: 12px; color: var(--fg-3); }
+:root[data-ds] .chk-lit b { color: var(--fg); font-variant-numeric: tabular-nums; }
+:root[data-ds] .chk-runs { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+:root[data-ds] .chk-runs-head { display: flex; align-items: baseline; justify-content: space-between; padding: 12px 16px 10px; border-bottom: 1px solid var(--line); }
+:root[data-ds] .chk-runs-title { font-size: 13px; font-weight: 600; }
+:root[data-ds] .chk-runs-sub { font-size: 11.5px; color: var(--fg-4); }
+:root[data-ds] .chk-empty { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; font-size: 13px; color: var(--fg-3); }
+:root[data-ds] .chk-run { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 16px 10px 18px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--fg); text-align: left; cursor: pointer; font: inherit; }
+:root[data-ds] .chk-run:last-child { border-bottom: 0; }
+:root[data-ds] .chk-run::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--chk-tone); opacity: 0; }
+:root[data-ds] .chk-run:hover { background: var(--ds-hover); }
+:root[data-ds] .chk-run.on { background: var(--ds-selected); }
+:root[data-ds] .chk-run.on::before { opacity: 1; }
+:root[data-ds] .chk-run-n { width: 16px; font: 500 11px var(--mono); color: var(--fg-4); }
+:root[data-ds] .chk-run-text { flex: 1 1 auto; min-width: 0; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root[data-ds] .chk-run-by { flex-shrink: 0; font-size: 11.5px; color: var(--fg-3); white-space: nowrap; }
+:root[data-ds] .chk-run-time { flex-shrink: 0; width: 64px; text-align: right; font: 400 11px var(--mono); color: var(--fg-4); }
+:root[data-ds] .chk-new { flex-shrink: 0; padding: 1px 7px; border-radius: 999px; font: 600 10px var(--mono); letter-spacing: 0.03em; text-transform: uppercase; color: #3fb950; background: color-mix(in oklab, #3fb950 15%, transparent); }
+:root[data-ds] .chk-path { margin-top: 14px; padding: 16px 18px 14px; border: 1px solid var(--line); border-top: 2px solid var(--chk-tone); border-radius: 12px; background: var(--surface); }
+:root[data-ds] .chk-path-top { display: flex; align-items: center; gap: 12px; }
+:root[data-ds] .chk-path-top > div:first-child { flex: 1 1 auto; }
+:root[data-ds] .chk-path-eyebrow { font: 500 11px var(--mono); color: var(--fg-4); }
+:root[data-ds] .chk-path-title { margin-top: 3px; font-size: 15px; font-weight: 600; line-height: 1.35; }
+:root[data-ds] .chk-rail { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); margin-top: 18px; }
+:root[data-ds] .chk-dot { position: relative; display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 0; color: var(--fg-4); text-decoration: none; }
+:root[data-ds] .chk-dot::before { content: ""; position: absolute; top: 13px; left: -50%; width: 100%; height: 1px; background: var(--line); }
+:root[data-ds] .chk-dot:first-child::before { display: none; }
+:root[data-ds] .chk-dot-n { position: relative; z-index: 1; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); font: 600 11px var(--mono); }
+:root[data-ds] .chk-dot-name { max-width: 100%; padding: 0 3px; font-size: 10.5px; line-height: 1.25; text-align: center; overflow-wrap: anywhere; }
+:root[data-ds] .chk-dot.s-noted { color: var(--fg-2, var(--fg)); }
+:root[data-ds] .chk-dot.s-noted .chk-dot-n { border-color: var(--fg-3); color: var(--fg); }
+:root[data-ds] .chk-dot.s-decided { color: var(--fg); font-weight: 600; }
+:root[data-ds] .chk-dot.s-decided .chk-dot-n { border-color: var(--chk-tone); background: var(--chk-tone); color: #0b0b0c; box-shadow: 0 0 0 4px color-mix(in oklab, var(--chk-tone) 22%, transparent); }
+:root[data-ds] .chk-dot:hover .chk-dot-n { border-color: var(--fg-3); }
+:root[data-ds] .chk-key { display: flex; gap: 18px; margin-top: 14px; padding-top: 11px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--fg-3); }
+:root[data-ds] .chk-key span { display: inline-flex; align-items: center; gap: 6px; }
+:root[data-ds] .chk-key-dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--line); }
+:root[data-ds] .chk-key-dot.s-noted { border-color: var(--fg-3); }
+:root[data-ds] .chk-key-dot.s-decided { border-color: var(--chk-tone); background: var(--chk-tone); }
+:root[data-ds] .chk-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+:root[data-ds] .chk-card { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 15px 16px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); scroll-margin-top: 80px; }
+:root[data-ds] .chk-card.s-decided { border-color: var(--chk-tone); box-shadow: 0 0 0 1px var(--chk-tone); }
+:root[data-ds] .chk-card-head { display: flex; align-items: center; gap: 9px; }
+:root[data-ds] .chk-card-n { width: 24px; height: 24px; flex-shrink: 0; display: grid; place-items: center; border-radius: 7px; background: var(--ds-hover); box-shadow: inset 0 0 0 1px var(--line); font: 600 11px var(--mono); color: var(--fg-3); }
+:root[data-ds] .chk-card.s-decided .chk-card-n { background: var(--chk-tone); color: #0b0b0c; box-shadow: none; }
+:root[data-ds] .chk-card-name { flex: 1 1 auto; min-width: 0; font-size: 14px; font-weight: 600; }
+:root[data-ds] .chk-count { flex-shrink: 0; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--fg-4); background: var(--ds-hover); }
+:root[data-ds] .chk-count.has { color: var(--fg); box-shadow: inset 0 0 0 1px var(--line-strong, var(--line)); }
+:root[data-ds] .chk-asks { font-size: 12.5px; line-height: 1.5; color: var(--fg-3); }
+:root[data-ds] .chk-label { margin-bottom: 5px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg-4); }
+:root[data-ds] .chk-now { padding: 10px 11px; border-radius: 9px; background: var(--ds-hover); }
+:root[data-ds] .chk-now-state { font-size: 13px; font-weight: 600; color: var(--fg-3); }
+:root[data-ds] .chk-card.s-noted .chk-now-state { color: var(--fg); }
+:root[data-ds] .chk-card.s-decided .chk-now-state { color: var(--chk-tone); }
+:root[data-ds] .chk-now-note { margin-top: 2px; font-size: 12px; line-height: 1.45; color: var(--fg-3); overflow-wrap: anywhere; }
+:root[data-ds] .chk-none { font-size: 12px; color: var(--fg-4); }
+:root[data-ds] .chk-mini { position: relative; display: flex; align-items: center; gap: 7px; width: 100%; margin-bottom: 3px; padding: 6px 8px 6px 12px; border: 0; border-radius: 7px; background: transparent; color: var(--fg); text-align: left; cursor: pointer; font: inherit; }
+:root[data-ds] .chk-mini::before { content: ""; position: absolute; left: 4px; top: 7px; bottom: 7px; width: 2px; border-radius: 2px; background: var(--chk-tone); }
+:root[data-ds] .chk-mini:hover { background: var(--ds-hover); }
+:root[data-ds] .chk-mini.on { background: var(--ds-selected); }
+:root[data-ds] .chk-mini-text { flex: 1 1 auto; min-width: 0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:root[data-ds] .chk-mini-time { flex-shrink: 0; font: 400 10.5px var(--mono); color: var(--fg-4); }
+:root[data-ds] .chk-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); }
+:root[data-ds] .chk-foot .btn { max-width: 100%; height: auto; min-height: 28px; padding-top: 4px; padding-bottom: 4px; white-space: normal; text-align: left; }
+:root[data-ds] .chk-foot .btn svg { flex-shrink: 0; }
+:root[data-ds] .chk-setup { flex: 1 1 100%; font-size: 12px; line-height: 1.45; color: var(--fg-3); }

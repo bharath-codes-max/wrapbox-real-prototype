@@ -9,6 +9,7 @@ import type { DecidedBy } from "../model/types";
 import { DETECTORS, CAPABILITIES, TRANSFORMS, PLACES, PLACE_LABEL, placeOf } from "../model/registries";
 import { detectorUsage } from "../engine/usage";
 import { DecisionInputs } from "./decision-inputs";
+import { BrainChecks } from "./brain-checks";
 import { userById } from "../model/org";
 import { DESKTOP_SHELL } from "../ui/shell";
 import { useMemo } from "react";
@@ -142,7 +143,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
       </div>
 
       <PageTabs storageKey="brain" tabs={plainTabs([
-        { id: "decides", label: "How it decides", count: ORDER.length, content: (
+        { id: "decides", label: "How it decides", count: ORDER.length, content: DESKTOP_SHELL ? <BrainChecks order={ORDER} nav={nav} /> : (
           <div>
             {/* Lead — the decision console: a proven decision, then every gate it ran through */}
             <SectionHead
