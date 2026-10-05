@@ -5,6 +5,8 @@ import { Avatar, AgentMark, DecisionChip, names, clock, RiskChip, usePaged, Page
 import { EventDetail } from "./event-detail";
 import { describe } from "./describe";
 import { AGENTS, USERS } from "../model/org";
+import { PLACES, PLACE_LABEL, placeOf } from "../model/registries";
+import { DESKTOP_SHELL } from "./shell";
 
 export function EventStream({
   events, nav, compact, limit, filters = true, bare,
@@ -28,7 +30,7 @@ export function EventStream({
     let list = [...events].sort((a, b) => b.timestamp - a.timestamp);
     if (fAgent) list = list.filter((e) => e.agent === fAgent);
     if (fUser) list = list.filter((e) => e.user === fUser);
-    if (fPlane) list = list.filter((e) => e.plane === fPlane);
+    if (fPlane) list = list.filter((e) => (DESKTOP_SHELL ? placeOf(e.plane) === fPlane : e.plane === fPlane));
     if (fDecision) list = list.filter((e) => e.decision === fDecision);
     if (fRisk) list = list.filter((e) => e.risk === fRisk);
     if (q) {
@@ -56,7 +58,9 @@ export function EventStream({
           filters={[
             { id: "agent", label: "Agent", options: AGENTS.map((a) => ({ value: a.id, label: a.name })) },
             { id: "user", label: "Person", options: USERS.map((u) => ({ value: u.id, label: u.name })) },
-            { id: "plane", label: "Plane", options: opts(["ENDPOINT", "NETWORK", "GATEWAY", "BROWSER", "HOSTED"]) },
+            DESKTOP_SHELL
+              ? { id: "plane", label: "Place", options: PLACES.map((p) => ({ value: p, label: PLACE_LABEL[p] })) }
+              : { id: "plane", label: "Plane", options: opts(["ENDPOINT", "NETWORK", "GATEWAY", "BROWSER", "HOSTED"]) },
             { id: "decision", label: "Decision", options: opts(["ALLOW", "CONSTRAIN", "REVIEW", "BLOCK"]) },
             { id: "risk", label: "Risk", options: opts(["low", "moderate", "high", "critical"]) },
           ]}
@@ -75,7 +79,7 @@ export function EventStream({
             <EntityCard
               key={e.id}
               icon={<AgentMark agentId={e.agent} size={26} />}
-              eyebrow={`${clock(e.timestamp)} · ${e.plane}`}
+              eyebrow={`${clock(e.timestamp)} · ${DESKTOP_SHELL ? (placeOf(e.plane) ?? e.plane) : e.plane}`}
               title={describe(e)}
               status={<DecisionChip d={e.decision} small />}
               tone={toneOf(e.decision)}

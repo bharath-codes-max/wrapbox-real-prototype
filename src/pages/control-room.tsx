@@ -9,12 +9,13 @@ import { PageHead, MetricBar, StatusChip, SimNote, SectionHead, AgentMark, Count
 import { EventStream } from "../ui/event-stream";
 import { describe } from "../ui/describe";
 import { AGENTS, DEVICES, agentById } from "../model/org";
-import { CAPABILITIES } from "../model/registries";
+import { CAPABILITIES, placeOf } from "../model/registries";
 import { buildCoverageMatrix } from "../engine/coverage";
 import type { CoverageStatus, Decision } from "../model/types";
 import { ShieldCheck, Network, Server, ArrowRight, Link2, Globe, Cloud, OctagonX } from "lucide-react";
 import { AGENT_LOGOS } from "../ui/logos";
 import { DESKTOP_SHELL } from "../ui/shell";
+import type { ReactNode } from "react";
 
 const DECISIONS = [
   { key: "ALLOW", label: "Allowed", tone: "allow", route: "live", note: "flowed automatically" },
@@ -30,13 +31,17 @@ const COVERAGE_ROWS: { key: CoverageStatus; label: string; tone: string; note: s
   { key: "UNDERSTOOD_ONLY", label: "Understood", tone: "accent", note: "can see it, can't stop it yet" },
 ];
 
-const PLANES = [
+const PLANES: { key: string; label: string; icon: ReactNode; blurb: string }[] = DESKTOP_SHELL ? [
+  { key: "DEVICE", label: "Device", icon: <Server size={15} strokeWidth={1.75} />, blurb: "files · commands · secrets · browser agents" },
+  { key: "NETWORK", label: "Network", icon: <Network size={15} strokeWidth={1.75} />, blurb: "HTTPS · uploads · AI destinations" },
+  { key: "GATEWAY", label: "Gateway", icon: <ShieldCheck size={15} strokeWidth={1.75} />, blurb: "GitHub · SQL · cloud · MCP · hosted agents" },
+] : [
   { key: "ENDPOINT", label: "Endpoint", icon: <Server size={15} strokeWidth={1.75} />, blurb: "file · process · secrets" },
   { key: "NETWORK", label: "Network", icon: <Network size={15} strokeWidth={1.75} />, blurb: "HTTPS · uploads · AI destinations" },
   { key: "GATEWAY", label: "Gateway", icon: <ShieldCheck size={15} strokeWidth={1.75} />, blurb: "GitHub · SQL · cloud · MCP" },
   { key: "BROWSER", label: "Browser", icon: <Globe size={15} strokeWidth={1.75} />, blurb: "browser agents in managed Chrome / Edge" },
   { key: "HOSTED", label: "Hosted", icon: <Cloud size={15} strokeWidth={1.75} />, blurb: "AWS AgentCore · Google (pending)" },
-] as const;
+];
 
 const toneOf = (d: Decision) => DECISIONS.find((x) => x.key === d)?.tone ?? "allow";
 
@@ -63,7 +68,8 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
   const coverageOther = coverageTotal - COVERAGE_ROWS.reduce((n, r) => n + coverage.counts[r.key], 0); // PENDING + UNINSPECTABLE
 
   const planeStatus = (plane: string) => {
-    const caps = CAPABILITIES.filter((c) => c.plane === plane);
+    // In the live prototype a row is a place (Device = endpoint + browser, Gateway = gateway + hosted).
+    const caps = CAPABILITIES.filter((c) => (DESKTOP_SHELL ? placeOf(c.plane) === plane : c.plane === plane));
     return { enforced: caps.filter((c) => c.status === "ENFORCED").length, total: caps.length };
   };
 
@@ -87,7 +93,7 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
           { label: "Active agents", value: activeAgents, note: discovered > 0 ? `+${discovered} discovered, unregistered` : "all registered", onClick: () => nav("agents") },
           { label: "Pending reviews", value: m.pendingReviews, tone: m.pendingReviews > 0 ? "warn" : "good", note: parked > 0 ? `${parked} task step(s) parked` : "no parked steps", onClick: () => nav("reviews") },
           { label: "Secrets protected", value: m.secretsProtected, tone: "good", note: "credential exfiltration blocked", onClick: () => nav("evidence") },
-          { label: "High-risk events", value: m.highRisk, tone: m.highRisk > 0 ? "bad" : "good", note: "risk ≥ high, all planes", onClick: () => nav("evidence") },
+          { label: "High-risk events", value: m.highRisk, tone: m.highRisk > 0 ? "bad" : "good", note: DESKTOP_SHELL ? "risk ≥ high, everywhere" : "risk ≥ high, all planes", onClick: () => nav("evidence") },
         ]} />
         <div className="overview-sep" />
         <div className="overview-decision">
@@ -312,8 +318,8 @@ export function ControlRoom({ nav }: { nav: (r: string) => void }) {
                 <OctagonX size={14} /> {stoppedNow.length} agent{stoppedNow.length === 1 ? "" : "s"} stopped everywhere: {stoppedNow.map((x) => AGENTS.find((a) => a.id === x.agent)?.name ?? x.agent).join(", ")}
               </div>
             )}
-            <span className="ft-title">Enforcement planes <ArrowRight size={18} /></span>
-            <div className="ft-sub">{CAPABILITIES.filter((c) => c.status === "ENFORCED").length} of {CAPABILITIES.length} skills fully enforced across all planes</div>
+            <span className="ft-title">{DESKTOP_SHELL ? "Where Wrapbox enforces" : "Enforcement planes"} <ArrowRight size={18} /></span>
+            <div className="ft-sub">{CAPABILITIES.filter((c) => c.status === "ENFORCED").length} of {CAPABILITIES.length} skills fully enforced {DESKTOP_SHELL ? `across device, network, gateway and the Core Brain (${CAPABILITIES.filter((c) => !placeOf(c.plane)).length} skills)` : "across all planes"}</div>
           </button>
         </div>
       </div>

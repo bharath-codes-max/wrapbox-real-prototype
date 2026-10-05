@@ -6,6 +6,7 @@ import type { SimulationEvent } from "../model/types";
 import { resolveReview, approverFor, stopOf, useAppState } from "../state/store";
 import { agentById, deviceById, supplierById, userById } from "../model/org";
 import { mcpServerById, planeLabel } from "../model/registries";
+import { DESKTOP_SHELL } from "./shell";
 import {
   Info, Lightbulb, ScanSearch, FileDiff, ArrowLeftRight, UserCheck,
   ScrollText, ShieldAlert, Link2, ShieldCheck, Ban, AlertTriangle, Workflow, OctagonX,
@@ -63,7 +64,7 @@ export function EventDetail({ e, onClose, onNavigate }: {
         <dt>Device</dt><dd>{deviceById(e.device)?.name ?? e.device}</dd>
         <dt>Agent</dt><dd>{onNavigate ? <a onClick={() => onNavigate("agents")}>{n.agent}</a> : n.agent}</dd>
         {e.application && <><dt>Tool</dt><dd>{e.application}</dd></>}
-        <dt>Plane</dt><dd>{planeLabel(e.plane)}</dd>
+        <dt>{DESKTOP_SHELL ? "Caught at" : "Plane"}</dt><dd>{planeLabel(e.plane)}</dd>
         <dt>Action</dt><dd className="mono">{e.actionRaw ?? e.action} <span className="faint">→ {e.action}</span></dd>
         <dt>Environment</dt><dd>{e.environment}</dd>
         {n.destination && <><dt>Destination</dt><dd className="row" style={{ gap: 8 }}>{n.destination} <Chip tone="neutral">{e.destinationClass}</Chip></dd></>}

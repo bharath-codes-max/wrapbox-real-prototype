@@ -3,6 +3,7 @@
 // run real simulations whose events propagate everywhere.
 import { useAppState, setDemoStep, simulateById, startTask, advanceTask, getState } from "../state/store";
 import { ORG } from "../model/org";
+import { DESKTOP_SHELL } from "../ui/shell";
 
 interface DemoStep {
   title: string;
@@ -14,7 +15,7 @@ interface DemoStep {
 const STEPS: DemoStep[] = [
   {
     title: "Welcome to Wrapbox",
-    text: `One brain, five enforcement planes. Every number on this Control Room derives from live event state — nothing is a static mock. This is ${ORG.name}, three days into a pilot.`,
+    text: `One brain, ${DESKTOP_SHELL ? "three places it catches actions" : "five enforcement planes"}. Every number on this Control Room derives from live event state — nothing is a static mock. This is ${ORG.name}, three days into a pilot.`,
     route: "control",
   },
   {

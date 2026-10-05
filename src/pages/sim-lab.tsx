@@ -14,13 +14,14 @@ import type { Decision, SimulationEvent } from "../model/types";
 import { agentById, userById } from "../model/org";
 import { destById, planeLabel } from "../model/registries";
 import { Network, Server, ShieldCheck, Layers, Cpu, Play, Pause, StepForward, RotateCcw, ArrowRight, Plug, Globe, Workflow, OctagonX, Eye } from "lucide-react";
+import { DESKTOP_SHELL } from "../ui/shell";
 
 const GROUPS = [
   { key: "NETWORK", label: "Network" },
-  { key: "ENDPOINT", label: "Endpoint" },
+  { key: "ENDPOINT", label: DESKTOP_SHELL ? "Device" : "Endpoint" },
   { key: "GATEWAY", label: "Gateway" },
   { key: "MCP", label: "MCP tools" },
-  { key: "BROWSER_HOSTED", label: "Browser & hosted" },
+  { key: "BROWSER_HOSTED", label: DESKTOP_SHELL ? "Browser & hosted agents" : "Browser & hosted" },
   { key: "AGENTIC", label: "Agentic risks" },
   { key: "CONTEXT", label: "Context" },
   { key: "SAFETY", label: "Safety Kernel" },
@@ -162,7 +163,7 @@ export function SimulationLab({ nav, route }: { nav: (r: string) => void; route:
       <div className="grid" style={{ gridTemplateColumns: "280px 1fr", gap: 16, alignItems: "start" }}>
         {/* Scenario picker */}
         <div className="card">
-          <SectionHead title="Scenarios" sub={["NETWORK", "ENDPOINT", "GATEWAY"].includes(group) ? `${groupScenarios.length} in the ${groupLabel} plane` : `${groupScenarios.length} in ${groupLabel}`} />
+          <SectionHead title="Scenarios" sub={["NETWORK", "ENDPOINT", "GATEWAY"].includes(group) ? (DESKTOP_SHELL ? `${groupScenarios.length} caught at the ${groupLabel.toLowerCase()}` : `${groupScenarios.length} in the ${groupLabel} plane`) : `${groupScenarios.length} in ${groupLabel}`} />
           {GROUP_NOTE[group] && <div className="small dim" style={{ margin: "-4px 0 10px", lineHeight: 1.5 }}>{GROUP_NOTE[group]}</div>}
           <div style={{ margin: "0 -20px" }}>
             {groupScenarios.map((x) => {

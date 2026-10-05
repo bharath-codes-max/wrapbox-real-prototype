@@ -18,6 +18,7 @@ import { pipelineFor } from "../engine/simulate";
 import { scenarioById } from "../engine/scenarios";
 import type { SimulationEvent } from "../model/types";
 import { Plug, Laptop, Fingerprint, Shuffle, ArrowRight, TerminalSquare, Share2 } from "lucide-react";
+import { DESKTOP_SHELL } from "../ui/shell";
 
 interface Connection {
   name: string; logo: string; kind: string; caps: string[]; detail: string;
@@ -40,10 +41,10 @@ const CONNECTIONS: Connection[] = [
   { name: "Stripe & support desk", logo: "stripe", kind: "Gateway connector", caps: ["cap-gw-saas"],
     detail: "Refunds, tickets and customer replies",
     uses: (e) => e.application === "Stripe API" || e.application === "Support SaaS API" || e.resource === "r-stripe" },
-  { name: "macOS Endpoint runtime", logo: "wrapbox-icon", kind: "Endpoint plane", caps: ["cap-ep-file", "cap-ep-exec", "cap-ep-clipboard"],
+  { name: "macOS Endpoint runtime", logo: "wrapbox-icon", kind: DESKTOP_SHELL ? "Device" : "Endpoint plane", caps: ["cap-ep-file", "cap-ep-exec", "cap-ep-clipboard"],
     detail: `${enrolled} enrolled devices · file and process authorization`,
     uses: (e) => e.plane === "ENDPOINT" },
-  { name: "Network Extension", logo: "wrapbox-icon", kind: "Network plane", caps: ["cap-net-https", "cap-net-quic", "cap-net-websocket", "cap-net-file"],
+  { name: "Network Extension", logo: "wrapbox-icon", kind: DESKTOP_SHELL ? "Network" : "Network plane", caps: ["cap-net-https", "cap-net-quic", "cap-net-websocket", "cap-net-file"],
     detail: "What leaves each device for AI tools and other sites",
     uses: (e) => e.plane === "NETWORK" },
   { name: "MCP registry", logo: "mcp", kind: "Gateway connector", caps: ["cap-gw-mcp", "cap-ep-mcp-stdio"],

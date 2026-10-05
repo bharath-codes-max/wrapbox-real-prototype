@@ -6,7 +6,7 @@ import { useAppState } from "../state/store";
 import { PageHead, SectionHead, Chip, StatusChip, SimNote, DecisionChip, MetricBar, Avatar, AgentMark, DestMark, PageTabs, timeAgo, EntityCard, CardGrid, useCardFilters, FilterBar, usePaged, Pager } from "../ui/kit";
 import { describe } from "../ui/describe";
 import type { DecidedBy } from "../model/types";
-import { DETECTORS, CAPABILITIES, TRANSFORMS } from "../model/registries";
+import { DETECTORS, CAPABILITIES, TRANSFORMS, PLACES, PLACE_LABEL, placeOf } from "../model/registries";
 import { detectorUsage } from "../engine/usage";
 import { userById } from "../model/org";
 import { DESKTOP_SHELL } from "../ui/shell";
@@ -46,13 +46,19 @@ const ORDER: { layer: DecidedBy["layer"]; name: string; asks: string; page?: [st
   { layer: "default", name: "Nothing objected", asks: "No rule restricts this action, so it's allowed and recorded." },
 ];
 
-const PLANES = [
+const PLANES = DESKTOP_SHELL ? [
+  { icon: <Laptop size={17} />, name: "Device", desc: "the laptop: files, commands and browser agents" },
+  { icon: <Network size={17} />, name: "Network", desc: "data leaving the laptop" },
+  { icon: <Server size={17} />, name: "Gateway", desc: "company systems, MCP tools and hosted agents" },
+] : [
   { icon: <Laptop size={17} />, name: "Endpoint", desc: "local actions on the laptop" },
   { icon: <Network size={17} />, name: "Network", desc: "traffic & data in flight" },
   { icon: <Server size={17} />, name: "Gateway", desc: "resources, systems & MCP tools" },
   { icon: <Globe size={17} />, name: "Browser", desc: "browser agents' page actions" },
   { icon: <Cloud size={17} />, name: "Hosted", desc: "agents on hosted platforms" },
 ];
+/** The label a capability is filed under: its place in the live prototype, its plane in the decks. */
+const fileUnder = (plane: string) => (DESKTOP_SHELL ? (placeOf(plane) ? PLACE_LABEL[placeOf(plane)!] : "Brain") : plane.charAt(0) + plane.slice(1).toLowerCase());
 
 const PLANE_ICON: Record<string, ReactNode> = {
   ENDPOINT: <Laptop size={16} />, NETWORK: <Network size={16} />, GATEWAY: <Server size={16} />, BROWSER: <Globe size={16} />, HOSTED: <Cloud size={16} />, BRAIN: <Cpu size={16} />,
@@ -69,7 +75,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
   const detectorsEnforced = DETECTORS.filter((d) => d.status === "ENFORCED").length;
   const transformsReversible = TRANSFORMS.filter((t) => t.reversible).length;
   const capsEnforced = CAPABILITIES.filter((c) => c.status === "ENFORCED").length;
-  const planeCount = new Set(CAPABILITIES.filter((c) => c.plane !== "BRAIN").map((c) => c.plane)).size;
+  const planeCount = DESKTOP_SHELL ? PLACES.length : new Set(CAPABILITIES.filter((c) => c.plane !== "BRAIN").map((c) => c.plane)).size;
   const capabilityGaps = CAPABILITIES.filter((c) => c.status !== "ENFORCED");
 
   // Real use of each detector, counted from recorded findings; the busiest come first.
@@ -96,7 +102,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
   const capF = useCardFilters(capabilityGaps, {
     search: (c) => `${c.label} ${c.note} ${c.plane}`,
     filters: [
-      { id: "plane", label: "Plane", get: (c) => c.plane, format: titleCase },
+      DESKTOP_SHELL ? { id: "plane", label: "Place", get: (c) => fileUnder(c.plane) } : { id: "plane", label: "Plane", get: (c) => c.plane, format: titleCase },
       { id: "status", label: "Status", get: (c) => c.status, format: titleCase },
     ],
   });
@@ -115,7 +121,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
         <MetricBar
           band
           items={[
-            { label: "Decisions made", value: s.events.length, note: `${planeCount} planes · one brain`, tone: "info", onClick: () => nav("evidence") },
+            { label: "Decisions made", value: s.events.length, note: `${planeCount} ${DESKTOP_SHELL ? "places" : "planes"} · one brain`, tone: "info", onClick: () => nav("evidence") },
             { label: "Detectors", value: DETECTORS.length, note: `${detectorsEnforced} enforced`, tone: "good" },
             { label: "Transforms", value: TRANSFORMS.length, note: `${transformsReversible} reversible` },
             { label: "Capabilities", value: CAPABILITIES.length, note: `${capsEnforced} enforced`, tone: "good", onClick: () => nav("coverage") },
@@ -185,7 +191,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
         ) },
         { id: "architecture", label: "Architecture", content: (
           <div>
-            <SectionHead title="One brain, three arms" sub="Every plane routes to a single deterministic decision engine that returns one of four outcomes" />
+            <SectionHead title="One brain, three arms" sub={DESKTOP_SHELL ? "Wherever an action is caught, it goes to the same decision engine, which returns one of four outcomes" : "Every plane routes to a single deterministic decision engine that returns one of four outcomes"} />
             <div className="card">
               <div className="grid g3">
                 {PLANES.map((p) => (
@@ -215,7 +221,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
                 </span>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 700, letterSpacing: "-0.01em" }}>Wrapbox Core Brain</div>
-                  <div className="small dim">One decision engine · five enforcement planes · same order every time</div>
+                  <div className="small dim">{DESKTOP_SHELL ? "One decision engine · three places it catches actions · same order every time" : "One decision engine · five enforcement planes · same order every time"}</div>
                 </div>
               </div>
 
@@ -366,7 +372,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
                       <EntityCard
                         key={c.id}
                         icon={PLANE_ICON[c.plane]}
-                        eyebrow={titleCase(c.plane)}
+                        eyebrow={DESKTOP_SHELL ? fileUnder(c.plane) : titleCase(c.plane)}
                         title={c.label}
                         status={<StatusChip s={c.status} />}
                         fields={[{ label: "Why", value: <span className="dim">{c.note}</span> }]}

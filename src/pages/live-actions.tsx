@@ -2,6 +2,7 @@
 import { useAppState, metrics } from "../state/store";
 import { PageHead, SimNote } from "../ui/kit";
 import { EventStream } from "../ui/event-stream";
+import { DESKTOP_SHELL } from "../ui/shell";
 
 const DECISIONS = [
   { key: "ALLOW", tone: "allow", label: "Allowed" },
@@ -34,7 +35,7 @@ export function LiveActions({ nav }: { nav: (r: string) => void }) {
           <div style={{ minWidth: 0 }}>
             <div className="section-title">Live decision stream</div>
             <div className="section-sub">
-              {m.total} consequential action{m.total === 1 ? "" : "s"} recorded, newest first — filter by agent, user, plane, decision or risk.
+              {m.total} consequential action{m.total === 1 ? "" : "s"} recorded, newest first — filter by agent, user, {DESKTOP_SHELL ? "place" : "plane"}, decision or risk.
             </div>
           </div>
           <span className="eyebrow" style={{ whiteSpace: "nowrap" }}>Decision mix</span>

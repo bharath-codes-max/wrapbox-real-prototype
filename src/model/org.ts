@@ -45,7 +45,7 @@ export interface OrgResource {
 
 /** The demo company. The live prototype (index.html sets data-ds="desktop") shows it as
  *  Glycon; tests and the decks (tour.html) keep Veridian, which their narration uses. */
-const LIVE_PROTOTYPE = typeof document !== "undefined" && document.documentElement.dataset.ds === "desktop";
+export const LIVE_PROTOTYPE = typeof document !== "undefined" && document.documentElement.dataset.ds === "desktop";
 export const ORG = LIVE_PROTOTYPE
   ? { name: "Glycon", short: "Glycon", slug: "glycon", domain: "glycon.example" }
   : { name: "Veridian Systems", short: "Veridian", slug: "veridian", domain: "veridian.example" };

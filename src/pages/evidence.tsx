@@ -7,7 +7,8 @@ import { describe } from "../ui/describe";
 import { EventDetail } from "../ui/event-detail";
 import type { SimulationEvent } from "../model/types";
 import { ORG, userById, AGENTS, USERS, SUPPLIERS } from "../model/org";
-import { planeLabel } from "../model/registries";
+import { planeLabel, PLACE_LABEL, placeOf, type Place } from "../model/registries";
+import { DESKTOP_SHELL } from "../ui/shell";
 import { toOcsfBatch, toOtlpLogs, OCSF_VERSION } from "../engine/export";
 import { FileClock, LayoutGrid, GitBranch, Download } from "lucide-react";
 
@@ -59,7 +60,9 @@ export function EvidenceExplorer({ nav }: { nav: (r: string) => void; route: str
       { id: "agent", label: "Agent", get: (e) => e.agent, format: (v) => AGENTS.find((a) => a.id === v)?.name ?? v },
       { id: "user", label: "Person", get: (e) => e.user, format: (v) => USERS.find((u) => u.id === v)?.name ?? v },
       { id: "risk", label: "Risk", get: (e) => e.risk, options: ["low", "moderate", "high", "critical"].map((v) => ({ value: v, label: v })) },
-      { id: "plane", label: "Plane", get: (e) => e.plane, format: (v) => planeLabel(v as SimulationEvent["plane"]) },
+      DESKTOP_SHELL
+        ? { id: "plane", label: "Place", get: (e) => placeOf(e.plane) ?? e.plane, format: (v) => PLACE_LABEL[v as Place] ?? v }
+        : { id: "plane", label: "Plane", get: (e) => e.plane, format: (v) => planeLabel(v as SimulationEvent["plane"]) },
       { id: "operator", label: "Operated by", get: (e) => e.operator ?? "veridian", format: (v) => v === "veridian" ? `${ORG.short}'s own agents` : SUPPLIERS.find((x) => x.id === v)?.name ?? v },
       { id: "review", label: "Human review", get: (e) => e.reviewState?.status ?? "none",
         options: [...Object.entries(REVIEW_OUTCOME).map(([v, [, label]]) => ({ value: v, label })), { value: "none", label: "No review" }] },

@@ -8,6 +8,7 @@ import { describe } from "../ui/describe";
 import { ORG, AGENTS, SUPPLIERS, deviceById, resourceById, supplierActive, supplierById, userById, type OrgAgent } from "../model/org";
 import { destById } from "../model/registries";
 import { ShieldAlert, ShieldCheck, Activity, ArrowRight, OctagonX, Play, Eye, Building2 } from "lucide-react";
+import { DESKTOP_SHELL } from "../ui/shell";
 
 /** People who may stop or resume an agent in this workspace. */
 const STOPPERS = ["u-priya", "u-maya", "u-alex"];
@@ -28,7 +29,7 @@ function KillSwitch({ agent }: { agent: OrgAgent }) {
         <>
           <div className="row" style={{ gap: 8 }}><OctagonX size={16} style={{ color: "var(--bad)" }} /><b className="small">Stopped everywhere</b></div>
           <div className="small dim" style={{ marginTop: 6, lineHeight: 1.55 }}>
-            By {userById(cur.by)?.name} · {timeAgo(cur.at)} · “{cur.reason}”. Every action by {agent.name} is refused on every plane, and its held requests were cancelled. Nothing else can lift this — not an approval, not break-glass.
+            By {userById(cur.by)?.name} · {timeAgo(cur.at)} · “{cur.reason}”. Every action by {agent.name} is refused {DESKTOP_SHELL ? "on the device, the network and every gateway" : "on every plane"}, and its held requests were cancelled. Nothing else can lift this — not an approval, not break-glass.
           </div>
           <div className="row" style={{ marginTop: 10, gap: 8 }}>
             <select className="select" style={{ width: "auto" }} value={by} onChange={(e) => setBy(e.target.value)} aria-label="Resumed by">
@@ -41,7 +42,7 @@ function KillSwitch({ agent }: { agent: OrgAgent }) {
         <>
           <b className="small">Stop {agent.name} everywhere</b>
           <div className="small dim" style={{ marginTop: 4, lineHeight: 1.55 }}>
-            Refuses every action on the laptop, network, gateways, browser and hosted planes at once. {held > 0 ? `${held} held request${held === 1 ? "" : "s"} will be cancelled. ` : ""}{running > 0 ? `${running} running job${running === 1 ? "" : "s"} will stop. ` : ""}Recorded with your name and reason.
+            {DESKTOP_SHELL ? "Refuses every action on the device, the network and every gateway at once." : "Refuses every action on the laptop, network, gateways, browser and hosted planes at once."} {held > 0 ? `${held} held request${held === 1 ? "" : "s"} will be cancelled. ` : ""}{running > 0 ? `${running} running job${running === 1 ? "" : "s"} will stop. ` : ""}Recorded with your name and reason.
           </div>
           <input className="input" style={{ marginTop: 10, width: "100%" }} placeholder="Why — e.g. suspicious pushes to main, investigating" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Reason for stopping" />
           <div className="row" style={{ marginTop: 10, gap: 8 }}>
@@ -54,7 +55,7 @@ function KillSwitch({ agent }: { agent: OrgAgent }) {
         </>
       ) : (
         <div className="spread" style={{ gap: 10 }}>
-          <span className="small dim">Kill switch — one step stops this agent on every plane.</span>
+          <span className="small dim">Kill switch — one step stops this agent {DESKTOP_SHELL ? "everywhere" : "on every plane"}.</span>
           <button className="btn btn-danger btn-sm" onClick={() => setOpen(true)}><OctagonX size={13} /> Stop this agent everywhere</button>
         </div>
       )}
@@ -176,7 +177,7 @@ export function AgentsPage({ nav }: { nav: (r: string) => void; route: string })
           { label: "Agents detected", value: AGENTS.length, note: `${registered} registered${stoppedNow > 0 ? ` · ${stoppedNow} stopped` : ""}` },
           { label: "Shadow agents", value: discovered, tone: discovered > 0 ? "bad" : "good", note: discovered > 0 ? "discovered, unregistered" : "none observed" },
           { label: "Trusted", value: trusted, tone: "good", note: "full trust posture" },
-          { label: "Decisions evaluated", value: totalEvents, note: "across every plane", onClick: () => nav("live") },
+          { label: "Decisions evaluated", value: totalEvents, note: DESKTOP_SHELL ? "device, network and gateway" : "across every plane", onClick: () => nav("live") },
         ]} />
       </div>
 

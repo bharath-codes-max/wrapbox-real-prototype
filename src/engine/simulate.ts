@@ -11,7 +11,7 @@ import type {
   ResultSeal, SimulationEvent, StandingPermission, TaskEnvelope, TransformStep, VaultToken,
 } from "../model/types";
 import { detectorFor, destById, mcpServerById, planeLabel } from "../model/registries";
-import { agentById, deviceForAction, resourceById, supplierById, userById } from "../model/org";
+import { agentById, deviceForAction, resourceById, supplierById, userById, LIVE_PROTOTYPE } from "../model/org";
 import type { KernelState } from "./kernel";
 
 let tokenCounter = 0;
@@ -345,7 +345,7 @@ export function pipelineFor(sc: Scenario, ev: SimulationEvent): PipelineStage[] 
     key: "intercept",
     label:
       sc.plane === "NETWORK" ? "Wrapbox Network plane intercepts traffic"
-      : sc.plane === "ENDPOINT" ? (sc.mcp ? "Wrapbox endpoint shim holds the stdio tool call" : "Wrapbox Endpoint plane holds the action")
+      : sc.plane === "ENDPOINT" ? (sc.mcp ? "Wrapbox endpoint shim holds the stdio tool call" : (LIVE_PROTOTYPE ? "Wrapbox on the device holds the action" : "Wrapbox Endpoint plane holds the action"))
       : sc.plane === "BROWSER" ? "Wrapbox browser extension holds the page action"
       : sc.plane === "HOSTED" ? "Wrapbox REQUEST interceptor holds the tool call (AgentCore Gateway)"
       : sc.mcp ? "Wrapbox MCP gateway holds tools/call" : "Wrapbox Gateway receives the operation",

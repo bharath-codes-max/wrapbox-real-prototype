@@ -6,7 +6,13 @@ import { useMemo, useState } from "react";
 import { useAppState } from "../state/store";
 import { PageHead, StatusChip, SimNote, Chip, MetricBar, usePaged, Pager, EntityCard, CardGrid, FilterBar, useCardFilters } from "../ui/kit";
 import { logoUrl, INTEGRATION_LOGOS } from "../ui/logos";
-import { CAPABILITIES, DATA_TYPES } from "../model/registries";
+import { CAPABILITIES, DATA_TYPES, placeOf } from "../model/registries";
+import { DESKTOP_SHELL } from "../ui/shell";
+
+/** Where a skill is filed: its place (Device / Network / Gateway) in the live prototype. */
+const under = (plane: string): string => (DESKTOP_SHELL ? placeOf(plane) ?? plane : plane);
+const underAll = (planes: string[]): string[] => [...new Set(planes.map(under))];
+const PLACE_WORD = DESKTOP_SHELL ? "Place" : "Plane";
 import { buildCoverageMatrix, type CoverageRow } from "../engine/coverage";
 import type { CoverageStatus } from "../model/types";
 import type { ReactNode } from "react";
@@ -81,7 +87,7 @@ function RuleCards({ rows, showReason, what }: { rows: CoverageRow[]; showReason
     search: (r) => [r.title, r.source, r.destination, ...r.dataClasses, ...r.needs.map((n) => n.label)].join(" "),
     filters: [
       { id: "status", label: showReason ? "Would be" : "Status", get: (r) => r.status, format: fmtStatus },
-      { id: "plane", label: "Plane", get: (r) => r.planes },
+      { id: "plane", label: PLACE_WORD, get: (r) => underAll(r.planes) },
       { id: "data", label: "Data", get: (r) => r.dataClasses },
       { id: "source", label: "Source", get: (r) => r.source },
     ],
@@ -113,7 +119,7 @@ function RuleCards({ rows, showReason, what }: { rows: CoverageRow[]; showReason
                     : <div className="row" style={{ gap: 4 }}>{r.dataClasses.map((d) => <Chip key={d} tone="violet">{d}</Chip>)}</div>,
                 },
                 { label: "Where to", value: <span className="small dim">{r.destination}</span> },
-                { label: "Plane", value: <div className="row" style={{ gap: 4 }}>{r.planes.map((p) => <Chip key={p} tone="neutral">{p}</Chip>)}</div> },
+                { label: PLACE_WORD, value: <div className="row" style={{ gap: 4 }}>{underAll(r.planes).map((p) => <Chip key={p} tone="neutral">{p}</Chip>)}</div> },
                 {
                   label: "Needs these skills",
                   value: (
@@ -139,9 +145,9 @@ function RuleCards({ rows, showReason, what }: { rows: CoverageRow[]; showReason
 
 function GapCards({ gaps, jump }: { gaps: CoverageRow[]; jump: (t: Tab, g: CoverageRow) => void }) {
   const f = useCardFilters(gaps, {
-    search: (g) => [g.title, g.source, ...g.planes].join(" "),
+    search: (g) => [g.title, g.source, ...g.planes, ...underAll(g.planes)].join(" "),
     filters: [
-      { id: "plane", label: "Plane", get: (g) => g.planes },
+      { id: "plane", label: PLACE_WORD, get: (g) => underAll(g.planes) },
       { id: "status", label: "Status", get: (g) => g.status, format: fmtStatus },
     ],
   });
@@ -161,7 +167,7 @@ function GapCards({ gaps, jump }: { gaps: CoverageRow[]; jump: (t: Tab, g: Cover
                 key={g.id}
                 tone={CARD_TONE[g.status]}
                 icon={PLANE_ICON[g.planes[0]] ?? <StatusIcon s={g.status} />}
-                eyebrow={g.planes[0]}
+                eyebrow={under(g.planes[0])}
                 title={g.title}
                 status={<StatusChip s={g.status} />}
                 fields={[
@@ -190,9 +196,9 @@ function GapCards({ gaps, jump }: { gaps: CoverageRow[]; jump: (t: Tab, g: Cover
 
 function SkillCards() {
   const f = useCardFilters(CAPABILITIES, {
-    search: (c) => [c.label, c.id, c.plane, c.note ?? ""].join(" "),
+    search: (c) => [c.label, c.id, c.plane, under(c.plane), c.note ?? ""].join(" "),
     filters: [
-      { id: "plane", label: "Plane", get: (c) => c.plane },
+      { id: "plane", label: PLACE_WORD, get: (c) => under(c.plane) },
       { id: "status", label: "Status", get: (c) => c.status, format: fmtStatus },
     ],
   });
@@ -211,7 +217,7 @@ function SkillCards() {
                 key={c.id}
                 tone={CARD_TONE[c.status]}
                 icon={lg ? <img src={logoUrl(lg)} alt="" className="logo-img" width={26} height={26} /> : PLANE_ICON[c.plane]}
-                eyebrow={c.plane}
+                eyebrow={under(c.plane)}
                 title={c.label}
                 status={<StatusChip s={c.status} />}
                 fields={[

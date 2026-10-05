@@ -5,13 +5,28 @@
 // ============================================================================
 
 import type { CoverageStatus, DestinationClass, Plane } from "./types";
-import { ORG } from "./org";
+import { ORG, LIVE_PROTOTYPE } from "./org";
 
 /** One wording for each enforcement plane, used by every screen. */
-export const PLANE_LABEL: Record<Plane, string> = {
-  ENDPOINT: "Endpoint plane", NETWORK: "Network Extension", GATEWAY: "Gateway",
-  BROWSER: "Browser extension", HOSTED: "Hosted agent gateway",
+/** Where Wrapbox catches an action. The engine keeps five internal planes; the product
+ *  talks about three places, because a browser agent is caught on the device and a
+ *  hosted agent is caught at a gateway. Every screen groups by this one mapping. */
+export type Place = "DEVICE" | "NETWORK" | "GATEWAY";
+export const PLACE_OF: Record<Plane, Place> = {
+  ENDPOINT: "DEVICE", BROWSER: "DEVICE", NETWORK: "NETWORK", GATEWAY: "GATEWAY", HOSTED: "GATEWAY",
 };
+export const PLACES: Place[] = ["DEVICE", "NETWORK", "GATEWAY"];
+export const PLACE_LABEL: Record<Place, string> = { DEVICE: "Device", NETWORK: "Network", GATEWAY: "Gateway" };
+export const placeOf = (p: string): Place | undefined => PLACE_OF[p as Plane];
+
+/** The live prototype names the three places (with the detail kept where it helps);
+ *  tests and the decks keep the five plane names their narration uses. */
+export const PLANE_LABEL: Record<Plane, string> = LIVE_PROTOTYPE
+  ? { ENDPOINT: "Device", NETWORK: "Network", GATEWAY: "Gateway", BROWSER: "Device · browser", HOSTED: "Gateway · hosted agent" }
+  : {
+      ENDPOINT: "Endpoint plane", NETWORK: "Network Extension", GATEWAY: "Gateway",
+      BROWSER: "Browser extension", HOSTED: "Hosted agent gateway",
+    };
 export const planeLabel = (p: Plane) => PLANE_LABEL[p] ?? p;
 
 export interface DataTypeDef {
