@@ -66,6 +66,17 @@ const PLANE_ICON: Record<string, ReactNode> = {
 };
 const titleCase = (v: string) => v.charAt(0) + v.slice(1).toLowerCase().replace(/_/g, " ");
 
+/** Plain names and reading order for the live prototype: what Wrapbox sees, then how it
+ *  checks, then the reference lists. The decks keep the original names and order. */
+const PLAIN_TABS: [string, string][] = [
+  ["inputs", "What it sees"], ["decides", "The checks"], ["detectors", "Data it can find"],
+  ["transforms", "How it hides data"], ["capabilities", "What works today"], ["architecture", "How it is built"],
+];
+function plainTabs<T extends { id: string; label: string }>(tabs: T[]): T[] {
+  if (!DESKTOP_SHELL) return tabs;
+  return PLAIN_TABS.flatMap(([id, label]) => { const t = tabs.find((x) => x.id === id); return t ? [{ ...t, label }] : []; });
+}
+
 const INPUTS = ["WHO", "DEVICE", "AGENT", "DELEGATION CHAIN", "ACTION", "MCP TOOL + ARGUMENTS", "RESOURCE", "DATA", "DESTINATION", "CONTEXT", "RECENT UNTRUSTED INPUT", "INTENT CONTRACT", "SAFETY KERNEL", "SUPPLIER CONTRACT", "TASK / STANDING AUTHORITY"];
 
 export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
@@ -130,13 +141,13 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
         />
       </div>
 
-      <PageTabs storageKey="brain" tabs={[
+      <PageTabs storageKey="brain" tabs={plainTabs([
         { id: "decides", label: "How it decides", count: ORDER.length, content: (
           <div>
             {/* Lead — the decision console: a proven decision, then every gate it ran through */}
             <SectionHead
-              title="How the brain decides"
-              sub="Every action runs through these gates in this exact order. The first one that objects wins. The count is how many of your recorded actions each gate decided."
+              title={DESKTOP_SHELL ? "The checks, in order" : "How the brain decides"}
+              sub={DESKTOP_SHELL ? "Wrapbox asks these in this order for every action. The first check that decides gives the answer. \"Decided\" is how many of your actions each check answered." : "Every action runs through these gates in this exact order. The first one that objects wins. The count is how many of your recorded actions each gate decided."}
             />
 
             {root && (
@@ -251,7 +262,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
         ) },
         { id: "inputs", label: "Decision inputs", count: INPUTS.length, content: ( DESKTOP_SHELL ? (
           <div>
-            <SectionHead title="Decision inputs" sub="Pick any recorded action to see the 15 facts Wrapbox weighed for it, and the decision that came out" />
+            <SectionHead title="What Wrapbox sees" sub="Pick any recorded action to see the 15 details Wrapbox read about it, and the decision that came out" />
             <DecisionInputs s={s} nav={nav} />
           </div>
         ) : (
@@ -274,7 +285,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
         )) },
         { id: "detectors", label: "Detectors", count: DETECTORS.length, content: (
           <div>
-            <SectionHead title="Detector Registry" sub="Pluggable analyzers that classify content into typed data findings" right={<span className="row" style={{ gap: 6 }}><ScanSearch size={13} /><span className="small dim">{DETECTORS.length} registered</span></span>} />
+            <SectionHead title={DESKTOP_SHELL ? "Data it can find" : "Detector Registry"} sub={DESKTOP_SHELL ? "The scanners that find private data inside what an agent sends, and what each one has found" : "Pluggable analyzers that classify content into typed data findings"} right={<span className="row" style={{ gap: 6 }}><ScanSearch size={13} /><span className="small dim">{DETECTORS.length} registered</span></span>} />
             {DETECTORS.length === 0 ? (
               <div className="card empty">No detectors registered.</div>
             ) : (
@@ -329,7 +340,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
         ) },
         { id: "transforms", label: "Transforms", count: TRANSFORMS.length, content: (
           <div>
-            <SectionHead title="Transform Registry" sub="How sensitive data is neutralized when an action is constrained rather than blocked" right={<span className="row" style={{ gap: 6 }}><Shuffle size={13} /><span className="small dim">{TRANSFORMS.length} kinds</span></span>} />
+            <SectionHead title={DESKTOP_SHELL ? "How it hides data" : "Transform Registry"} sub={DESKTOP_SHELL ? "The ways Wrapbox makes private data safe so the action can still go through" : "How sensitive data is neutralized when an action is constrained rather than blocked"} right={<span className="row" style={{ gap: 6 }}><Shuffle size={13} /><span className="small dim">{TRANSFORMS.length} kinds</span></span>} />
             {TRANSFORMS.length === 0 ? (
               <div className="card empty">No transforms registered.</div>
             ) : (
@@ -361,8 +372,8 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
         { id: "capabilities", label: "Capability truthfulness", count: capabilityGaps.length, content: (
           <div>
             <SectionHead
-              title="Capability truthfulness"
-              sub="Capabilities that are not fully enforced gate contract activation honestly — nothing claims coverage it lacks"
+              title={DESKTOP_SHELL ? "What works today" : "Capability truthfulness"}
+              sub={DESKTOP_SHELL ? "The skills that do not fully work yet. A rule that needs one cannot be switched on until it does" : "Capabilities that are not fully enforced gate contract activation honestly — nothing claims coverage it lacks"}
               right={<><span className="row" style={{ gap: 6 }}><ShieldCheck size={13} style={{ color: "var(--allow)" }} /><span className="small dim">{capsEnforced} of {CAPABILITIES.length} enforced</span></span><button className="btn btn-sm" onClick={() => nav("coverage")}>Coverage Map <ArrowRight size={13} /></button></>}
             />
             {capabilityGaps.length === 0 ? (
@@ -391,7 +402,7 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
             )}
           </div>
         ) },
-      ]} />
+      ])} />
     </div>
   );
 }
