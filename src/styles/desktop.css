@@ -455,7 +455,11 @@
 /* EntityCard — the list record used on every page. */
 :root[data-ds] .ecard-grid { gap: 12px; }
 :root[data-ds] .ecard { padding: 18px 20px; }
-:root[data-ds] .ecard-head { gap: 11px; }
+:root[data-ds] .ecard-head { gap: 11px; flex-wrap: wrap; }
+/* In a narrow card the status chips and action drop to their own line instead of
+   crushing the title to a few letters per line. */
+:root[data-ds] .ecard-titles { flex: 1 1 150px; }
+:root[data-ds] .ecard-actions { flex-shrink: 1; max-width: 100%; }
 :root[data-ds] .ecard-eyebrow { font-size: 11.5px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--fg-3); }
 :root[data-ds] .ecard-title { margin-top: 2px; font-size: 14px; font-weight: 600; letter-spacing: -0.008em; }
 :root[data-ds] .ecard-fields { grid-template-columns: 104px minmax(0, 1fr); gap: 9px 16px; margin-top: 16px; font-size: 13px; }
@@ -926,6 +930,24 @@
   :root[data-ds] .heat-grid .heat-cell, :root[data-ds] .heat-sound-hint i, :root[data-ds] .heat-code { animation: none !important; }
   :root[data-ds] .heat-code-line { animation: none !important; opacity: 1; }
 }
+
+/* Standing Permissions — the grant form. */
+:root[data-ds] .grant { padding: 22px 24px 20px; display: flex; flex-direction: column; gap: 16px; max-height: 86vh; overflow-y: auto; }
+:root[data-ds] .grant-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+:root[data-ds] .grant-sub { margin: -10px 0 0; font-size: 13px; line-height: 1.55; color: var(--fg-3); }
+:root[data-ds] .grant .field { display: flex; flex-direction: column; gap: 6px; }
+:root[data-ds] .grant-picks { display: flex; flex-wrap: wrap; gap: 6px; }
+:root[data-ds] .grant-pick {
+  display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; border-radius: 999px;
+  border: 1px solid var(--ds-border); background: var(--ds-fill); color: var(--fg-2);
+  font: 500 12.5px var(--sans); cursor: pointer; transition: background-color 0.12s var(--ease), border-color 0.12s var(--ease), color 0.12s var(--ease);
+}
+:root[data-ds] .grant-pick:hover { border-color: var(--ds-border-hover); color: var(--fg); }
+:root[data-ds] .grant-pick.on { background: var(--allow-soft); border-color: color-mix(in oklab, var(--allow) 45%, transparent); color: var(--allow); }
+:root[data-ds] .grant-pick.deny.on { background: var(--block-soft); border-color: color-mix(in oklab, var(--block) 45%, transparent); color: var(--block); }
+:root[data-ds] .grant-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+:root[data-ds] .grant-preview { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--ds-hover); }
+:root[data-ds] .grant-foot { display: flex; align-items: center; gap: 12px; padding-top: 4px; }
 
 /* Policy Simulator — the three acts as columns, separated by hairlines. */
 :root[data-ds] .sim-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(250px, 0.8fr); align-items: start; }

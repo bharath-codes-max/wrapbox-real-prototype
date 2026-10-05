@@ -7,10 +7,10 @@
 import { useSyncExternalStore } from "react";
 import type {
   AgentStop, AgentTaint, AutopilotRecommendation, BreakGlassSession, IntentContract, SimulationEvent,
-  StandingPermission, TaskEnvelope, VaultToken, Decision, RestoreRecord, Environment,
+  StandingPermission, TaskEnvelope, VaultToken, Decision, RestoreRecord, Environment, ActionVerb,
 } from "../model/types";
 import { DEMO_CONTRACTS, MCP_TOOL_CONTRACT, SEED_CONTRACTS } from "../model/contracts";
-import { ORG, USERS, AGENTS, deviceForAction, userById } from "../model/org";
+import { ORG, USERS, AGENTS, agentById, deviceForAction, resourceById, userById } from "../model/org";
 import { ROLLOUT, type AgentKind } from "../model/rollout";
 import { canActivate, contractCoverage } from "../engine/coverage";
 import { BASELINE_KERNEL, enforceRule, installRelease, pendingRelease, type KernelState } from "../engine/kernel";
@@ -886,6 +886,100 @@ export function markAutopilotModified(id: string, contractId: string, name: stri
     autopilot: state.autopilot.map((a) =>
       a.id === id ? { ...a, status: "modified", contractId, result: `Saved your edited version as draft "${name}".` } : a),
   });
+}
+
+/** What a person fills in to grant an agent everyday authority on one system. */
+export interface StandingGrant {
+  agent: string;
+  resource: string;
+  actions: ActionVerb[];
+  environments: Environment[];
+  /** Ids from STANDING_DENY_PRESETS — the explicit "may not" list. */
+  denyIds: string[];
+  maxRows?: number;
+  maxFilesPerTask?: number;
+  days: number;
+  grantedBy: string;
+}
+
+/** Verbs that can be standing authority. Secret access and permission / security
+ *  changes are never everyday work — they always go to a person or the Safety Kernel. */
+export const STANDING_VERBS: { verb: ActionVerb; label: string }[] = [
+  { verb: "READ", label: "read and look up" },
+  { verb: "WRITE", label: "write and edit" },
+  { verb: "EXECUTE", label: "run commands and tests" },
+  { verb: "DELETE", label: "delete" },
+  { verb: "DEPLOY", label: "deploy" },
+  { verb: "DATA_EXPORT", label: "export data" },
+  { verb: "NETWORK_SEND", label: "send data out" },
+];
+
+export const STANDING_DENY_PRESETS: { id: string; label: string; actions?: ActionVerb[]; environments?: Environment[] }[] = [
+  { id: "prod", label: "anything in production", environments: ["production"] },
+  { id: "writes", label: "writes or deletes", actions: ["WRITE", "DELETE"] },
+  { id: "export", label: "bulk export", actions: ["DATA_EXPORT"] },
+  { id: "deploy", label: "deploys", actions: ["DEPLOY"] },
+  { id: "send", label: "sending data out", actions: ["NETWORK_SEND"] },
+];
+
+/** Why a grant can't be made, or null when it can. The Core Brain reads exactly one
+ *  permission per agent + system, so a second one on the same pair is refused rather
+ *  than silently ignored. */
+export function standingGrantError(g: StandingGrant, standing: StandingPermission[] = state.standing): string | null {
+  if (!AGENTS.some((a) => a.id === g.agent && !a.discovered)) return "Pick a registered agent.";
+  if (!resourceById(g.resource)) return "Pick a system.";
+  if (g.actions.length === 0) return "Pick at least one thing the agent may do.";
+  if (g.actions.some((v) => !STANDING_VERBS.some((x) => x.verb === v))) return "That action can't be standing authority.";
+  if (g.environments.length === 0) return "Pick at least one environment.";
+  if (!Number.isFinite(g.days) || g.days < 1 || g.days > 30) return "Expiry must be between 1 and 30 days.";
+  if (g.maxRows !== undefined && (!Number.isFinite(g.maxRows) || g.maxRows < 1)) return "The row limit must be at least 1.";
+  const clash = standing.find((p) => p.agent === g.agent && p.resource === g.resource);
+  if (clash) {
+    const live = clash.status === "active" && clash.expiresAt > Date.now();
+    return `${agentById(g.agent)?.name} already has a permission on ${resourceById(g.resource)?.name} (${live ? "active" : "revoked or expired"}). ${live ? "Revoke it first" : "Grant it again from Revoked & expired"}, or pick another system.`;
+  }
+  // A "may not" that removes everything granted would be a permission that allows nothing.
+  const denies = STANDING_DENY_PRESETS.filter((d) => g.denyIds.includes(d.id));
+  const usable = g.actions.some((v) => g.environments.some((env) =>
+    !denies.some((d) => (!d.actions || d.actions.includes(v)) && (!d.environments || d.environments.includes(env)))));
+  if (!usable) return "The 'may not' list cancels everything you allowed. Remove one of them.";
+  return null;
+}
+
+/** The permission a grant would create — also used to preview it before granting. */
+export function standingFromGrant(g: StandingGrant, id = "sp-draft", now = Date.now()): StandingPermission {
+  const res = resourceById(g.resource);
+  const denies = STANDING_DENY_PRESETS.filter((d) => g.denyIds.includes(d.id));
+  return {
+    id,
+    agent: g.agent,
+    resource: g.resource,
+    scope: `${res?.name ?? g.resource}${g.actions.length === 1 && g.actions[0] === "READ" ? " (read-only)" : ""}`,
+    actions: g.actions,
+    environments: g.environments,
+    ...(g.maxRows !== undefined ? { maxRows: g.maxRows } : {}),
+    denies: denies.map((d) => ({ label: d.label, ...(d.actions ? { actions: d.actions } : {}), ...(d.environments ? { environments: d.environments } : {}) })),
+    allowed: [
+      ...STANDING_VERBS.filter((x) => g.actions.includes(x.verb)).map((x) => x.label),
+      `only in ${g.environments.join(", ")}`,
+    ],
+    forbidden: denies.map((d) => d.label),
+    expiresAt: now + g.days * 24 * 3600 * 1000,
+    maxFilesPerTask: g.maxFilesPerTask ?? 0,
+    grantedBy: g.grantedBy,
+    status: "active",
+  };
+}
+
+/** A person grants an agent everyday authority on one system. Returns the new
+ *  permission, or an error string and no change. */
+export function grantStanding(g: StandingGrant): StandingPermission | string {
+  const err = standingGrantError(g);
+  if (err) return err;
+  const n = state.standing.reduce((m, p) => Math.max(m, Number(p.id.replace(/\D/g, "")) || 0), 0) + 1;
+  const perm = standingFromGrant(g, `sp-${String(n).padStart(3, "0")}`);
+  set({ standing: [...state.standing, perm] });
+  return perm;
 }
 
 export function revokeStanding(id: string) {
