@@ -7,6 +7,10 @@ import { PageHead, SectionHead, Chip, StatusChip, SimNote, DecisionChip, MetricB
 import { describe } from "../ui/describe";
 import type { DecidedBy } from "../model/types";
 import { DETECTORS, CAPABILITIES, TRANSFORMS } from "../model/registries";
+import { detectorUsage } from "../engine/usage";
+import { userById } from "../model/org";
+import { DESKTOP_SHELL } from "../ui/shell";
+import { useMemo } from "react";
 import { ScanSearch, Shuffle, ShieldCheck, Cpu, Laptop, Network, Server, ArrowRight, ArrowDown, Undo2, Lock, Globe, Cloud } from "lucide-react";
 
 function Block({ title, items, tone }: { title: string; items: string[]; tone?: string }) {
@@ -68,7 +72,13 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
   const planeCount = new Set(CAPABILITIES.filter((c) => c.plane !== "BRAIN").map((c) => c.plane)).size;
   const capabilityGaps = CAPABILITIES.filter((c) => c.status !== "ENFORCED");
 
-  const detF = useCardFilters(DETECTORS, {
+  // Real use of each detector, counted from recorded findings; the busiest come first.
+  const detUse = useMemo(() => detectorUsage(s.events), [s.events]);
+  const detectorList = useMemo(
+    () => (DESKTOP_SHELL ? [...DETECTORS].sort((a, b) => (detUse.get(b.id)?.actions ?? 0) - (detUse.get(a.id)?.actions ?? 0)) : DETECTORS),
+    [detUse],
+  );
+  const detF = useCardFilters(detectorList, {
     search: (d) => `${d.id} ${d.method} ${d.detects.join(" ")}`,
     filters: [
       { id: "status", label: "Status", get: (d) => d.status, format: titleCase },
@@ -269,7 +279,33 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
                         eyebrow={d.method}
                         title={<span className="mono">{d.id} <span className="faint">v{d.version}</span></span>}
                         status={<StatusChip s={d.status} />}
-                        fields={[{ label: "Detects", value: <div className="row" style={{ gap: 4, flexWrap: "wrap" }}>{d.detects.map((x) => <Chip key={x} tone="violet">{x}</Chip>)}</div> }]}
+                        onClick={DESKTOP_SHELL && detUse.get(d.id) ? () => nav("live") : undefined}
+                        fields={[
+                          { label: "Detects", value: <div className="row" style={{ gap: 4, flexWrap: "wrap" }}>{d.detects.map((x) => <Chip key={x} tone="violet">{x}</Chip>)}</div> },
+                          ...(DESKTOP_SHELL ? (() => {
+                            const u = detUse.get(d.id);
+                            if (!u) return [{ label: "Found", value: <span className="dim">Nothing yet in this workspace</span> }];
+                            return [
+                              { label: "Found", value: <span><b>{u.items.toLocaleString("en-US")}</b> item{u.items === 1 ? "" : "s"} in <b>{u.actions}</b> action{u.actions === 1 ? "" : "s"}</span> },
+                              { label: "Whose actions", value: (
+                                <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                  {u.users.slice(0, 3).map((x) => (
+                                    <span key={x.id} className="row" style={{ gap: 6, flexWrap: "nowrap" }}><Avatar userId={x.id} size={16} />{userById(x.id)?.name ?? x.id}<span className="faint">× {x.actions}</span></span>
+                                  ))}
+                                  {u.users.length > 3 && <span className="faint">+ {u.users.length - 3} more</span>}
+                                </span>
+                              ) },
+                              { label: "What happened", value: (
+                                <span className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+                                  {(["BLOCK", "REVIEW", "CONSTRAIN", "ALLOW"] as const).filter((k) => u.byDecision[k]).map((k) => (
+                                    <span key={k} className="row" style={{ gap: 4, flexWrap: "nowrap" }}><DecisionChip d={k} small /><span className="faint">× {u.byDecision[k]}</span></span>
+                                  ))}
+                                </span>
+                              ) },
+                              { label: "Latest", value: u.latest ? <span>{describe(u.latest)} <span className="faint">· {timeAgo(u.latest.timestamp)}</span></span> : null },
+                            ];
+                          })() : []),
+                        ]}
                       />
                     ))}
                   </CardGrid>
