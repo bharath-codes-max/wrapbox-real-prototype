@@ -18,7 +18,7 @@ const SAMPLES: { label: string; text: string }[] = [
   { label: "Card and SSN", text: "Refund to card 4111 1111 1111 1111, customer SSN 123-45-6789." },
   { label: "Our customer IDs", text: '{"customers":[{"id":"VRD-CUST-0921","account":"ACCT-99128842"},{"id":"VRD-CUST-9999"}]}' },
   { label: "Code snippet", text: "export async function submitOrder(cart: Cart) {\n  const total = cart.items.reduce((s, i) => s + i.price, 0);\n  return api.post('/orders', { items: cart.items, total });\n}" },
-  { label: "Placeholders (finds nothing)", text: `STRIPE_KEY=${SK}51Hxxxxxxxxxxxxxxxxxxxxxxxx\nDB_PASSWORD=changeme\nAPI_KEY=${API_KEY}\nAWS=AKIAIOSFODNN7EXAMPLE` },
+  { label: "Placeholders (finds nothing)", text: `STRIPE_KEY=${SK}51Hxxxxxxxxxxxxxxxxxxxxxxxx\nDB_PASSWORD=changeme\nAPI_KEY=\${API_KEY}\nAWS=AKIAIOSFODNN7EXAMPLE` },
 ];
 
 export function ScannerLab({ nav }: { nav: (r: string) => void }) {
