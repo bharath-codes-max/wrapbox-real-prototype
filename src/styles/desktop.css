@@ -1206,3 +1206,37 @@
 :root[data-ds] .chk-foot .btn { max-width: 100%; height: auto; min-height: 28px; padding-top: 4px; padding-bottom: 4px; white-space: normal; text-align: left; }
 :root[data-ds] .chk-foot .btn svg { flex-shrink: 0; }
 :root[data-ds] .chk-setup { flex: 1 1 100%; font-size: 12px; line-height: 1.45; color: var(--fg-3); }
+
+/* ── Core Brain → Data it can find → Try it ──────────────────────────────── */
+:root[data-ds] .sl { margin-bottom: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+:root[data-ds] .sl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+:root[data-ds] .sl-title { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; }
+:root[data-ds] .sl-note { font-size: 11.5px; color: var(--fg-4); text-align: right; }
+:root[data-ds] .sl-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); }
+:root[data-ds] .sl-in { padding: 14px 16px 16px; border-right: 1px solid var(--line); min-width: 0; }
+:root[data-ds] .sl-out { padding: 14px 16px 16px; min-width: 0; }
+:root[data-ds] .sl-samples { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+:root[data-ds] .sl-sample { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--fg-3); font: inherit; font-size: 11.5px; cursor: pointer; }
+:root[data-ds] .sl-sample:hover { color: var(--fg); border-color: var(--ds-border-hover); }
+:root[data-ds] .sl-sample.on { background: var(--ds-selected); color: var(--fg); border-color: var(--line-strong); }
+:root[data-ds] .sl-text { width: 100%; font: 400 12.5px/1.55 var(--mono); resize: vertical; }
+:root[data-ds] .sl-dest { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12.5px; color: var(--fg-3); }
+:root[data-ds] .sl-dest .input { flex: 1; min-width: 0; }
+:root[data-ds] .sl-fake { margin-top: 8px; font-size: 11px; color: var(--fg-4); }
+:root[data-ds] .sl-label { margin-bottom: 7px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg-4); }
+:root[data-ds] .sl-label b { color: var(--fg); font-variant-numeric: tabular-nums; }
+:root[data-ds] .sl-none { font-size: 12.5px; color: var(--fg-3); }
+:root[data-ds] .sl-hit { padding: 9px 11px; margin-bottom: 6px; border-radius: 9px; background: var(--ds-hover); box-shadow: inset 0 0 0 1px var(--line); }
+:root[data-ds] .sl-hit-top { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+:root[data-ds] .sl-hit-by { color: var(--fg-3); font-size: 11.5px; }
+:root[data-ds] .sl-hit-conf { margin-left: auto; font: 500 10.5px var(--mono); color: var(--fg-4); white-space: nowrap; }
+:root[data-ds] .sl-hit-val { display: block; margin: 5px 0 3px; font: 500 12px var(--mono); overflow-wrap: anywhere; }
+:root[data-ds] .sl-hit-why { font-size: 11.5px; line-height: 1.45; color: var(--fg-3); }
+:root[data-ds] .sl-ignored { opacity: 0.8; box-shadow: inset 0 0 0 1px var(--line); background: transparent; }
+:root[data-ds] .sl-decision { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+:root[data-ds] .sl-decision-top { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; }
+:root[data-ds] .sl-reasons { margin: 8px 0 0; padding-left: 18px; font-size: 12px; line-height: 1.5; color: var(--fg-3); }
+:root[data-ds] .sl-sim { margin-top: 8px; font-size: 11px; color: var(--fg-4); }
+:root[data-ds] .sl-untested { margin-top: 14px; font-size: 11.5px; line-height: 1.5; color: var(--fg-4); }
+:root[data-ds] .sl-untested b { color: var(--fg-3); font-weight: 600; }
+@media (max-width: 980px) { :root[data-ds] .sl-body { grid-template-columns: 1fr; } :root[data-ds] .sl-in { border-right: 0; border-bottom: 1px solid var(--line); } }

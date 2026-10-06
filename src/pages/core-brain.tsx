@@ -6,8 +6,10 @@ import { useAppState } from "../state/store";
 import { PageHead, SectionHead, Chip, StatusChip, SimNote, DecisionChip, MetricBar, Avatar, AgentMark, DestMark, PageTabs, timeAgo, EntityCard, CardGrid, useCardFilters, FilterBar, usePaged, Pager } from "../ui/kit";
 import { describe } from "../ui/describe";
 import type { DecidedBy } from "../model/types";
-import { DETECTORS, CAPABILITIES, TRANSFORMS, PLACES, PLACE_LABEL, placeOf } from "../model/registries";
+import { DETECTORS, CAPABILITIES, TRANSFORMS, PLACES, PLACE_LABEL, placeOf, dataTypeById } from "../model/registries";
 import { detectorUsage } from "../engine/usage";
+import { SCANNER_INFO, rulesUsing } from "../engine/detect";
+import { ScannerLab } from "./scanner-lab";
 import { DecisionInputs } from "./decision-inputs";
 import { BrainChecks } from "./brain-checks";
 import { userById } from "../model/org";
@@ -286,7 +288,8 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
         )) },
         { id: "detectors", label: "Detectors", count: DETECTORS.length, content: (
           <div>
-            <SectionHead title={DESKTOP_SHELL ? "Data it can find" : "Detector Registry"} sub={DESKTOP_SHELL ? "The scanners that find private data inside what an agent sends, and what each one has found" : "Pluggable analyzers that classify content into typed data findings"} right={<span className="row" style={{ gap: 6 }}><ScanSearch size={13} /><span className="small dim">{DETECTORS.length} registered</span></span>} />
+            <SectionHead title={DESKTOP_SHELL ? "Data it can find" : "Detector Registry"} sub={DESKTOP_SHELL ? "Scanners that look inside what an agent sends. Try them on your own text below. The cards show what each found in your runs, and which of your rules use it." : "Pluggable analyzers that classify content into typed data findings"} right={<span className="row" style={{ gap: 6 }}><ScanSearch size={13} /><span className="small dim">{DETECTORS.length} registered</span></span>} />
+            {DESKTOP_SHELL && <ScannerLab nav={nav} />}
             {DETECTORS.length === 0 ? (
               <div className="card empty">No detectors registered.</div>
             ) : (
@@ -300,17 +303,27 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
                       <EntityCard
                         key={d.id}
                         icon={<ScanSearch size={16} />}
-                        eyebrow={d.method}
-                        title={<span className="mono">{d.id} <span className="faint">v{d.version}</span></span>}
-                        status={<StatusChip s={d.status} />}
+                        eyebrow={DESKTOP_SHELL ? (SCANNER_INFO[d.id].testable ? "Real scanner" : "Simulated scanner") : d.method}
+                        title={DESKTOP_SHELL ? SCANNER_INFO[d.id].title : <span className="mono">{d.id} <span className="faint">v{d.version}</span></span>}
+                        status={DESKTOP_SHELL ? <Chip tone={d.status === "ENFORCED" ? "allow" : "review"}>{d.status === "ENFORCED" ? "On" : "Degraded"}</Chip> : <StatusChip s={d.status} />}
                         onClick={DESKTOP_SHELL && detUse.get(d.id) ? () => nav("live") : undefined}
-                        fields={[
-                          { label: "Detects", value: <div className="row" style={{ gap: 4, flexWrap: "wrap" }}>{d.detects.map((x) => <Chip key={x} tone="violet">{x}</Chip>)}</div> },
-                          ...(DESKTOP_SHELL ? (() => {
-                            const u = detUse.get(d.id);
-                            if (!u) return [{ label: "Found", value: <span className="dim">Nothing yet in this workspace</span> }];
-                            return [
-                              { label: "Found", value: <span><b>{u.items.toLocaleString("en-US")}</b> item{u.items === 1 ? "" : "s"} in <b>{u.actions}</b> action{u.actions === 1 ? "" : "s"}</span> },
+                        fields={DESKTOP_SHELL ? (() => {
+                          const info = SCANNER_INFO[d.id];
+                          const u = detUse.get(d.id);
+                          const rules = rulesUsing(d.id, s.contracts);
+                          return [
+                            { label: "Finds", value: <span className="mono small">{info.finds}</span> },
+                            { label: "Data types", value: <div className="row" style={{ gap: 4, flexWrap: "wrap" }}>{d.detects.map((x) => <Chip key={x} tone="violet">{dataTypeById(x)?.label ?? x}</Chip>)}</div> },
+                            { label: "How, here", value: <span className="dim">{info.here}</span> },
+                            { label: "In production", value: <span className="dim">{info.production}</span> },
+                            { label: "Your rules", value: rules.length === 0
+                              ? <span className="dim">No active rule uses this data yet. <button className="link" onClick={(e) => { e.stopPropagation(); nav("intent"); }}>Write one</button></span>
+                              : <span style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                                  {rules.slice(0, 2).map((r, i) => <span key={i} className="row" style={{ gap: 6, flexWrap: "nowrap", alignItems: "flex-start" }}><DecisionChip d={r.effect} small /><span className="dim">{r.clause}</span></span>)}
+                                  {rules.length > 2 && <span className="faint">+ {rules.length - 2} more</span>}
+                                </span> },
+                            ...(!u ? [{ label: "Found in your runs", value: <span className="dim">Nothing yet</span> }] : [
+                              { label: "Found in your runs", value: <span><b>{u.items.toLocaleString("en-US")}</b> item{u.items === 1 ? "" : "s"} in <b>{u.actions}</b> action{u.actions === 1 ? "" : "s"}</span> },
                               { label: "Whose actions", value: (
                                 <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                                   {u.users.slice(0, 3).map((x) => (
@@ -319,16 +332,18 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
                                   {u.users.length > 3 && <span className="faint">+ {u.users.length - 3} more</span>}
                                 </span>
                               ) },
-                              { label: "What happened", value: (
+                              { label: "Those actions ended in", value: (
                                 <span className="row" style={{ gap: 6, flexWrap: "wrap" }}>
                                   {(["BLOCK", "REVIEW", "CONSTRAIN", "ALLOW"] as const).filter((k) => u.byDecision[k]).map((k) => (
                                     <span key={k} className="row" style={{ gap: 4, flexWrap: "nowrap" }}><DecisionChip d={k} small /><span className="faint">× {u.byDecision[k]}</span></span>
                                   ))}
                                 </span>
                               ) },
-                              { label: "Latest", value: u.latest ? <span>{describe(u.latest)} <span className="faint">· {timeAgo(u.latest.timestamp)}</span></span> : null },
-                            ];
-                          })() : []),
+                              { label: "Latest", value: u.latest ? <span>{describe(u.latest)} <span className="faint">· {timeAgo(u.latest.timestamp)} · decided by {(() => { const l = u.latest.decidedBy?.label.split(" — ")[0] ?? "no rule"; return l.length > 64 ? `${l.slice(0, 61)}…` : l; })()}</span></span> : null },
+                            ]),
+                          ];
+                        })() : [
+                          { label: "Detects", value: <div className="row" style={{ gap: 4, flexWrap: "wrap" }}>{d.detects.map((x) => <Chip key={x} tone="violet">{x}</Chip>)}</div> },
                         ]}
                       />
                     ))}
