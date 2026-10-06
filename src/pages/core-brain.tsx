@@ -72,7 +72,7 @@ const titleCase = (v: string) => v.charAt(0) + v.slice(1).toLowerCase().replace(
 /** Plain names and reading order for the live prototype: what Wrapbox sees, then how it
  *  checks, then the reference lists. The decks keep the original names and order. */
 const PLAIN_TABS: [string, string][] = [
-  ["inputs", "What it sees"], ["decides", "The checks"], ["detectors", "Data it can find"],
+  ["inputs", "What it sees"], ["decides", "The checks"],
   ["transforms", "How it hides data"], ["capabilities", "What works today"], ["architecture", "How it is built"],
 ];
 function plainTabs<T extends { id: string; label: string }>(tabs: T[]): T[] {
