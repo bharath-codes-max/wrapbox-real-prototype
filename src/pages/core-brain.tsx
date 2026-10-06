@@ -72,8 +72,7 @@ const titleCase = (v: string) => v.charAt(0) + v.slice(1).toLowerCase().replace(
 /** Plain names and reading order for the live prototype: what Wrapbox sees, then how it
  *  checks, then the reference lists. The decks keep the original names and order. */
 const PLAIN_TABS: [string, string][] = [
-  ["inputs", "What it sees"], ["decides", "The checks"],
-  ["transforms", "How it hides data"], ["capabilities", "What works today"], ["architecture", "How it is built"],
+  ["inputs", "What it sees"], ["decides", "The checks"], ["architecture", "How it is built"],
 ];
 function plainTabs<T extends { id: string; label: string }>(tabs: T[]): T[] {
   if (!DESKTOP_SHELL) return tabs;
@@ -84,7 +83,7 @@ const INPUTS = ["WHO", "DEVICE", "AGENT", "DELEGATION CHAIN", "ACTION", "MCP TOO
 
 export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
   const s = useAppState();
-  const decided = (l: string) => s.events.filter((e) => e.decidedBy?.layer === l).length;
+  const decided = (l: string) => s.events.filter((e) => (e.decidedBy?.layer ?? "default") === l).length;
   const byTime = [...s.events].sort((a, b) => b.timestamp - a.timestamp);
   const root = byTime.find((e) => /checkout/i.test(e.resource)) ?? byTime[0];
   const detectorsEnforced = DETECTORS.filter((d) => d.status === "ENFORCED").length;
@@ -135,7 +134,11 @@ export function CoreBrainPage({ nav }: { nav: (r: string) => void }) {
       <div className="card" style={{ padding: "10px 22px" }}>
         <MetricBar
           band
-          items={[
+          items={DESKTOP_SHELL ? [
+            { label: "Decisions made", value: s.events.length, note: "one brain decides all", tone: "info", onClick: () => nav("evidence") },
+            { label: "Checks", value: ORDER.length, note: `${ORDER.filter((o) => decided(o.layer) > 0).length} have decided a run` },
+            { label: "Places", value: PLACES.length, note: PLACES.map((p) => PLACE_LABEL[p]).join(" · ") },
+          ] : [
             { label: "Decisions made", value: s.events.length, note: `${planeCount} ${DESKTOP_SHELL ? "places" : "planes"} · one brain`, tone: "info", onClick: () => nav("evidence") },
             { label: "Detectors", value: DETECTORS.length, note: `${detectorsEnforced} enforced`, tone: "good" },
             { label: "Transforms", value: TRANSFORMS.length, note: `${transformsReversible} reversible` },
