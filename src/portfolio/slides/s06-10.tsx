@@ -1,4 +1,5 @@
 // Research (market, landscape) · Synthesize · Ideate
+import { DECK_V2 } from "../deck-kind";
 import { useEffect, useRef, useState } from "react";
 import { Reveal, Head, Sources, Brand, Bars, claimById, fmtDate, Chip } from "../ui";
 import { research } from "../data/research";
@@ -142,7 +143,7 @@ export function Synthesize() {
 
 /* ---------- ideate: insight → principle → feature ---------- */
 const MAP = [
-  { i: "The prompt is not the control", p: "Decide outside the model, at the moment of action", f: "Five enforcement planes + one decision engine" },
+  { i: "The prompt is not the control", p: "Decide outside the model, at the moment of action", f: DECK_V2 ? "Three places (device, network, gateway) + one decision engine" : "Five enforcement planes + one decision engine" },
   { i: "Binary governance fails", p: "Four graded decisions, not a switch", f: "ALLOW · CONSTRAIN · REVIEW · BLOCK, with in-flight transforms" },
   { i: "Approvals must be cheap and targeted", p: "Humans only where judgement adds value", f: "Review Center: blast radius, safer path, expiry — requester ≠ approver" },
   { i: "Security leaders think in sentences", p: "Intent in plain English, one normalized rule", f: "Intent Studio + one matcher for simulator, tasks and runtime (MCP tools too)" },

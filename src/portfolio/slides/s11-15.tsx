@@ -5,6 +5,7 @@ import { Display, Eyebrow, Reveal, Head, Pill, Chip, Brand, decisionTone } from 
 import { ArchFlow, DrafterDemo, LiveDecide, decideOnce } from "../live";
 import { SCENARIOS } from "../../engine/scenarios";
 import { DEMO_CONTRACTS } from "../../model/contracts";
+import { DECK_V2 } from "../deck-kind";
 
 // Counted from the test files at build time — never typed in.
 const TEST_SOURCES = import.meta.glob("../../../tests/*.test.ts", { eager: true, query: "?raw", import: "default" }) as Record<string, string>;
@@ -16,7 +17,7 @@ import { KERNEL_RULES } from "../../engine/kernel";
 export function Architecture({ active }: SlideProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Head eyebrow="Prototype · 08" title={<>One engine. <em>Five planes.</em></>} lead="Every action is held where it happens, described with its full identity chain, decided once and chained into evidence. The animation is the real engine deciding real scenarios." />
+      <Head eyebrow="Prototype · 08" title={DECK_V2 ? <>One engine. <em>Three places.</em></> : <>One engine. <em>Five planes.</em></>} lead="Every action is held where it happens, described with its full identity chain, decided once and chained into evidence. The animation is the real engine deciding real scenarios." />
       <Reveal i={3} style={{ flex: 1, minHeight: 0 }}><ArchFlow active={active} /></Reveal>
       <div style={{ height: 36 }} />
     </div>
@@ -45,22 +46,26 @@ export function DecisionLive({ active }: SlideProps) {
 
 /* ---------- test ---------- */
 const PLANE_LABEL: Record<string, string> = { ENDPOINT: "Endpoint", NETWORK: "Network", GATEWAY: "Gateway", BROWSER: "Browser", HOSTED: "Hosted" };
+// Deck v2 files a browser agent under Device and a hosted agent under Gateway, as the live prototype does.
+const PLACE_OF: Record<string, string> = { ENDPOINT: "DEVICE", BROWSER: "DEVICE", NETWORK: "NETWORK", GATEWAY: "GATEWAY", HOSTED: "GATEWAY" };
+const PLACE_LABEL: Record<string, string> = { DEVICE: "Device", NETWORK: "Network", GATEWAY: "Gateway" };
 export function Tested() {
   // Every scenario in the product, run through the real engine right now.
   const results = useMemo(() => { let h = "genesis"; return SCENARIOS.filter((s) => s.group !== "TASK").map((sc) => { const ev = decideOnce(sc, h); h = ev.evidence.hash; return { sc, ev }; }); }, []);
   const counts = { ALLOW: 0, CONSTRAIN: 0, REVIEW: 0, BLOCK: 0 } as Record<string, number>;
   results.forEach((r) => { counts[r.ev.decision] += 1; });
-  const planes = ["ENDPOINT", "NETWORK", "GATEWAY", "BROWSER", "HOSTED"];
+  const planes = DECK_V2 ? ["DEVICE", "NETWORK", "GATEWAY"] : ["ENDPOINT", "NETWORK", "GATEWAY", "BROWSER", "HOSTED"];
+  const rowOf = (plane: string) => (DECK_V2 ? PLACE_OF[plane] : plane);
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Head eyebrow="Test · 11" title={<>Tested, <em>not claimed.</em></>} lead={<>Every scenario below was just evaluated by the engine inside this deck — {results.length} scenarios across five planes, {counts.BLOCK} blocked, {counts.REVIEW} held for review, {counts.CONSTRAIN} transformed, {counts.ALLOW} allowed.</>} />
+      <Head eyebrow="Test · 11" title={<>Tested, <em>not claimed.</em></>} lead={<>Every scenario below was just evaluated by the engine inside this deck — {results.length} scenarios across {DECK_V2 ? "three places" : "five planes"}, {counts.BLOCK} blocked, {counts.REVIEW} held for review, {counts.CONSTRAIN} transformed, {counts.ALLOW} allowed.</>} />
       <div className="cols" style={{ gridTemplateColumns: "1fr 380px", gap: 40, flex: 1, minHeight: 0, alignItems: "start" }}>
         <div className="stack" style={{ gap: 10 }}>
           {planes.map((p, k) => (
             <Reveal key={p} i={2 + k} className="row" style={{ gap: 14, alignItems: "flex-start" }}>
-              <div className="label" style={{ width: 80, paddingTop: 8 }}>{PLANE_LABEL[p]}</div>
+              <div className="label" style={{ width: 80, paddingTop: 8 }}>{DECK_V2 ? PLACE_LABEL[p] : PLANE_LABEL[p]}</div>
               <div className="smx compact" style={{ flex: 1 }}>
-                {results.filter((r) => r.sc.plane === p).map(({ sc, ev }) => (
+                {results.filter((r) => rowOf(r.sc.plane) === p).map(({ sc, ev }) => (
                   <div key={sc.id} className={`cell ${decisionTone(ev.decision)}`} title={`${sc.narrative} → ${ev.decision} (decided by ${ev.decidedBy?.layer ?? "default"})`}>
                     <span className="t">{sc.title}</span><span className="d">{ev.decision}</span>
                   </div>

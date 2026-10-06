@@ -1,6 +1,7 @@
 // Live widgets — every one of these calls the product's real engine
 // (engine/brain.ts decide() via runScenario, engine/drafter.ts draftClauses,
 // engine/coverage.ts). Nothing here types a decision in.
+import { DECK_V2 } from "./deck-kind";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SCENARIOS, type Scenario } from "../engine/scenarios";
 import { runScenario, pipelineFor } from "../engine/simulate";
@@ -174,11 +175,18 @@ const EDGES: [NodeId, NodeId][] = [
   ["endpoint", "brain"], ["network", "brain"], ["gateway", "brain"], ["browser-hosted", "brain"],
   ["brain", "d-github"], ["brain", "d-db"], ["brain", "d-aws"], ["brain", "d-extai"], ["brain", "d-unknown"], ["brain", "d-evidence"],
 ];
+// Deck v2 draws the live prototype's three places: a browser agent is caught on the device,
+// a hosted agent at the gateway.
+const EDGES_V2: [NodeId, NodeId][] = [
+  ["a-claude-code", "endpoint"], ["a-claude-code", "gateway"], ["a-codex", "endpoint"], ["a-copilot", "network"], ["a-chatgpt", "network"], ["a-finance", "gateway"], ["a-unknown-mcp", "network"], ["a-browser-hosted", "endpoint"], ["a-browser-hosted", "gateway"],
+  ["endpoint", "brain"], ["network", "brain"], ["gateway", "brain"],
+  ...EDGES.slice(12),
+];
 const DEST_FOR: Record<string, string> = { "ep-read-env": "", "net-pii-approved": "d-extai", "gw-force-main": "d-github", "net-unknown-dest": "d-unknown", "gw-export-500k": "d-db", "gw-iam-admin": "d-aws", "ep-run-tests": "", "mcp-push-main": "d-github", "br-form-pii": "d-extai", "hosted-export": "d-db" };
 const FLOW_IDS = ["net-pii-approved", "gw-force-main", "net-unknown-dest", "ep-read-env", "mcp-push-main", "br-form-pii", "hosted-export", "ep-run-tests"];
 // Browser, hosted and supplier agents share one node on the diagram, as do their planes.
 const AGENT_NODE = (agent: string) => (["a-claude-chrome", "a-billing-hosted", "a-meridian-recon", "a-northwind-desk"].includes(agent) ? "a-browser-hosted" : agent);
-const PLANE_NODE = (plane: string) => (plane === "BROWSER" || plane === "HOSTED" ? "browser-hosted" : plane.toLowerCase());
+const PLANE_NODE = (plane: string) => (DECK_V2 ? (plane === "BROWSER" ? "endpoint" : plane === "HOSTED" ? "gateway" : plane.toLowerCase()) : plane === "BROWSER" || plane === "HOSTED" ? "browser-hosted" : plane.toLowerCase());
 
 export function ArchFlow({ active }: { active: boolean }) {
   const root = useRef<HTMLDivElement>(null);
@@ -193,7 +201,7 @@ export function ArchFlow({ active }: { active: boolean }) {
   useEffect(() => {
     const el = root.current; if (!el) return;
     const r = (id: string) => { const n = el.querySelector<HTMLElement>(`[data-n="${id}"]`); if (!n) return null; return { x: n.offsetLeft, y: n.offsetTop, w: n.offsetWidth, h: n.offsetHeight }; };
-    const draw = () => setPaths(EDGES.map(([a, b]) => { const A = r(a), B = r(b); if (!A || !B) return null; const x1 = A.x + A.w, y1 = A.y + A.h / 2, x2 = B.x, y2 = B.y + B.h / 2, mx = x1 + (x2 - x1) / 2; return { k: `${a}>${b}`, d: `M${x1},${y1} H${mx} V${y2} H${x2 - 2}` }; }).filter(Boolean) as { k: string; d: string }[]);
+    const draw = () => setPaths((DECK_V2 ? EDGES_V2 : EDGES).map(([a, b]) => { const A = r(a), B = r(b); if (!A || !B) return null; const x1 = A.x + A.w, y1 = A.y + A.h / 2, x2 = B.x, y2 = B.y + B.h / 2, mx = x1 + (x2 - x1) / 2; return { k: `${a}>${b}`, d: `M${x1},${y1} H${mx} V${y2} H${x2 - 2}` }; }).filter(Boolean) as { k: string; d: string }[]);
     draw(); const t = setTimeout(draw, 400); window.addEventListener("resize", draw);
     return () => { clearTimeout(t); window.removeEventListener("resize", draw); };
   }, []);
@@ -241,11 +249,22 @@ export function ArchFlow({ active }: { active: boolean }) {
         <N id="a-browser-hosted" title="Browser · hosted · supplier" sub="Claude in Chrome · AgentCore · partners" />
       </div>
       <div className="col">
-        <div className="col-title">Enforcement planes</div>
-        <N id="endpoint" title="Endpoint runtime" sub="file · process · secrets" cap="plane: ENDPOINT" />
-        <N id="network" title="Network Extension" sub="uploads · AI destinations" cap="plane: NETWORK" />
-        <N id="gateway" title="Gateways" sub="GitHub · SQL · AWS · SaaS · MCP" cap="plane: GATEWAY" />
-        <N id="browser-hosted" title="Browser + hosted" sub="managed extension · AgentCore gateway" cap="plane: BROWSER · HOSTED" />
+        {DECK_V2 ? (
+          <>
+            <div className="col-title">Three places</div>
+            <N id="endpoint" title="Device" sub="files · commands · secrets · browser agents" cap="place: DEVICE" />
+            <N id="network" title="Network" sub="uploads · AI destinations" cap="place: NETWORK" />
+            <N id="gateway" title="Gateway" sub="GitHub · SQL · AWS · SaaS · MCP · hosted agents" cap="place: GATEWAY" />
+          </>
+        ) : (
+          <>
+            <div className="col-title">Enforcement planes</div>
+            <N id="endpoint" title="Endpoint runtime" sub="file · process · secrets" cap="plane: ENDPOINT" />
+            <N id="network" title="Network Extension" sub="uploads · AI destinations" cap="plane: NETWORK" />
+            <N id="gateway" title="Gateways" sub="GitHub · SQL · AWS · SaaS · MCP" cap="plane: GATEWAY" />
+            <N id="browser-hosted" title="Browser + hosted" sub="managed extension · AgentCore gateway" cap="plane: BROWSER · HOSTED" />
+          </>
+        )}
       </div>
       <div data-n="brain" className={`brain ${lit.has("brain") ? "lit" : ""}`}>
         <div className="bstages">

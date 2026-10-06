@@ -15,7 +15,8 @@ import VOICE from "./voice.json";
 // Narration clips (generated at build time by docs/_voice.ts). Dev serves them from
 // /docs/voice; the published tour.html sits next to its voice/ folder.
 const VOICE_BASE = import.meta.env.DEV ? "/docs/voice/" : "voice/";
-const CLIPS = (VOICE as { cases: Record<string, { file: string; ms: number }[]> }).cases;
+export type Clips = Record<string, { file: string; ms: number }[]>;
+const CLIPS = (VOICE as { cases: Clips }).cases;
 
 export type Mode = "play" | "check" | "shot";
 export interface RunOptions {
@@ -25,6 +26,9 @@ export interface RunOptions {
   shot: number;         // shot: the step to freeze on
   shotAfter: boolean;   // shot: perform the step's action before freezing
   voice: boolean;       // play: narrate each step (AI voice)
+  /** Where this walkthrough's narration lives (deck v2 has its own); default: the original set. */
+  clips?: Clips;
+  voiceBase?: string;
 }
 export interface StepResult { i: number; title: string; found: boolean; waitFor?: boolean; error?: string }
 
@@ -64,13 +68,18 @@ function textOf(el: Element): string {
   return norm(bits.join(" "));
 }
 
+/** The live prototype's shell (tour-v2.html) names its sidebar links differently from the
+ *  original shell; walkthroughs are written once, against the original names. */
+const DESKTOP = typeof document !== "undefined" && document.documentElement.dataset.ds === "desktop";
+const shellSel = (sel: string) => (DESKTOP ? sel.replace(/\.rail-item\b/g, ".sidebar .nav-item") : sel);
+
 export function resolve(t: Target): HTMLElement | null {
   if (typeof t === "string") {
-    return ([...document.querySelectorAll<HTMLElement>(t)].find(visible)) ?? null;
+    return ([...document.querySelectorAll<HTMLElement>(shellSel(t))].find(visible)) ?? null;
   }
-  const scope: ParentNode | null = t.within ? ([...document.querySelectorAll(t.within)].find(visible) ?? null) : document;
+  const scope: ParentNode | null = t.within ? ([...document.querySelectorAll(shellSel(t.within))].find(visible) ?? null) : document;
   if (!scope) return null;
-  let els = [...scope.querySelectorAll<HTMLElement>(t.selector ?? DEFAULT_SEL)].filter(visible);
+  let els = [...scope.querySelectorAll<HTMLElement>(shellSel(t.selector ?? DEFAULT_SEL))].filter(visible);
   if (t.text) {
     const want = norm(t.text);
     els = els.filter((el) => (t.exact ? norm(el.textContent ?? "") === want || textOf(el) === want : textOf(el).includes(want)));
@@ -126,10 +135,10 @@ export class Runner {
   }
   /** Starts step i's narration; returns its length in ms (0 when there is none). */
   private narrate(i: number): number {
-    const clip = CLIPS[this.tc.id]?.[i];
+    const clip = (this.opt.clips ?? CLIPS)[this.tc.id]?.[i];
     this.audio?.pause();
     if (!clip || !clip.ms) return 0;
-    const a = new Audio(VOICE_BASE + clip.file);
+    const a = new Audio((this.opt.voiceBase ?? VOICE_BASE) + clip.file);
     a.muted = !this.opt.voice;
     this.audio = a;
     // The exact moment this line starts, so a video recorder can lay the clip

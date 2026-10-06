@@ -6,6 +6,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 BASE="${BASE:-http://localhost:5980}"
+PAGE="${TOUR_PAGE:-tour.html}"   # tour-v2.html = the live-prototype shell that deck v2 embeds
 BIN="$HOME/Library/Caches/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-mac-arm64/chrome-headless-shell"
 W=1280; H=800
 
@@ -22,7 +23,7 @@ shot() { # url out.png
   rm -rf "$p"
 }
 check() {
-  local out; out="$(run "$BASE/tour.html?case=$1&check=1" | sed -n 's/.*<pre id="tour-result"[^>]*>\(.*\)<\/pre>.*/\1/p' | head -1)"
+  local out; out="$(run "$BASE/$PAGE?case=$1&check=1" | sed -n 's/.*<pre id="tour-result"[^>]*>\(.*\)<\/pre>.*/\1/p' | head -1)"
   if [ -z "$out" ]; then echo "{\"case\":\"$1\",\"ok\":false,\"errors\":[\"no result — page crashed or case id unknown\"]}"; else
     python3 -c 'import html,sys; print(html.unescape(sys.argv[1]))' "$out"; fi
 }
@@ -36,8 +37,8 @@ case "${1:-}" in
     id="$2"; out="${3:-/tmp/tour-shots/$id}"; mkdir -p "$out"
     n="$(check "$id" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("steps",0))')"
     for ((i = 0; i < n; i++)); do
-      shot "$BASE/tour.html?case=$id&shot=$i" "$out/step-$(printf %02d $i)-a.png" &
-      shot "$BASE/tour.html?case=$id&shot=$i&after=1" "$out/step-$(printf %02d $i)-b.png" &
+      shot "$BASE/$PAGE?case=$id&shot=$i" "$out/step-$(printf %02d $i)-a.png" &
+      shot "$BASE/$PAGE?case=$id&shot=$i&after=1" "$out/step-$(printf %02d $i)-b.png" &
       wait
     done
     ls "$out" ;;

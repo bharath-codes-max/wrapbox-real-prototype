@@ -1,5 +1,5 @@
 // v2 use cases — each one plays inside the real Wrapbox product. The left frame
-// is the actual app (tour.html) running a walkthrough: a cursor, typing and
+// is the actual app (tour-v2.html: the live prototype itself) running a walkthrough: a cursor, typing and
 // clicks through the product's own screens, pausing on a spotlight with a
 // plain-language card. The right column follows along step by step.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -7,7 +7,7 @@ import { Pause, Play, RotateCcw, SkipBack, SkipForward, Check, Volume2, VolumeX 
 import type { SlideProps } from "./deck";
 import { Reveal, Display, Lead, SHOT } from "./ui";
 import { photoOf } from "../ui/logos";
-import { CASES } from "../tour/cases";
+import { CASES } from "../tour/v2/cases";
 import { BrowserChrome } from "./browser-chrome";
 import type { TourCase } from "../tour/types";
 
@@ -130,8 +130,8 @@ export function LiveCaseSlide({ tc, n, active }: { tc: TourCase; n: number } & S
   const voiceRef = useRef(voice);
   voiceRef.current = voice;
   const src = useMemo(() => SHOT
-    ? `tour.html?case=${tc.id}&shot=${poster}&after=1`
-    : `tour.html?case=${tc.id}&voice=${voiceRef.current ? 1 : 0}${run.from ? `&from=${run.from}` : ""}`,
+    ? `tour-v2.html?case=${tc.id}&shot=${poster}&after=1`
+    : `tour-v2.html?case=${tc.id}&voice=${voiceRef.current ? 1 : 0}${run.from ? `&from=${run.from}` : ""}`,
   [tc.id, poster, run]);
   const shownStep = SHOT ? poster : step;
   // Long tours: keep the current step visible in the (scrollable) list.

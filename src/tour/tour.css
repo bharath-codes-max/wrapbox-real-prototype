@@ -40,3 +40,20 @@ html[data-tour-still] *, html[data-tour-still] *::before, html[data-tour-still] 
 }
 /* The one element whose resting state is hidden until its entrance animation runs. */
 html[data-tour-still] .pipe-stage { opacity: 1 !important; transform: none !important; }
+
+/* Deck v2 runs the live prototype's shell (tour-v2.html sets data-ds="desktop"): the caption
+   card and spotlight take its design language — 8px corners, a hairline instead of a shadow,
+   Dovetail's blue, JetBrains Mono for the step label. The original shell is unaffected. */
+html[data-ds="desktop"] .tour-spot {
+  border-radius: 8px;
+  box-shadow: 0 0 0 2px #0044ff, 0 0 0 7px rgba(0, 68, 255, 0.2), 0 0 0 9999px rgba(10, 10, 10, 0.5);
+}
+html[data-ds="desktop"] .tour-dim { background: rgba(10, 10, 10, 0.5); }
+html[data-ds="desktop"] .tour-card {
+  padding: 22px 24px 24px; border-radius: 8px; background: #ffffff; color: #0a0a0a;
+  border: 1px solid #0a0a0a; box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.16);
+}
+html[data-ds="desktop"] .tour-card-step { font: 400 13px/1 "JetBrains Mono", ui-monospace, monospace; letter-spacing: 0.07em; color: #0044ff; }
+html[data-ds="desktop"] .tour-card-title { font-weight: 500; letter-spacing: -0.02em; }
+html[data-ds="desktop"] .tour-card-body { color: #525252; }
+html[data-ds="desktop"] .tour-ripple { border-color: #0044ff; }

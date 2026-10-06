@@ -7,7 +7,8 @@ import { resolve } from "node:path";
 // logo is inlined so each page opens from disk and publishes as one file.
 //   ENTRY=portfolio     → the deck, v1 (default; `npm run build:portfolio`)
 //   ENTRY=portfolio-v2  → the deck, v2 (use cases played live in the product)
-//   ENTRY=tour          → the real app + walkthrough player the v2 deck embeds
+//   ENTRY=tour          → the real app + walkthrough player (original shell; v3, demo, video)
+//   ENTRY=tour-v2       → the same player in the live prototype's shell, which deck v2 embeds
 const entry = process.env.ENTRY ?? "portfolio";
 export default defineConfig({
   plugins: [react(), viteSingleFile()],

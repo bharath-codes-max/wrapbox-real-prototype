@@ -443,7 +443,7 @@ export const SCENARIOS: Scenario[] = [
     group: "BROWSER_HOSTED",
     title: "Browser agent pastes customer contacts into an unapproved AI",
     narrative: "Claude in Chrome, working for Jordan, fills a form on FreeAIChat with three customers' names, emails and phone numbers.",
-    expected: "CONSTRAIN — emails and phones tokenized, same rule as the network plane",
+    expected: "CONSTRAIN — emails and phones tokenized, same rule as the network",
     plane: "BROWSER", action: "NETWORK_SEND", actionRaw: "fill + submit form on freeaichat.example",
     agent: "a-claude-chrome", user: "u-jordan", application: "Chrome (managed)",
     resource: "customer-contacts", environment: "local",

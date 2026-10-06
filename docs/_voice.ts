@@ -1,6 +1,7 @@
 // Narration for the live walkthroughs — generated at BUILD time, on this machine.
 //   npx tsx docs/_voice.ts            generate any missing clips, prune stale ones
 //   npx tsx docs/_voice.ts --dry      list what would be generated
+//   add --v2 for deck v2's own set (src/tour/v2/cases → docs/voice-v2)
 //
 // Uses OpenAI text-to-speech (POST https://api.openai.com/v1/audio/speech,
 // model gpt-4o-mini-tts, `instructions` for tone). The API key is read from the
@@ -17,9 +18,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import type { TourCase } from "../src/tour/types";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const CASES_DIR = join(ROOT, "src/tour/cases");
-const OUT = join(ROOT, "docs/voice");
-const MANIFEST = join(ROOT, "src/tour/voice.json");
+const V2 = process.argv.includes("--v2");
+const CASES_DIR = join(ROOT, V2 ? "src/tour/v2/cases" : "src/tour/cases");
+const OUT = join(ROOT, V2 ? "docs/voice-v2" : "docs/voice");
+const MANIFEST = join(ROOT, V2 ? "src/tour/v2/voice.json" : "src/tour/voice.json");
 const DRY = process.argv.includes("--dry");
 
 const MODEL = "gpt-4o-mini-tts";
