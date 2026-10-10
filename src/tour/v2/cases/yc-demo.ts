@@ -24,41 +24,15 @@ const c: TourCase = {
   setup: ["simulate:gw-force-main"],
   poster: 1,
   steps: [
-    // ─── 1 · HOOK + WHO IT IS FOR ─────────────────────────────────────────────────
-    {
-      target: ".metricband",
-      title: "The agentic security runtime.",
-      body: "Claude Code, Codex, ChatGPT, Microsoft Copilot, your own agents, every MCP tool — one brain decides what each of them is allowed to do, at the moment of action.",
-      say: "Wrapbox is the agentic security runtime. Claude Code, Codex, ChatGPT, Copilot, your own agents, every M-C-P tool — one brain decides what each of them is allowed to do, at the moment of action.",
-      hold: 1800,
-    },
-    {
-      target: ".ws-switch",
-      title: "Four personas, one product.",
-      body: "Priya, the admin, writes the rules. Daniel, a developer, runs the agents. Alex, an engineering manager, decides the risky calls. Sam, security, holds the final override.",
-      say: "Four people use it: Priya the admin, Daniel the developer, Alex engineering, Sam security.",
-      placement: "bottom",
-      pad: 6,
-      hold: 900,
-    },
-
-    // ─── 2 · WHAT WRAPBOX IS (and is NOT) ──────────────────────────────────────────
+    // ─── 1 · THREE PLACES — one engine, three arms ───────────────────────────────
     {
       route: "brain",
       target: { selector: ".tab", text: "How it is built" },
       action: "click",
-      title: "Not EDR. Not MDM. The agentic security runtime.",
-      body: "EDR watches the laptop. MDM configures the device. Wrapbox sits between every agent and every action — Anthropic, OpenAI, Google, Microsoft, MCP tools, your own — and decides whether the action is allowed to run.",
-      say: "Wrapbox is not E-D-R. Not M-D-M. It sits between every agent — Anthropic, Open-A-I, Google, Microsoft, M-C-P tools, your own — and every action, and decides whether that action runs.",
-      waitFor: { selector: ".section-title", text: "One brain, three arms" },
-      hold: 1200,
-    },
-    {
-      target: { selector: ".section-title", text: "One brain, three arms" },
       title: "One brain. Three places.",
-      body: "Device catches files, commands and browser agents. Network catches uploads and AI destinations. Gateway catches calls to GitHub, SQL, AWS, Stripe, MCP tools. One decision engine behind all three.",
+      body: "Device catches files, commands and browser agents. Network catches uploads and AI destinations. Gateway catches calls to GitHub, SQL, AWS, Stripe and MCP tools. One decision engine behind all three.",
       say: "One brain, three places. Device catches files and commands. Network catches what leaves. Gateway catches calls to Git-Hub, S-Q-L, A-W-S, M-C-P.",
-      pad: 10,
+      waitFor: { selector: ".section-title", text: "One brain, three arms" },
       hold: 1400,
     },
 

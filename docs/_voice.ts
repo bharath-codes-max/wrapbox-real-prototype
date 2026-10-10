@@ -112,7 +112,9 @@ async function main() {
   // Lengths from the files themselves; prune clips no step uses any more.
   const keep = new Set<string>();
   for (const [id, list] of Object.entries(manifest.cases)) list.forEach((x) => { keep.add(x.file); if (!x.ms) x.ms = durationMs(join(OUT, x.file)); void id; });
+  // yc-intro holds hand-authored opening clips that aren't in any case file — never prune it.
   if (existsSync(OUT)) for (const d of readdirSync(OUT)) {
+    if (d === "yc-intro") continue;
     const dir = join(OUT, d);
     for (const f of readdirSync(dir)) if (!keep.has(`${d}/${f}`)) rmSync(join(dir, f));
     if (!readdirSync(dir).length) rmSync(dir, { recursive: true });
