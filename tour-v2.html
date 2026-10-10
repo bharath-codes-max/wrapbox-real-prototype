@@ -25,7 +25,10 @@
           };
         }
         var local = mem(), session = mem();
-        local.setItem("wrapbox-theme", "light");
+        // Deck v2 default is still light, but the YC demo recording passes ?dark=1 to flip it.
+        var dark = /[?&]dark=1/.test(location.search);
+        local.setItem("wrapbox-theme", dark ? "dark" : "light");
+        if (dark) document.documentElement.dataset.theme = "dark";
         local.setItem("wrapbox-real-prototype-workspace", "demo");
         try {
           Object.defineProperty(window, "localStorage", { configurable: true, get: function () { return local; } });

@@ -5,3 +5,7 @@ dist
 # YouTube recording: build artifact + output (too large for git)
 docs/record.html
 docs/video/
+docs/video/.tmp/
+
+# Final MP4s are big and generated per build — keep them out of git.
+docs/video/*.mp4

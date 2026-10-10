@@ -9,6 +9,7 @@ import { resolve } from "node:path";
 //   ENTRY=portfolio-v2  → the deck, v2 (use cases played live in the product)
 //   ENTRY=tour          → the real app + walkthrough player (original shell; v3, demo, video)
 //   ENTRY=tour-v2       → the same player in the live prototype's shell, which deck v2 embeds
+//   ENTRY=record-yc    → the YC product-demo recording frame (loaded by docs/_record-yc.mjs)
 const entry = process.env.ENTRY ?? "portfolio";
 export default defineConfig({
   plugins: [react(), viteSingleFile()],
