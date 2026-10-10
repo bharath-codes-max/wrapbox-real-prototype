@@ -1,155 +1,181 @@
-/* Full-frame dark recording surface for the YC product demo (1920×1080).
-   The intro is a cinematic opener (code snippets drift in, hero reveals, four
-   personas slide in with parallax, positioning line lands), then crossfades
-   into the real product running under tour-v2. Pure CSS keyframes with fixed
-   delays so headless Chrome plays them deterministically. */
+/* Investor demo recording surface (1920×1080, dark) — polished screen-studio
+   language: the real product floats in a rounded card on a slow aurora
+   backdrop, an auto-zoom camera moves inside the card, act stamps punctuate
+   chapters, and the close counts real numbers up. Pure CSS keyframes with
+   fixed delays so headless Chrome plays them deterministically. */
 html, body, #rec { margin: 0; padding: 0; background: #000; color: #fff; font-family: "Inter", system-ui, -apple-system, sans-serif; }
 body { overflow: hidden; }
 .rvy { background: #000; }
-.rvy-view {
-  position: relative; overflow: hidden; background: #0a0a0a;
-  background-image:
-    radial-gradient(ellipse 70% 60% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.55) 100%),
-    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
-  background-size: auto, 48px 48px, 48px 48px;
-}
-.rvy iframe { position: absolute; top: 0; left: 0; width: 1600px; height: 900px; border: 0; transform-origin: 0 0; display: block; }
+.rvy-view { position: relative; overflow: hidden; background: #050507; }
 
-.rvy-prog { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: rgba(255, 255, 255, 0.06); transition: opacity 0.6s; z-index: 3; }
-.rvy-prog i { display: block; height: 100%; background: linear-gradient(90deg, #6798ff 0%, #a2bfff 100%); box-shadow: 0 0 12px rgba(103, 152, 255, 0.55); transition: width 0.5s cubic-bezier(0.22, 0.9, 0.3, 1); }
-.rvy-mark {
-  position: absolute; right: 32px; bottom: 24px; padding: 10px 16px; border-radius: 8px;
-  background: rgba(10, 10, 10, 0.72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08); transition: opacity 0.6s cubic-bezier(0.22, 0.9, 0.3, 1); z-index: 3;
-}
+/* ───────── Aurora backdrop ───────── */
+.rvy-aurora { position: absolute; inset: -20%; filter: blur(90px) saturate(1.15); opacity: 0.6; }
+.rvy-aurora i { position: absolute; border-radius: 50%; mix-blend-mode: screen; }
+.rvy-aurora i:nth-child(1) { width: 1100px; height: 900px; left: -220px; top: -260px; background: radial-gradient(closest-side, rgba(103, 152, 255, 0.5), transparent 70%); animation: rvy-aur1 26s ease-in-out infinite alternate; }
+.rvy-aurora i:nth-child(2) { width: 1000px; height: 860px; right: -260px; top: 100px; background: radial-gradient(closest-side, rgba(109, 102, 230, 0.42), transparent 70%); animation: rvy-aur2 31s ease-in-out infinite alternate; }
+.rvy-aurora i:nth-child(3) { width: 900px; height: 760px; left: 30%; bottom: -340px; background: radial-gradient(closest-side, rgba(236, 74, 34, 0.26), transparent 70%); animation: rvy-aur3 23s ease-in-out infinite alternate; }
+@keyframes rvy-aur1 { to { transform: translate(180px, 120px) scale(1.12); } }
+@keyframes rvy-aur2 { to { transform: translate(-160px, -90px) scale(0.94); } }
+@keyframes rvy-aur3 { to { transform: translate(-120px, -140px) scale(1.1); } }
 
 /* ───────── Opening scene ───────── */
-.rvy-intro {
-  position: absolute; inset: 0; z-index: 2; pointer-events: none;
-  background:
-    radial-gradient(60% 55% at 50% 38%, rgba(103, 152, 255, 0.14), transparent 70%),
-    radial-gradient(90% 90% at 50% 50%, #0a0a0a 55%, #000 100%);
-  transition: opacity 0.6s cubic-bezier(0.22, 0.9, 0.3, 1);
-}
+.rvy-intro { position: absolute; inset: 0; z-index: 2; pointer-events: none; transition: opacity 0.7s cubic-bezier(0.22, 0.9, 0.3, 1); }
 .rvy-intro-out { opacity: 0; }
 
-/* Code snippets: fly in from off-screen in a staggered burst, settle, drift gently with a slow parallax, then fade back as the hero takes over. */
-.rvy-codes { position: absolute; inset: 0; }
-.rvy-code {
-  position: absolute; width: 460px; border-radius: 10px;
-  background: #000000; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 20px 60px -20px rgba(0, 0, 0, 0.6);
-  opacity: 0; transform: translateY(60px) rotate(var(--rot, 0deg)) scale(0.9); filter: blur(10px);
-  animation: rvy-code-in 1s cubic-bezier(0.22, 0.9, 0.3, 1) forwards, rvy-code-drift 6s ease-in-out 2s infinite alternate, rvy-code-out 1.2s cubic-bezier(0.22, 0.9, 0.3, 1) 8500ms forwards;
+/* Beat 1 · the terminal (0–10.4 s, then fades for the personas) */
+.rvy-term {
+  position: absolute; left: 50%; top: 50%; width: 1240px; transform: translate(-50%, -50%);
+  border-radius: 18px; background: rgba(5, 5, 8, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 50px 140px -40px rgba(0, 0, 0, 0.9);
+  /* Own keyframes: generic rvy-in/out end at transform:none, which would drop
+     the centering translate and shove the card into the bottom-right quadrant. */
+  opacity: 0; animation: rvy-term-in 0.8s cubic-bezier(0.22, 0.9, 0.3, 1) 300ms forwards, rvy-term-out 0.8s cubic-bezier(0.22, 0.9, 0.3, 1) 9800ms forwards;
 }
-.rvy-code-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font: 400 11px "JetBrains Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; color: #7c7c7c; }
-.rvy-code-bar i { width: 8px; height: 8px; border-radius: 50%; background: #313131; }
-.rvy-code-bar span { margin-left: auto; }
-.rvy-code-body { padding: 18px 18px 20px; font: 500 18px/1.4 "JetBrains Mono", monospace; color: #e6e6e6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rvy-code-block     { box-shadow: inset 0 0 0 1px rgba(235, 87, 87, 0.5),  0 20px 60px -20px rgba(235, 87, 87, 0.3); }
-.rvy-code-block .rvy-code-body     { color: #f3a3a3; }
-.rvy-code-review    { box-shadow: inset 0 0 0 1px rgba(216, 165, 77, 0.55), 0 20px 60px -20px rgba(216, 165, 77, 0.28); }
-.rvy-code-review .rvy-code-body    { color: #f3cf8e; }
-.rvy-code-constrain { box-shadow: inset 0 0 0 1px rgba(103, 152, 255, 0.5),  0 20px 60px -20px rgba(103, 152, 255, 0.3); }
-.rvy-code-constrain .rvy-code-body { color: #a9c4ff; }
-.rvy-code-allow     { box-shadow: inset 0 0 0 1px rgba(63, 185, 80, 0.4),   0 20px 60px -20px rgba(63, 185, 80, 0.26); }
-.rvy-code-allow .rvy-code-body     { color: #a0dfab; }
-@keyframes rvy-code-in {
-  0%   { opacity: 0; transform: translateY(60px) rotate(var(--rot, 0deg)) scale(0.9); filter: blur(10px); }
-  60%  { opacity: 1; }
-  100% { opacity: 1; transform: translateY(0) rotate(var(--rot, 0deg)) scale(1);     filter: blur(0); }
+@keyframes rvy-term-in  { from { opacity: 0; transform: translate(-50%, -44%) scale(0.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes rvy-term-out { to { opacity: 0; transform: translate(-50%, -56%) scale(0.97); } }
+.rvy-term-bar { display: flex; align-items: center; gap: 9px; padding: 15px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.09); font: 500 13px "JetBrains Mono", monospace; letter-spacing: 0.16em; text-transform: uppercase; color: #7c7c7c; }
+.rvy-term-bar i { width: 11px; height: 11px; border-radius: 50%; background: #313131; }
+.rvy-term-bar span { margin-left: auto; }
+.rvy-term-body { padding: 26px 30px 30px; display: flex; flex-direction: column; gap: 20px; }
+.rvy-term-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  font: 500 23px/1.4 "JetBrains Mono", monospace; color: #e6e6e6;
+  opacity: 0; transform: translateY(10px); animation: rvy-in 0.5s cubic-bezier(0.22, 0.9, 0.3, 1) forwards;
 }
-@keyframes rvy-code-drift {
-  0%   { transform: translateY(0)   rotate(var(--rot, 0deg)); }
-  100% { transform: translateY(-10px) rotate(calc(var(--rot, 0deg) + 0.5deg)); }
+.rvy-term-cmd { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rvy-term-tail .rvy-term-cmd { color: #6798ff; font-size: 20px; }
+.rvy-verdict {
+  flex: none; padding: 9px 16px; border-radius: 8px; font: 700 18px/1 "JetBrains Mono", monospace; letter-spacing: 0.14em;
+  background: #0a0a0a; opacity: 0; transform: scale(2.2) rotate(-5deg);
+  animation: rvy-stamp 0.32s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
 }
-@keyframes rvy-code-out {
-  0%   { opacity: 1; filter: blur(0); }
-  100% { opacity: 0; filter: blur(14px); transform: translateY(-40px) rotate(var(--rot, 0deg)) scale(0.95); }
-}
+.rvy-verdict-block     { color: #f3a3a3; box-shadow: inset 0 0 0 2px rgba(235, 87, 87, 0.85), 0 10px 30px -10px rgba(235, 87, 87, 0.6); }
+.rvy-verdict-review    { color: #f3cf8e; box-shadow: inset 0 0 0 2px rgba(216, 165, 77, 0.85), 0 10px 30px -10px rgba(216, 165, 77, 0.5); }
+.rvy-verdict-constrain { color: #a9c4ff; box-shadow: inset 0 0 0 2px rgba(103, 152, 255, 0.85), 0 10px 30px -10px rgba(103, 152, 255, 0.55); }
+@keyframes rvy-stamp { to { opacity: 1; transform: scale(1) rotate(-2deg); } }
 
-/* Hero: eyebrow, logo, headline, subhead. Starts hidden, cascades in from t=3s. */
-.rvy-hero {
-  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 16px; padding: 0 80px; text-align: center;
+/* Beat 2 · personas (10.4–21.4 s) */
+.rvy-personas { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 44px; }
+.rvy-personas-head {
+  font: 500 52px/1.1 "Inter"; letter-spacing: -0.025em; color: #fff;
+  opacity: 0; animation: rvy-in 0.8s cubic-bezier(0.22, 0.9, 0.3, 1) 10400ms forwards, rvy-out 0.7s cubic-bezier(0.22, 0.9, 0.3, 1) 20600ms forwards;
 }
-.rvy-hero > * { opacity: 0; transform: translateY(16px); animation-fill-mode: forwards; animation-timing-function: cubic-bezier(0.22, 0.9, 0.3, 1); animation-duration: 0.9s; }
-.rvy-hero > *:nth-child(1) { animation-name: rvy-hero-in; animation-delay: 2600ms; }
-.rvy-hero > *:nth-child(2) { animation-name: rvy-hero-in; animation-delay: 2900ms; }
-.rvy-hero > *:nth-child(3) { animation-name: rvy-hero-in; animation-delay: 3200ms; }
-.rvy-hero > *:nth-child(4) { animation-name: rvy-hero-in; animation-delay: 3500ms; }
-@keyframes rvy-hero-in { to { opacity: 1; transform: none; } }
-
-.rvy-eyebrow {
-  padding: 10px 20px; border-radius: 999px;
-  font: 500 15px/1 "JetBrains Mono", monospace; letter-spacing: 0.22em; text-transform: uppercase;
-  color: #6798ff; background: rgba(103, 152, 255, 0.12); box-shadow: inset 0 0 0 1px rgba(103, 152, 255, 0.4);
-}
-.rvy-logo { width: 132px; height: 132px; display: grid; place-items: center; }
-.rvy-headline { margin: 0; font: 500 80px/1.08 "Inter"; letter-spacing: -0.03em; color: #ffffff; max-width: 1600px; }
-.rvy-sub { margin: 0; font: 400 26px/1.42 "Inter"; letter-spacing: -0.01em; color: #c7c7c7; max-width: 1120px; }
-
-/* Personas: hidden until ~11s, then four cards slide up with parallax. */
-.rvy-personas-row {
-  position: absolute; left: 0; right: 0; bottom: 180px;
-  display: flex; justify-content: center; gap: 24px; padding: 0 80px;
-  opacity: 0; animation: rvy-hero-in 0.9s cubic-bezier(0.22, 0.9, 0.3, 1) 9400ms forwards;
-}
+.rvy-personas-row { display: flex; gap: 26px; opacity: 1; }
 .rvy-persona {
-  width: 300px; padding: 24px 24px 22px; border-radius: 16px;
-  background: rgba(20, 20, 20, 0.72); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  width: 296px; padding: 26px 26px 24px; border-radius: 18px;
+  background: rgba(16, 16, 20, 0.78); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09), 0 30px 80px -30px rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
-  opacity: 0; transform: translateY(28px); animation: rvy-persona-in 1s cubic-bezier(0.22, 0.9, 0.3, 1) forwards;
+  opacity: 0; transform: translateY(30px);
+  animation: rvy-in 0.9s cubic-bezier(0.22, 0.9, 0.3, 1) forwards, rvy-out 0.7s cubic-bezier(0.22, 0.9, 0.3, 1) forwards;
+  /* Per-animation delays — an inline animation-delay would override both. */
+  animation-delay: var(--d, 10700ms), 20600ms;
 }
-.rvy-face { width: 56px; height: 56px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1); object-fit: cover; }
+.rvy-face { width: 58px; height: 58px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12); object-fit: cover; }
 .rvy-face-mono { display: grid; place-items: center; background: #313131; color: #fff; font: 600 20px "Inter"; }
-.rvy-persona-name { font: 600 20px/1.1 "Inter"; letter-spacing: -0.01em; color: #ffffff; }
+.rvy-persona-name { font: 600 21px/1.1 "Inter"; letter-spacing: -0.01em; color: #fff; }
 .rvy-persona-role { font: 400 12px/1 "JetBrains Mono", monospace; letter-spacing: 0.14em; text-transform: uppercase; color: #6798ff; }
 .rvy-persona-job  { font: 400 15px/1.4 "Inter"; color: #a7a7a7; }
-@keyframes rvy-persona-in { to { opacity: 1; transform: none; } }
 
-/* Positioning line that lands late in the intro, as the third narration speaks. */
-.rvy-category {
-  position: absolute; left: 0; right: 0; top: 86px; display: flex; justify-content: center; gap: 18px;
-  opacity: 0; animation: rvy-hero-in 0.9s cubic-bezier(0.22, 0.9, 0.3, 1) 19200ms forwards;
+/* Beat 3 · title (21.4–30 s) */
+.rvy-title {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; text-align: center;
 }
-.rvy-cat-k, .rvy-cat-v {
-  padding: 10px 18px; border-radius: 999px;
-  font: 500 15px/1 "JetBrains Mono", monospace; letter-spacing: 0.18em; text-transform: uppercase;
-}
-.rvy-cat-k { color: #a7a7a7; background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
-.rvy-cat-v { color: #ffffff; background: rgba(103, 152, 255, 0.18); box-shadow: inset 0 0 0 1px rgba(103, 152, 255, 0.5); }
+.rvy-title > * { opacity: 0; transform: translateY(16px); animation: rvy-in 0.9s cubic-bezier(0.22, 0.9, 0.3, 1) forwards; }
+.rvy-title > :nth-child(1) { animation-delay: 21300ms; }
+.rvy-title > :nth-child(2) { animation-delay: 21600ms; }
+.rvy-title > :nth-child(3) { animation-delay: 21950ms; }
+.rvy-title > :nth-child(4) { animation-delay: 22600ms; }
+.rvy-logo { display: grid; place-items: center; }
+.rvy-headline { margin: 0; font: 500 78px/1.08 "Inter"; letter-spacing: -0.03em; color: #fff; }
+.rvy-sub { margin: 0; font: 400 26px/1.42 "Inter"; letter-spacing: -0.01em; color: #c7c7c7; max-width: 1120px; }
+.rvy-category { display: flex; gap: 16px; margin-top: 14px; }
+.rvy-cat-k, .rvy-cat-v { padding: 10px 18px; border-radius: 999px; font: 500 15px/1 "JetBrains Mono", monospace; letter-spacing: 0.18em; text-transform: uppercase; }
+.rvy-cat-k { color: #a7a7a7; background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); }
+.rvy-cat-v { color: #fff; background: rgba(103, 152, 255, 0.2); box-shadow: inset 0 0 0 1px rgba(103, 152, 255, 0.55); }
 
-/* Platforms strip at the very bottom; appears with personas. */
-.rvy-platforms {
-  position: absolute; left: 0; right: 0; bottom: 110px; display: flex; justify-content: center; align-items: center; gap: 14px;
-  font: 500 14px/1 "Inter"; color: #a7a7a7; letter-spacing: -0.005em;
-  opacity: 0; animation: rvy-hero-in 0.9s cubic-bezier(0.22, 0.9, 0.3, 1) 10000ms forwards;
-}
-.rvy-platforms i { width: 4px; height: 4px; border-radius: 50%; background: #6798ff; opacity: 0.6; }
+@keyframes rvy-in  { to { opacity: 1; transform: none; } }
+@keyframes rvy-out { to { opacity: 0; transform: translateY(-18px); } }
 
-/* Footer meta label. */
-.rvy-footmark {
-  position: absolute; left: 0; right: 0; bottom: 48px; text-align: center;
-  font: 500 12px/1 "JetBrains Mono", monospace; letter-spacing: 0.26em; text-transform: uppercase; color: #6798ff;
-  opacity: 0; animation: rvy-hero-in 0.9s cubic-bezier(0.22, 0.9, 0.3, 1) 4000ms forwards;
+/* ───────── The product card + camera ───────── */
+.rvy-card {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0.965);
+  border-radius: 20px; overflow: hidden; background: #0a0a0a;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 60px 160px -40px rgba(0, 0, 0, 0.95), 0 0 120px -30px rgba(103, 152, 255, 0.35);
+  animation: rvy-card-in 1.1s cubic-bezier(0.22, 0.9, 0.3, 1) forwards;
+  transition: opacity 0.8s cubic-bezier(0.22, 0.9, 0.3, 1), transform 0.8s cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+@keyframes rvy-card-in { from { opacity: 0; transform: translate(-50%, -46%) scale(0.9); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+/* animation:none — the filled entrance animation would otherwise pin opacity:1
+   and the fade-out class would never win. */
+.rvy-card-out { animation: none; opacity: 0; transform: translate(-50%, -52%) scale(0.96); }
+/* The camera: zooms within the rounded card, Ken-Burns smooth. */
+.rvy-cam { width: 100%; height: 100%; transform: scale(1); transform-origin: 50% 50%; transition: transform 1.3s cubic-bezier(0.3, 0.8, 0.3, 1), transform-origin 1.3s cubic-bezier(0.3, 0.8, 0.3, 1); }
+.rvy-cam iframe { display: block; width: 1600px; height: 900px; border: 0; transform-origin: 0 0; }
+
+/* ───────── Act stamps ───────── */
+.rvy-act {
+  position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  background: rgba(3, 3, 5, 0.78); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  opacity: 0; pointer-events: none; transition: opacity 0.4s cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+.rvy-act-in { opacity: 1; }
+.rvy-act-n { font: 500 17px/1 "JetBrains Mono", monospace; letter-spacing: 0.34em; text-transform: uppercase; color: #6798ff; }
+.rvy-act-t { font: 500 92px/1.05 "Inter"; letter-spacing: -0.03em; color: #fff; }
+.rvy-act-in .rvy-act-n { animation: rvy-in 0.45s cubic-bezier(0.22, 0.9, 0.3, 1) both; }
+.rvy-act-in .rvy-act-t { animation: rvy-act-t 0.5s cubic-bezier(0.2, 1.1, 0.35, 1) 80ms both; }
+@keyframes rvy-act-t { from { opacity: 0; transform: translateY(26px) scale(0.96); } to { opacity: 1; transform: none; } }
+
+/* ───────── Narration orb ───────── */
+.rvy-orb {
+  position: absolute; right: 34px; bottom: 28px; z-index: 3; display: flex; align-items: center; gap: 12px;
+  padding: 13px 18px; border-radius: 999px; background: rgba(8, 8, 12, 0.8);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  transition: opacity 0.6s;
+}
+.rvy-orb-wave { display: flex; align-items: center; gap: 3.5px; height: 20px; }
+.rvy-orb-wave i { width: 3.5px; border-radius: 2px; background: #6798ff; animation: rvy-wave 1.1s ease-in-out infinite; }
+.rvy-orb-wave i:nth-child(1) { height: 8px;  animation-delay: 0ms; }
+.rvy-orb-wave i:nth-child(2) { height: 16px; animation-delay: 140ms; }
+.rvy-orb-wave i:nth-child(3) { height: 20px; animation-delay: 280ms; }
+.rvy-orb-wave i:nth-child(4) { height: 14px; animation-delay: 420ms; }
+.rvy-orb-wave i:nth-child(5) { height: 9px;  animation-delay: 560ms; }
+@keyframes rvy-wave { 0%, 100% { transform: scaleY(0.45); } 50% { transform: scaleY(1); } }
+.rvy-orb-label { font: 500 13px/1 "Inter"; letter-spacing: 0.02em; color: #a7a7a7; }
+
+/* ───────── Chrome ───────── */
+.rvy-prog { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: rgba(255, 255, 255, 0.07); transition: opacity 0.6s; z-index: 3; }
+.rvy-prog i { display: block; height: 100%; background: linear-gradient(90deg, #6798ff 0%, #a2bfff 100%); box-shadow: 0 0 12px rgba(103, 152, 255, 0.55); transition: width 0.5s cubic-bezier(0.22, 0.9, 0.3, 1); }
+.rvy-mark {
+  position: absolute; left: 34px; bottom: 28px; padding: 11px 16px; border-radius: 999px;
+  background: rgba(8, 8, 12, 0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1); transition: opacity 0.6s; z-index: 3;
 }
 
 /* ───────── Closing card ───────── */
 .rvy-end {
-  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 24px; padding: 80px; text-align: center; z-index: 2; pointer-events: none;
+  position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 22px; padding: 80px; text-align: center; pointer-events: none;
   background:
-    radial-gradient(60% 55% at 50% 50%, rgba(103, 152, 255, 0.18), transparent 70%),
-    radial-gradient(90% 90% at 50% 50%, #0a0a0a 55%, #000 100%);
-  opacity: 0; transform: scale(0.985); transition: opacity 0.9s cubic-bezier(0.22, 0.9, 0.3, 1) 0.25s, transform 0.9s cubic-bezier(0.22, 0.9, 0.3, 1) 0.25s;
+    radial-gradient(60% 55% at 50% 50%, rgba(103, 152, 255, 0.16), transparent 70%),
+    radial-gradient(90% 90% at 50% 50%, #0a0a0c 55%, #020203 100%);
+  opacity: 0; transform: scale(0.985); transition: opacity 0.9s cubic-bezier(0.22, 0.9, 0.3, 1) 0.3s, transform 0.9s cubic-bezier(0.22, 0.9, 0.3, 1) 0.3s;
 }
 .rvy-end-in { opacity: 1; transform: scale(1); }
-.rvy-end h1 { margin: 0; font: 500 108px/1.05 "Inter"; letter-spacing: -0.035em; color: #ffffff; }
-.rvy-end p { margin: 0; font: 400 26px/1.42 "Inter"; letter-spacing: -0.01em; color: #c7c7c7; max-width: 1120px; }
-.rvy-end-sub { margin-top: 8px; padding: 8px 16px; border-radius: 999px; font: 500 13px/1 "JetBrains Mono", monospace; letter-spacing: 0.2em; text-transform: uppercase; color: #7c7c7c; background: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
+.rvy-end h1 { margin: 0; font: 500 100px/1.05 "Inter"; letter-spacing: -0.035em; color: #fff; }
+.rvy-end p { margin: 0; font: 400 25px/1.42 "Inter"; letter-spacing: -0.01em; color: #c7c7c7; max-width: 1080px; }
+.rvy-end-stats { display: flex; gap: 22px; margin-top: 16px; }
+.rvy-end-stat {
+  display: flex; flex-direction: column; gap: 8px; min-width: 206px; padding: 22px 26px; border-radius: 16px;
+  background: rgba(14, 14, 18, 0.8); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+  opacity: 0; transform: translateY(18px);
+}
+.rvy-end-in .rvy-end-stat { animation: rvy-in 0.7s cubic-bezier(0.22, 0.9, 0.3, 1) forwards; }
+.rvy-end-stat b { font: 500 46px/1 "Inter"; letter-spacing: -0.02em; color: #fff; }
+.rvy-end-stat span { font: 400 14px/1.3 "Inter"; color: #a7a7a7; }
+.rvy-end-sub { margin-top: 14px; padding: 10px 20px; border-radius: 999px; font: 500 14px/1 "JetBrains Mono", monospace; letter-spacing: 0.22em; text-transform: uppercase; color: #fff; background: rgba(103, 152, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(103, 152, 255, 0.5); }
 
-/* Headless virtual time doesn't advance CSS animations — gate them off during capture
-   so the title card settles immediately instead of staying mid-animation. */
+/* Headless virtual time doesn't advance CSS animations — gate them off during
+   still capture so cards settle instead of staying mid-animation. */
 html[data-rec="still"] * { animation: none !important; transition: none !important; }

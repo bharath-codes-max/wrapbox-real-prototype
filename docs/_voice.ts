@@ -75,7 +75,8 @@ function durationMs(file: string): number {
 }
 
 async function main() {
-  const files = readdirSync(CASES_DIR).filter((f) => f.endsWith(".ts") && f !== "index.ts");
+  // yc-film is owned by docs/_voice-film.ts (different TTS snapshot) — never touch it here.
+  const files = readdirSync(CASES_DIR).filter((f) => f.endsWith(".ts") && f !== "index.ts" && f !== "yc-film.ts");
   const cases: TourCase[] = [];
   for (const f of files) cases.push((await import(pathToFileURL(join(CASES_DIR, f)).href)).default as TourCase);
 
@@ -93,6 +94,8 @@ async function main() {
       if (!existsSync(file)) jobs.push({ text, file, rel, caseId: c.id, i });
     });
   }
+  // Preserve yc-film's manifest entry (owned by docs/_voice-film.ts).
+  if (old.cases?.["yc-film"]) manifest.cases["yc-film"] = old.cases["yc-film"];
   console.log(`${cases.length} cases · ${Object.values(manifest.cases).reduce((n, a) => n + a.length, 0)} lines · ${jobs.length} to generate`);
   if (DRY) { jobs.forEach((j) => console.log(`  ${j.rel}: ${j.text}`)); return; }
 
@@ -112,9 +115,10 @@ async function main() {
   // Lengths from the files themselves; prune clips no step uses any more.
   const keep = new Set<string>();
   for (const [id, list] of Object.entries(manifest.cases)) list.forEach((x) => { keep.add(x.file); if (!x.ms) x.ms = durationMs(join(OUT, x.file)); void id; });
-  // yc-intro holds hand-authored opening clips that aren't in any case file — never prune it.
+  // yc-intro/yc-intro2 hold hand-authored opening clips and yc-film is owned by
+  // docs/_voice-film.ts — never prune them.
   if (existsSync(OUT)) for (const d of readdirSync(OUT)) {
-    if (d === "yc-intro") continue;
+    if (d === "yc-intro" || d === "yc-intro2" || d === "yc-film") continue;
     const dir = join(OUT, d);
     for (const f of readdirSync(dir)) if (!keep.has(`${d}/${f}`)) rmSync(join(dir, f));
     if (!readdirSync(dir).length) rmSync(dir, { recursive: true });

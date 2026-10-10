@@ -342,8 +342,15 @@ export class Runner {
     this.track(el);
     overlay.set({ rect: el ? overlay.get().rect : null, pad: step.pad ?? 8, caption: { title: step.title, body: step.body, index: i, total, placement: step.placement ?? "auto", centered: !el } });
     const spoken = this.narrate(i);
-    const read = Math.max(spoken + 600, Math.min(9500, Math.max(3400, 1100 + words(step.title + " " + step.body) * 240)));
+    let read = Math.max(spoken + 600, Math.min(9500, Math.max(3400, 1100 + words(step.title + " " + step.body) * 240)));
     const acting = (step.action ?? "none") !== "none";
+    // At recording speeds (<1) wait() shrinks, but the narration clip doesn't:
+    // keep this step's waits long enough that the clip can finish during the
+    // next step's transition (~1.2 s of bleed) instead of being cut mid-word.
+    if (this.opt.speed < 1 && spoken) {
+      const floor = (spoken - 1200) / this.opt.speed - (step.hold ?? (acting ? 1400 : 0));
+      read = Math.max(read, floor);
+    }
     await this.wait(acting ? read * 0.5 : read);
     if (acting) {
       try { await this.act(step, el, false); } catch (e) { overlay.set({ error: (e as Error).message }); this.post(); }

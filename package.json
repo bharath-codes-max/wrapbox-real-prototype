@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Wrapbox Real Prototype — isolated high-fidelity interactive product simulation of the 8-week Wrapbox blueprint. All integrations are simulated; product behavior is real.",
+  "description": "Wrapbox Real Prototype \u2014 isolated high-fidelity interactive product simulation of the 8-week Wrapbox blueprint. All integrations are simulated; product behavior is real.",
   "scripts": {
     "dev": "vite --port 5980 --strictPort",
     "build": "tsc --noEmit && vite build",
@@ -14,7 +14,9 @@
     "build:demo": "ENTRY=tour vite build --config vite.portfolio.config.ts && cp docs/tour-build/tour.html docs/tour.html && ENTRY=portfolio-demo vite build --config vite.portfolio.config.ts && cp docs/portfolio-demo-build/portfolio-demo.html docs/demo.html && rm -rf docs/tour-build docs/portfolio-demo-build",
     "build:v3": "ENTRY=tour vite build --config vite.portfolio.config.ts && cp docs/tour-build/tour.html docs/tour.html && ENTRY=portfolio-v3 vite build --config vite.portfolio.config.ts && cp docs/portfolio-v3-build/portfolio-v3.html docs/portfolio-v3.html && rm -rf docs/tour-build docs/portfolio-v3-build",
     "build:record": "ENTRY=tour vite build --config vite.portfolio.config.ts && cp docs/tour-build/tour.html docs/tour.html && ENTRY=portfolio-record vite build --config vite.portfolio.config.ts && cp docs/portfolio-record-build/portfolio-record.html docs/record.html && rm -rf docs/tour-build docs/portfolio-record-build",
-    "record:video": "node docs/_record.mjs"
+    "record:video": "node docs/_record.mjs",
+    "build:film": "ENTRY=record-yc vite build --config vite.portfolio.config.ts && cp docs/record-yc-build/record-yc.html docs/record-yc.html && ENTRY=tour-v2 vite build --config vite.portfolio.config.ts && cp docs/tour-v2-build/tour-v2.html docs/tour-v2.html && rm -rf docs/record-yc-build docs/tour-v2-build",
+    "film:video": "node docs/_record-yc.mjs"
   },
   "dependencies": {
     "framer-motion": "^11.18.2",

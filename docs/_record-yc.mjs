@@ -18,9 +18,10 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
-const URL = arg("--url", "http://localhost:5982/record-yc.html");
+const CASE = arg("--case", "yc-film");
+const URL = arg("--url", `http://localhost:5982/record-yc.html?case=${CASE}`);
 const FPS = 30, W = 1920, H = 1080, SR = 48000;
-const TAIL_MS = 2500;
+const TAIL_MS = 4600;
 const MAX_SECONDS = 215;
 const OUT = join(ROOT, "docs/video");
 const TMP = join(OUT, ".tmp");
@@ -30,14 +31,15 @@ const VIDEO_ONLY = join(TMP, "yc-video.mp4");
 const VOICE_WAV = join(TMP, "yc-voice.wav");
 const MUSIC_WAV = join(TMP, "music.wav");
 const AUDIO_MIX = join(TMP, "yc-audio.m4a");
-const FINAL = join(OUT, "wrapbox-yc-demo.mp4");
+const FINAL = arg("--out", join(OUT, "wrapbox-demo-3min.mp4"));
 
 if (!existsSync(MUSIC_WAV)) throw new Error(`${MUSIC_WAV} missing — run: python3 docs/_music-yc.py ${MUSIC_WAV}`);
 const tourManifest = JSON.parse(readFileSync(join(ROOT, "src/tour/v2/voice.json"), "utf8"));
-const tourClips = tourManifest.cases["yc-demo"];
-if (!tourClips) throw new Error("yc-demo clips missing — run: npx tsx docs/_voice.ts --v2");
-const introManifest = JSON.parse(readFileSync(join(ROOT, "docs/voice-v2/yc-intro/manifest.json"), "utf8"));
-const INTRO_FILES = ["0-ai-agents.mp3", "1-personas.mp3", "2-not-edr.mp3"];
+const tourClips = tourManifest.cases[CASE];
+if (!tourClips) throw new Error(`${CASE} clips missing — run: npx tsx docs/_voice-film.ts`);
+const INTRO_DIR = arg("--intro", "yc-intro2");
+const introManifest = JSON.parse(readFileSync(join(ROOT, `docs/voice-v2/${INTRO_DIR}/manifest.json`), "utf8"));
+const INTRO_FILES = Object.keys(introManifest).sort();
 
 /* ---------------------------------------------------------------- capture */
 const ff = spawn("ffmpeg", ["-y", "-loglevel", "error",
@@ -128,7 +130,7 @@ for (const n of narr) {
   if (seen.has(n.i)) continue;
   seen.add(n.i);
   if (n.i < INTRO_COUNT) {
-    const file = `yc-intro/${INTRO_FILES[n.i]}`;
+    const file = `${INTRO_DIR}/${INTRO_FILES[n.i]}`;
     const ms = introManifest[INTRO_FILES[n.i]]?.ms ?? 0;
     if (ms) placements.push({ at: n.at, file, ms });
   } else {
@@ -165,7 +167,10 @@ for (const p of placements) {
   }
   if (p.truncateAt) overlapped++;
 }
-if (overlapped) console.log(`  (${overlapped} clip${overlapped === 1 ? "" : "s"} truncated for overlap safety)`);
+if (overlapped) {
+  console.log(`  (${overlapped} clip${overlapped === 1 ? "" : "s"} truncated for overlap safety)`);
+  for (const p of placements) if (p.truncateAt) console.log(`    ${p.file}: cut ${(p.ms - (p.truncateAt - p.at)).toFixed(0)} ms of ${p.ms} ms`);
+}
 
 const dataBytes = pcm.length * 2;
 const h = Buffer.alloc(44);

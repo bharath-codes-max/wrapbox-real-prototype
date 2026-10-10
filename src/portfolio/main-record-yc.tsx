@@ -8,6 +8,7 @@ import { RecordYc } from "./record-yc";
 import "./deck.css";
 import "./record-yc.css";
 
-const tc = caseById("yc-demo");
-if (!tc) throw new Error("yc-demo case missing");
+const caseId = new URLSearchParams(location.search).get("case") ?? "yc-film";
+const tc = caseById(caseId);
+if (!tc) throw new Error(`${caseId} case missing`);
 createRoot(document.getElementById("rec")!).render(<RecordYc tc={tc} />);
