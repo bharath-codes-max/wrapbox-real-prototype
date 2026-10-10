@@ -53,7 +53,7 @@ export function RecordYc({ tc }: { tc: TourCase }) {
         {go && (
           <iframe
             ref={frame}
-            src={`tour-v2.html?case=${tc.id}&voice=0&nocap=1&dark=1`}
+            src={`tour-v2.html?case=${tc.id}&voice=0&nocap=1&dark=1&speed=0.78`}
             title={tc.title}
             width={APP_W}
             height={APP_H}
@@ -72,20 +72,25 @@ export function RecordYc({ tc }: { tc: TourCase }) {
           <WrapboxWordmark tone="dark" height={22} />
         </div>
 
-        {/* Opening title card, full frame, until the first narration frame lands. */}
+        {/* Opening title card — spells the category in frame one so the viewer never
+            has to guess what Wrapbox is. */}
         <div className={`rvy-title ${started ? "rvy-title-out" : ""}`}>
-          <div className="rvy-logo"><WrapboxLogo size={118} tone="dark" /></div>
-          <h1>Runtime authorization<br />for every AI agent.</h1>
-          <p>From the laptop to the cloud. One decision engine, every action on record.</p>
-          <div className="rvy-sub">A live walkthrough of the real product.</div>
+          <div className="rvy-eyebrow">THE AGENTIC SECURITY RUNTIME</div>
+          <div className="rvy-logo"><WrapboxLogo size={128} tone="dark" /></div>
+          <h1>Wrapbox decides<br />what every AI agent is allowed to do.</h1>
+          <p>Not EDR. Not MDM. A single decision engine between every agent and every action — on the device, over the network, at the gateway.</p>
+          <div className="rvy-personas">
+            <span>Priya · Admin</span><i /><span>Daniel · Developer</span><i /><span>Alex · Engineering Manager</span><i /><span>Sam · Security</span>
+          </div>
+          <div className="rvy-sub">A LIVE WALKTHROUGH OF THE REAL PRODUCT</div>
         </div>
 
-        {/* Closing title card, same frame, fades in at the end. */}
+        {/* Closing card, same frame, fades in at the end. */}
         <div className={`rvy-end ${done ? "rvy-end-in" : ""}`}>
-          <div className="rvy-logo"><WrapboxLogo size={118} tone="dark" /></div>
+          <div className="rvy-logo"><WrapboxLogo size={128} tone="dark" /></div>
           <h1>Wrapbox.</h1>
-          <p>Device · Network · Gateway. One brain. Every action on record.</p>
-          <div className="rvy-sub">wrapbox.ai</div>
+          <p>The agentic security runtime. Device, Network, Gateway — one brain, every action on record.</p>
+          <div className="rvy-sub">WRAPBOX.AI</div>
         </div>
       </div>
     </div>

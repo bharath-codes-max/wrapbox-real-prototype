@@ -19,7 +19,7 @@ const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? proces
 const URL = arg("--url", "http://localhost:5982/record-yc.html");
 const FPS = 30, W = 1920, H = 1080, SR = 48000;
 const TAIL_MS = 2500;
-const MAX_SECONDS = 185;
+const MAX_SECONDS = 200;
 const OUT = join(ROOT, "docs/video");
 const TMP = join(OUT, ".tmp");
 mkdirSync(TMP, { recursive: true });

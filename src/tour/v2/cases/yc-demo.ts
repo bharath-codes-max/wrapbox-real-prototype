@@ -1,159 +1,144 @@
 import type { TourCase } from "../../types";
 
-// The YC application video (~3 minutes). The script walks the four things the
-// user asked for, played against the real product:
-//   1. Three places. One brain decides for Device, Network and Gateway.
-//   2. Device scenario. A coding agent reaches for .env; the company's rule blocks it.
-//   3. Safety Kernel + Policy Simulator. Built-in rules nobody can switch off, and a
-//      preview that replays the company's own history before a rule change goes live.
-//   4. Human review + Break Glass. Risky steps hold for a person, with blast radius in
-//      view; a true emergency can lift the hold for one system, time-boxed, on record.
+// The YC application video (~3 minutes). The script leads with WHO it is for and
+// WHAT category it owns, then shows the real product doing it:
+//
+//   0:00  Hook — AI agents already act on real systems; one brain decides for all of them.
+//   0:15  Who it's for — Priya (admin), Daniel (developer), Alex (eng manager), Sam (security).
+//   0:28  Where it sits — not EDR, not MDM; a runtime for agent actions, in three places.
+//   0:55  Device catches a secret — Daniel's agent reaches for .env; the company's rule blocks it.
+//   1:25  Safety Kernel — a built-in rule previewed against the company's own history.
+//   1:50  Policy Simulator — a company rule change previewed the same way, nothing live changes.
+//   2:15  Human review + Break Glass — risky steps hold with blast radius; SEV-1 lifts the hold.
+//   2:50  Close.
 //
 // Order 950 keeps it out of deck v2's slide list (CASES is filtered to order < 900).
-// `kernel-install` runs so the Safety Kernel is on its new release with the preview card.
 const c: TourCase = {
   id: "yc-demo",
   order: 950,
   persona: { userId: "u-priya", name: "Priya Menon", role: "Admin" },
   title: "Wrapbox — runtime authorization for AI agents",
-  goal: "AI agents are already acting on real systems. Wrapbox decides what they're allowed to do at the moment of action, in the real engine.",
-  outcome: "One engine catches every agent action on the device, over the network and at the gateway, decides it against the company's rules and the built-in Safety Kernel, previews changes against real history, and lets a person hold or override anything with real stakes.",
-  start: "brain",
+  goal: "AI agents are already acting on real systems. Wrapbox is the agentic security runtime that decides what they're allowed to do, at the moment of action.",
+  outcome: "A single decision engine catches every agent action on the device, over the network and at the gateway, decides it against the company's rules and a built-in Safety Kernel, previews every change against the company's own history, and lets a person hold or override anything with real stakes.",
+  start: "control",
   setup: ["simulate:gw-force-main"],
-  poster: 2,
+  poster: 1,
   steps: [
-    // ─── 1 · THREE PLACES (opening): the Core Brain's "how it is built" tab. ───────
+    // ─── 1 · HOOK + WHO IT IS FOR ─────────────────────────────────────────────────
     {
+      target: ".metricband",
+      title: "The agentic security runtime.",
+      body: "Claude Code, Codex, ChatGPT, Microsoft Copilot, your own agents, every MCP tool — one brain decides what each of them is allowed to do, at the moment of action.",
+      say: "Wrapbox is the agentic security runtime. Claude Code, Codex, ChatGPT, Copilot, your own agents, every M-C-P tool — one brain decides what each of them is allowed to do, at the moment of action.",
+      hold: 1800,
+    },
+    {
+      target: ".ws-switch",
+      title: "Four personas, one product.",
+      body: "Priya, the admin, writes the rules. Daniel, a developer, runs the agents. Alex, an engineering manager, decides the risky calls. Sam, security, holds the final override.",
+      say: "Four people use it: Priya the admin, Daniel the developer, Alex engineering, Sam security.",
+      placement: "bottom",
+      pad: 6,
+      hold: 900,
+    },
+
+    // ─── 2 · WHAT WRAPBOX IS (and is NOT) ──────────────────────────────────────────
+    {
+      route: "brain",
       target: { selector: ".tab", text: "How it is built" },
       action: "click",
-      title: "One brain. Three places.",
-      body: "Wrapbox catches every agent action in one of three places: on the person's device, as it leaves the network, or at the gateway in front of each system. One decision engine behind all three.",
-      say: "AI agents are acting on your systems now. Wrapbox decides, at the moment of action, what they're allowed to do. One engine, in three places: the device, the network, the gateway.",
+      title: "Not EDR. Not MDM. The agentic security runtime.",
+      body: "EDR watches the laptop. MDM configures the device. Wrapbox sits between every agent and every action — Anthropic, OpenAI, Google, Microsoft, MCP tools, your own — and decides whether the action is allowed to run.",
+      say: "Wrapbox is not E-D-R. Not M-D-M. It sits between every agent — Anthropic, Open-A-I, Google, Microsoft, M-C-P tools, your own — and every action, and decides whether that action runs.",
       waitFor: { selector: ".section-title", text: "One brain, three arms" },
-      hold: 1500,
+      hold: 1200,
     },
     {
       target: { selector: ".section-title", text: "One brain, three arms" },
-      title: "Wherever it happens, same checks",
-      body: "A device catches files, commands and the browser. The network catches uploads and AI destinations. The gateway catches calls to your company systems. They all send the action to the same engine, which answers ALLOW, CONSTRAIN, REVIEW or BLOCK.",
-      say: "Device catches files and commands. Network catches what leaves. Gateway catches calls to your systems. All three send the action to the same engine, which answers one of four things.",
+      title: "One brain. Three places.",
+      body: "Device catches files, commands and browser agents. Network catches uploads and AI destinations. Gateway catches calls to GitHub, SQL, AWS, Stripe, MCP tools. One decision engine behind all three.",
+      say: "One brain, three places. Device catches files and commands. Network catches what leaves. Gateway catches calls to Git-Hub, S-Q-L, A-W-S, M-C-P.",
       pad: 10,
-      hold: 1200,
+      hold: 1400,
     },
 
-    // ─── 2 · THE CHECKS (overview, picks a real blocked action) ────────────────────
-    {
-      target: { selector: ".tab", text: "The checks" },
-      action: "click",
-      title: "Fourteen checks, in order",
-      body: "Every action goes through the same fourteen checks, always in the same order. The first one that has an answer decides, and the strictest answer wins.",
-      say: "Every action goes through fourteen checks, in order. The strictest wins.",
-      waitFor: { selector: ".chk-runs" },
-      hold: 1000,
-    },
-    {
-      target: { selector: ".chk-run", text: "Tried to send export.json" },
-      action: "click",
-      title: "A real blocked action",
-      body: "An agent tried to send export.json to an unknown address. Wrapbox stopped it. Each dot on the path is one check; the filled dot gave the answer.",
-      say: "Here's a real one — an agent tried to send a file out. The filled dot on the path is the check that stopped it.",
-      waitFor: { selector: ".chk-path-title", text: "export.json" },
-      hold: 1600,
-    },
-
-    // ─── 3 · DEVICE SCENARIO: .env blocked by a company rule ──────────────────────
+    // ─── 3 · DEVICE: a real block in action ───────────────────────────────────────
     {
       route: "simlab",
       target: { selector: "[role=tab]", text: "Device" },
       action: "click",
-      title: "Watch the device catch one",
-      body: "The Simulation Lab plays practice agent actions through Wrapbox's real checks. Nothing is faked; only the system behind the agent is simulated.",
-      say: "To watch it live: the Simulation Lab plays practice actions through the same real checks.",
+      title: "A coding agent reaches for the secrets file.",
+      body: "Daniel's agent is chasing a settings problem and tries to open .env, where the app keeps its passwords and keys.",
+      say: "Watch one in action. Daniel's coding agent is chasing a settings problem and tries to open the dot env file, where the app keeps its passwords and keys.",
       waitFor: { selector: ".stream-item", text: "Agent reads .env" },
-      hold: 800,
     },
     {
       target: { selector: ".stream-item", text: "Agent reads .env" },
       action: "click",
-      title: "An agent reaches for the secrets file",
-      body: "Daniel's coding agent is chasing a settings problem and tries to open .env, where the app keeps its passwords and keys.",
-      say: "Daniel's coding agent chases a settings problem and reaches for the dot env file, where the app keeps its passwords and keys.",
+      title: "Caught on the device, read on the device, decided on the device.",
+      body: "Wrapbox catches the command before it runs, reads what the file holds right there, and decides against the company's own rule — agents may not read local secrets files.",
+      say: "Wrapbox catches the command before it runs, reads what the file holds right there, and decides against the company's own rule.",
       waitFor: { selector: ".card", text: "attempts to read .env" },
     },
     {
       target: { selector: "button", text: "Run", exact: true },
       action: "click",
-      title: "Caught, read, decided",
-      body: "Wrapbox catches the command on the device, reads what the file holds right there, and decides. The company's own rule — agents must not read local secrets files — blocks it before it runs.",
-      say: "Wrapbox catches it on the device, reads what the file holds right there, and decides. The company's own rule — agents must not read local secrets files — blocks it before it runs.",
+      title: "Blocked before it runs.",
+      body: "No agent in the chain of command can retry it. Every decision is recorded with its reasons; the Safety Kernel would have caught it too if the rule hadn't existed.",
+      say: "Blocked before it runs. Nothing left the laptop, and the Safety Kernel would have caught it anyway if the rule hadn't existed.",
       waitFor: { selector: ".aterm-line", text: "Decision BLOCK" },
-      hold: 1600,
-    },
-
-    // ─── 4 · SAFETY KERNEL: built-in rules nobody can switch off ──────────────────
-    {
-      target: { selector: ".sidebar .nav-item", text: "Safety Kernel" },
-      action: "click",
-      title: "A second lock, always on",
-      body: "If a company rule is missing, the Safety Kernel steps in: built-in rules nobody can switch off. Credentials never leave, mass exports stop, admin grants on production hold for a person.",
-      say: "What if your rules miss something? The Safety Kernel is a second lock, always on. Built-in rules nobody can switch off, like credentials never leaving and mass exports stopping.",
-      waitFor: { selector: ".page-head", text: "Safety Kernel" },
-      hold: 1200,
-    },
-    {
-      target: ".kernel-impact",
-      title: "A new rule, previewed against your history",
-      body: "A new rule arrives in Observe mode. Wrapbox replays it over every past action and shows what it would have changed, so nothing switches on blind.",
-      say: "When a new rule ships, Wrapbox doesn't just turn it on. It replays the rule over every past action and shows what it would have changed. Nothing switches on blind.",
       hold: 1800,
     },
 
-    // ─── 5 · POLICY SIMULATOR: preview the company's own rule change ──────────────
+    // ─── 4 · SAFETY KERNEL: the default protection ─────────────────────────────────
+    {
+      route: "safety",
+      target: ".kernel-impact",
+      title: "Default protection, even without a rule.",
+      body: "A new built-in rule arrives. Wrapbox replays it over every past action and shows what it would have changed. Nothing switches on blind.",
+      say: "Even without your rules, the Safety Kernel is a built-in default. When a new rule arrives, Wrapbox replays it over every past action — nothing switches on blind.",
+      hold: 1800,
+    },
+
+    // ─── 5 · POLICY SIMULATOR: preview a rule change ──────────────────────────────
     {
       route: "simulator",
       target: { selector: "label.rule-item", text: "Source code may go to approved AI" },
       action: "click",
-      title: "Preview a rule change, safely",
-      body: "The Policy Simulator does the same for your own rules. Untick a rule — nothing lives changes — and Wrapbox replays the company's real history under the proposal.",
-      say: "The Policy Simulator does the same for your own rules. Untick one — nothing live changes.",
+      title: "Preview any rule change against your own history.",
+      body: "Untick a company rule — nothing live changes — and Wrapbox replays twenty recorded actions. One past review would have been lost. The red flag is automatic.",
+      say: "You can preview any rule change the same way. Untick a company rule, and Wrapbox replays twenty recorded actions. One past review would have been lost. The red flag is automatic.",
       waitFor: { selector: ".ecard", text: "3 of 4 on in preview" },
-    },
-    {
-      target: { selector: ".sim-col-title", text: "See what would happen" },
-      title: "One past action would change",
-      body: "Twenty recorded actions, two sets of rules, one difference: a review step would be lost. Nothing is recorded. Rules switch on in Intent Studio when you're sure.",
-      say: "Twenty recorded actions, replayed under both rules. One review step would be lost.",
-      waitFor: { selector: ".card", text: "Impact preview" },
-      hold: 1600,
+      hold: 1500,
     },
 
-    // ─── 6 · HUMAN REVIEW + BREAK GLASS ───────────────────────────────────────────
+    // ─── 6 · HUMAN IN THE LOOP: review + break glass ──────────────────────────────
     {
       route: "reviews",
       target: { selector: ".ecard", text: "force-push" },
-      title: "Risky steps hold for a person",
-      body: "A production deploy sits in the Review Center with its blast radius in view, not with the person who asked. The requester is never the approver.",
-      say: "When something risky needs a yes, it holds in the Review Center with its blast radius in view. It goes to the right person, never the one who asked.",
+      title: "A person decides the risky step.",
+      body: "Blast radius in view, safer alternative suggested, routed to the right person — never the one who asked.",
+      say: "When something risky needs a yes, it holds here with its blast radius in view, routed to the right person, never the one who asked.",
       waitFor: { selector: ".ecard", text: "force-push" },
-      hold: 1800,
+      hold: 1500,
     },
     {
       route: "breakglass",
       target: ".card",
-      title: "A SEV-1 can lift the hold",
-      body: "In a true emergency, Break Glass lifts the hold for one system, time-boxed to twenty minutes, with a written reason. It never lifts the Safety Kernel. Every action under it is flagged in Evidence.",
-      say: "A real emergency uses Break Glass: time-boxed, one system, written reason. Never lifts the Safety Kernel. Every action, on record.",
+      title: "A SEV-1 can lift the hold — never the Safety Kernel.",
+      body: "Written reason, one system, twenty minutes, logged. Break Glass lets the fix ship. The Safety Kernel still stops anything truly dangerous.",
+      say: "And in a real emergency, Break Glass lifts the hold for one system, time-boxed, with a written reason. It never lifts the Safety Kernel, so anything truly dangerous still stops.",
       waitFor: { selector: ".page-head", text: "Break Glass" },
-      hold: 2000,
+      hold: 1800,
     },
 
     // ─── 7 · CLOSE ────────────────────────────────────────────────────────────────
     {
       route: "control",
       target: ".metricband",
-      title: "Wrapbox — one brain, three places, every action on record",
-      body: "Every number on every page comes from recorded actions through the real engine. Nothing on this screen is a mockup.",
-      say: "That's Wrapbox. One brain, three places, every action on record.",
+      title: "Wrapbox is the agentic security runtime.",
+      body: "One brain. Three places. Every action on record. Not watching the laptop — deciding what the agent is allowed to do, at the moment it tries.",
+      say: "Wrapbox is the agentic security runtime. One brain. Three places. Every action on record.",
       waitFor: ".metricband",
       hold: 1600,
     },
