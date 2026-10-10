@@ -37,7 +37,7 @@ const INSTRUCTIONS = [
 const INTRO_DIR = "yc-intro2";
 const INTRO: { file: string; say: string }[] = [
   { file: "0-ai-employees.mp3", say: "Your company already has AI employees. They write code, they query databases — and nobody can see what they're allowed to do. Wrapbox can." },
-  { file: "1-personas.mp3",     say: "Priya writes the rules. Daniel runs the agents. Alex approves the risky calls. Maya holds the override. One product for all four." },
+  { file: "1-personas.mp3",     say: "Priya writes the rules. Daniel runs the agents. Alex approves the risky calls. Maya holds the override." },
   { file: "2-category.mp3",     say: "Not antivirus. Not device management. The runtime that decides what every agent may do — at the moment it acts." },
 ];
 

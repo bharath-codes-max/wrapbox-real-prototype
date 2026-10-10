@@ -9,7 +9,7 @@ body { overflow: hidden; }
 .rvy-view { position: relative; overflow: hidden; background: #050507; }
 
 /* ───────── Aurora backdrop ───────── */
-.rvy-aurora { position: absolute; inset: -20%; filter: blur(90px) saturate(1.15); opacity: 0.6; }
+.rvy-aurora { position: absolute; inset: -20%; filter: blur(60px) saturate(1.15); opacity: 0.55; }
 .rvy-aurora i { position: absolute; border-radius: 50%; mix-blend-mode: screen; }
 .rvy-aurora i:nth-child(1) { width: 1100px; height: 900px; left: -220px; top: -260px; background: radial-gradient(closest-side, rgba(103, 152, 255, 0.5), transparent 70%); animation: rvy-aur1 26s ease-in-out infinite alternate; }
 .rvy-aurora i:nth-child(2) { width: 1000px; height: 860px; right: -260px; top: 100px; background: radial-gradient(closest-side, rgba(109, 102, 230, 0.42), transparent 70%); animation: rvy-aur2 31s ease-in-out infinite alternate; }
@@ -58,7 +58,7 @@ body { overflow: hidden; }
 .rvy-personas { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 44px; }
 .rvy-personas-head {
   font: 500 52px/1.1 "Inter"; letter-spacing: -0.025em; color: #fff;
-  opacity: 0; animation: rvy-in 0.8s cubic-bezier(0.22, 0.9, 0.3, 1) 10400ms forwards, rvy-out 0.7s cubic-bezier(0.22, 0.9, 0.3, 1) 20600ms forwards;
+  opacity: 0; animation: rvy-in 0.8s cubic-bezier(0.22, 0.9, 0.3, 1) 9900ms forwards, rvy-out 0.7s cubic-bezier(0.22, 0.9, 0.3, 1) 19000ms forwards;
 }
 .rvy-personas-row { display: flex; gap: 26px; opacity: 1; }
 .rvy-persona {
@@ -69,7 +69,7 @@ body { overflow: hidden; }
   opacity: 0; transform: translateY(30px);
   animation: rvy-in 0.9s cubic-bezier(0.22, 0.9, 0.3, 1) forwards, rvy-out 0.7s cubic-bezier(0.22, 0.9, 0.3, 1) forwards;
   /* Per-animation delays — an inline animation-delay would override both. */
-  animation-delay: var(--d, 10700ms), 20600ms;
+  animation-delay: var(--d, 10200ms), 19000ms;
 }
 .rvy-face { width: 58px; height: 58px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12); object-fit: cover; }
 .rvy-face-mono { display: grid; place-items: center; background: #313131; color: #fff; font: 600 20px "Inter"; }
@@ -83,10 +83,10 @@ body { overflow: hidden; }
   gap: 18px; text-align: center;
 }
 .rvy-title > * { opacity: 0; transform: translateY(16px); animation: rvy-in 0.9s cubic-bezier(0.22, 0.9, 0.3, 1) forwards; }
-.rvy-title > :nth-child(1) { animation-delay: 21300ms; }
-.rvy-title > :nth-child(2) { animation-delay: 21600ms; }
-.rvy-title > :nth-child(3) { animation-delay: 21950ms; }
-.rvy-title > :nth-child(4) { animation-delay: 22600ms; }
+.rvy-title > :nth-child(1) { animation-delay: 19500ms; }
+.rvy-title > :nth-child(2) { animation-delay: 19800ms; }
+.rvy-title > :nth-child(3) { animation-delay: 20150ms; }
+.rvy-title > :nth-child(4) { animation-delay: 20800ms; }
 .rvy-logo { display: grid; place-items: center; }
 .rvy-headline { margin: 0; font: 500 78px/1.08 "Inter"; letter-spacing: -0.03em; color: #fff; }
 .rvy-sub { margin: 0; font: 400 26px/1.42 "Inter"; letter-spacing: -0.01em; color: #c7c7c7; max-width: 1120px; }
@@ -111,7 +111,7 @@ body { overflow: hidden; }
    and the fade-out class would never win. */
 .rvy-card-out { animation: none; opacity: 0; transform: translate(-50%, -52%) scale(0.96); }
 /* The camera: zooms within the rounded card, Ken-Burns smooth. */
-.rvy-cam { width: 100%; height: 100%; transform: scale(1); transform-origin: 50% 50%; transition: transform 1.3s cubic-bezier(0.3, 0.8, 0.3, 1), transform-origin 1.3s cubic-bezier(0.3, 0.8, 0.3, 1); }
+.rvy-cam { width: 100%; height: 100%; transform: scale(1.05); transform-origin: 50% 50%; will-change: transform; transition: transform-origin 2.6s cubic-bezier(0.3, 0.7, 0.3, 1); }
 .rvy-cam iframe { display: block; width: 1600px; height: 900px; border: 0; transform-origin: 0 0; }
 
 /* ───────── Act stamps ───────── */
@@ -122,7 +122,7 @@ body { overflow: hidden; }
 }
 .rvy-act-in { opacity: 1; }
 .rvy-act-n { font: 500 17px/1 "JetBrains Mono", monospace; letter-spacing: 0.34em; text-transform: uppercase; color: #6798ff; }
-.rvy-act-t { font: 500 92px/1.05 "Inter"; letter-spacing: -0.03em; color: #fff; }
+.rvy-act-t { font: 500 82px/1.1 "Inter"; letter-spacing: -0.03em; color: #fff; max-width: 1600px; text-align: center; }
 .rvy-act-in .rvy-act-n { animation: rvy-in 0.45s cubic-bezier(0.22, 0.9, 0.3, 1) both; }
 .rvy-act-in .rvy-act-t { animation: rvy-act-t 0.5s cubic-bezier(0.2, 1.1, 0.35, 1) 80ms both; }
 @keyframes rvy-act-t { from { opacity: 0; transform: translateY(26px) scale(0.96); } to { opacity: 1; transform: none; } }

@@ -1,194 +1,201 @@
 import type { TourCase } from "../../types";
 
-// The 3-minute investor demo film (v2, 2026-10-10). Wider than yc-demo: it walks
-// the whole product in one story — control room, shadow agent, plain-English
-// policy, live tokenization + vault, device secret block, tasks with permission
-// slips, review, break glass, safety kernel, policy simulator, core brain, close.
+// The 3-minute investor film, v3 (2026-10-10): five use-case stories from deck
+// v2, each end-to-end, each opened by a curiosity question (the act cards in
+// record-yc.tsx). Condensed from the proven cases blocked-secret,
+// pii-tokenized, task-deploy, agents-inventory and break-glass.
 //
-//   0:00  Hook — your company already has AI employees; Wrapbox decides for them.
-//   0:10  Personas — Priya / Daniel / Alex / Maya, one product for all four.
-//   0:20  Category — not EDR, not MDM: runtime authorization at the moment of action.
-//   0:27  Control Room → shadow agent → Intent Studio → PII tokenized live →
-//         Token Vault → device .env block → Tasks → Review → Break Glass →
-//         Safety Kernel → Policy Simulator → Core Brain → close on Control Room.
+//   Q1 · Can an agent steal your keys?    → .env read blocked on the device
+//   Q2 · Where does customer data go?     → PII tokenized in flight + vault
+//   Q3 · Can an agent own a whole job?    → permission slip, parked deploy, scoped yes
+//   Q4 · The agent nobody hired           → shadow MCP agent, fails safe, on record
+//   Q5 · 2 a.m. — production is down      → break glass, and what it still can't unlock
 //
-// Order 960 keeps it out of deck v2's slide list (CASES filters to order < 900).
-// Voice clips are OWNED by docs/_voice-film.ts (newest TTS snapshot, marin) —
-// docs/_voice.ts skips this case so the two generators never fight.
+// Order 960 keeps it out of deck v2's slide list. Voice clips are OWNED by
+// docs/_voice-film.ts — docs/_voice.ts skips this case on purpose.
 const c: TourCase = {
   id: "yc-film",
   order: 960,
   persona: { userId: "u-priya", name: "Priya Menon", role: "Admin" },
   title: "Wrapbox — runtime authorization for AI agents",
-  goal: "AI agents are already acting on real systems. Wrapbox is the runtime that decides what each one is allowed to do, at the moment it acts.",
-  outcome: "One decision engine catches every agent action on the device, over the network and at the gateway; rules are written in plain English, enforced live, previewed against history, and every decision is sealed into evidence.",
+  goal: "AI agents are already acting on real systems. Five questions every company should ask — answered live by the real decision engine.",
+  outcome: "Secrets stay on the laptop, customer data leaves only as tokens, whole jobs run on scoped permission slips, unregistered agents fail safe, and even a 2 a.m. override can't lift the Safety Kernel.",
   start: "control",
-  setup: ["simulate:gw-force-main"],
-  poster: 0,
+  poster: 2,
   steps: [
-    // ── 1 · CONTROL ROOM — the morning view ─────────────────────────────────
-    {
-      route: "control",
-      target: ".metricband",
-      title: "Glycon's control room, three months in.",
-      body: "Twenty agent actions decided — ten flowed, one rewritten in flight, two held for a human, seven stopped cold. Every single one on record.",
-      say: "This is Glycon's control room, three months in. Twenty agent actions decided: ten flowed, seven stopped cold, and every single one is on record.",
-      waitFor: ".metricband",
-      hold: 900,
-    },
-
-    // ── 2 · SHADOW AGENT — the one nobody registered ────────────────────────
-    {
-      route: "agents",
-      target: { selector: ".card", text: "Shadow agent discovered" },
-      title: "The agent nobody registered.",
-      body: "An unknown MCP process on a finance laptop, pushing data at an address nobody recognises. No owner, no permissions — everything it tries fails safe.",
-      say: "And Wrapbox found the agent nobody registered — an unknown M-C-P process on a finance laptop. Everything it tries fails safe.",
-      waitFor: { selector: ".card", text: "Shadow agent discovered" },
-      pad: 6,
-      hold: 900,
-    },
-
-    // ── 3 · INTENT STUDIO — policy in plain English ─────────────────────────
-    {
-      route: "intent",
-      target: { selector: ".ecard", text: "External AI usage" },
-      title: "Rules, written the way you'd say them.",
-      body: "“Credentials must never be transmitted externally.” Wrapbox compiles the sentence into enforceable clauses — and only claims coverage its live checks can truthfully deliver.",
-      say: "Rules are written the way you'd say them: credentials must never leave the company. Wrapbox compiles the sentence into enforceable clauses.",
-      pad: 6,
-      hold: 900,
-    },
-
-    // ── 4 · LIVE RUN — customer PII tokenized in flight ─────────────────────
-    {
-      route: "simlab",
-      target: { selector: "button", text: "Run", exact: true },
-      action: "click",
-      title: "A customer list heads to the approved AI.",
-      body: "Wrapbox intercepts in flight, opens the file, finds every email and phone number — and swaps each one for a token. The work still happens; the data never leaves.",
-      say: "Watch it live. Priya sends the customer list to the approved A-I. In flight, Wrapbox opens the file and swaps every email and phone number for a token. The work still happens — the data never leaves.",
-      waitFor: { selector: ".pipe-stage", text: "Transform applied" },
-      hold: 1400,
-    },
-
-    // ── 5 · TOKEN VAULT — the round trip ────────────────────────────────────
-    {
-      route: "vault",
-      target: { selector: ".g3 > .card", text: "2 · The AI's reply" },
-      title: "The AI answered with a stand-in.",
-      body: "Real values wait in the Token Vault. Only someone inside the company can trade the token back for the truth — the AI never knew.",
-      say: "The real values wait in the Token Vault — only someone inside the company can trade a token back for the truth. The A-I never knew.",
-      pad: 6,
-      hold: 900,
-    },
-
-    // ── 6 · DEVICE — same brain on the laptop ───────────────────────────────
+    // ── Q1 · CAN AN AGENT STEAL YOUR KEYS? (steps 0–2) ──────────────────────
     {
       route: "simlab",
       target: { selector: "[role=tab]", text: "Device" },
       action: "click",
-      title: "Different place, same brain.",
-      body: "This is Daniel's laptop, where his coding agent is debugging a settings problem.",
-      say: "Different place, same brain. This is Daniel's laptop, where his coding agent is busy debugging.",
+      title: "Daniel's laptop. His agent is debugging.",
+      body: "The laptop is simulated; the company's rules and the decision engine are real.",
+      say: "First question. This is Daniel's laptop, and his coding agent is busy debugging a config issue.",
       waitFor: { selector: ".card", text: "caught at the device" },
     },
     {
       target: { selector: ".stream-item", text: "Agent reads .env" },
       action: "click",
-      title: "The agent reaches for the secrets file.",
-      body: ".env holds every password and key the app uses.",
-      say: "And the agent reaches for dot env — the file with every password and key.",
+      title: "It reaches for .env.",
+      body: "The file with every password and key the app uses.",
+      say: "And it reaches for dot env — the file with every password and key the app has.",
       waitFor: { selector: ".card", text: "attempts to read .env" },
     },
     {
       target: { selector: "button", text: "Run", exact: true },
       action: "click",
       title: "Blocked before it runs.",
-      body: "Caught on the device, read on the device, decided on the device. The agent is told which rule stopped it — and offered a safer path.",
-      say: "Caught on the device, read on the device, blocked before it runs. The agent gets told why, and offered a safer path.",
+      body: "Caught on the device, read on the device, decided on the device — and the agent is told which rule stopped it.",
+      say: "Caught on the laptop, blocked before it ever runs — and the agent is told exactly which rule stopped it.",
       waitFor: { selector: ".aterm-line", text: "Decision" },
       hold: 1200,
     },
 
-    // ── 7 · TASKS — autonomy with a permission slip ─────────────────────────
+    // ── Q2 · WHERE DOES CUSTOMER DATA GO? (steps 3–5) ───────────────────────
+    {
+      target: { selector: "[role=tab]", text: "Network" },
+      action: "click",
+      title: "Priya sends the customer list to AI.",
+      body: "An everyday moment: customers.csv attached to a prompt in the approved AI.",
+      say: "Next question. Priya is sending the customer list to the approved A-I — an everyday moment.",
+      waitFor: { selector: ".card", text: "Expected under the brief" },
+    },
+    {
+      target: { selector: "button", text: "Run", exact: true },
+      action: "click",
+      title: "Every email and phone becomes a token.",
+      body: "Intercepted in flight, inspected, tokenized. The AI still does the work — it never sees the real people.",
+      say: "She hits send. In flight, Wrapbox opens the file and swaps every email and phone for a token. The A-I still does its job — it never sees the real people.",
+      waitFor: { selector: ".pipe-stage", text: "Transform applied" },
+      hold: 1500,
+    },
+    {
+      route: "vault",
+      target: { selector: ".g3 > .card", text: "2 · The AI's reply" },
+      title: "The real values never left.",
+      body: "They sit in the Token Vault. Only someone inside the company can swap a token back.",
+      say: "The real values sit in the Token Vault. Only someone inside the company can ever swap them back.",
+      pad: 6,
+      hold: 900,
+    },
+
+    // ── Q3 · CAN AN AGENT OWN A WHOLE JOB? (steps 6–8) ──────────────────────
     {
       route: "tasks",
-      target: { selector: ".ecard", text: "Fix checkout and deploy" },
-      title: "Agents also work unattended.",
-      body: "Four teams, four jobs. Each agent carries a short-lived permission slip: exactly what it may touch, for how long. Risky steps park for a person.",
-      say: "Agents also work unattended — each one carries a permission slip: what it may touch, for how long. Risky steps park for a person.",
-      pad: 6,
-      hold: 800,
+      target: { within: ".ecard", selector: "button", text: "Start" },
+      action: "click",
+      title: "A whole job, on a permission slip.",
+      body: "Fix checkout and deploy. The agent gets thirty minutes and only what this job needs. Safe steps run; the production deploy parks for a human.",
+      say: "Third question: can an agent own a whole job? One click — it gets a thirty-minute permission slip. Safe steps run; the production deploy parks.",
+      waitFor: { selector: ".grid.g2", text: "Forbidden" },
+      placement: "top",
     },
-
-    // ── 8 · REVIEW CENTER — the human yes ───────────────────────────────────
     {
-      route: "reviews",
-      target: { selector: ".ecard", text: "force-push" },
-      title: "They park here.",
-      body: "Blast radius in view, a safer alternative suggested, routed to the right approver — never the person who asked.",
-      say: "It parks here — blast radius in view, safer alternative suggested, routed to the right approver. Never the one who asked.",
-      waitFor: { selector: ".ecard", text: "force-push" },
+      target: { selector: "a", text: "Review Center" },
+      action: "click",
+      title: "It waits for the right person.",
+      body: "Routed to Alex — never to Daniel, who asked. Blast radius and a safer path included.",
+      say: "The parked step lands with Alex — never with Daniel, who asked for the change.",
+      waitFor: { selector: ".ecard-fields", text: "Decides" },
+      pad: 10,
+      placement: "top",
+    },
+    {
+      target: { selector: "button", text: "Approve scoped" },
+      action: "click",
+      title: "One scoped yes. The job finishes itself.",
+      body: "Yes to the deploy, for this job only. The queue empties and the task resumes on its own.",
+      say: "One scoped yes — this job only — and the job picks up and finishes itself.",
+      waitFor: { selector: ".card", text: "Nothing waiting" },
+      hold: 900,
+    },
+
+    // ── Q4 · THE AGENT NOBODY HIRED (steps 9–10) ────────────────────────────
+    {
+      route: "agents",
+      target: { selector: ".card", text: "Shadow agent discovered" },
+      title: "Found in the traffic.",
+      body: "An unknown MCP process on a finance laptop, pushing data at an address nobody recognises.",
+      say: "Question four: who's the agent nobody hired? Wrapbox found one on a finance laptop, pushing data at a strange address.",
       pad: 6,
       hold: 800,
     },
+    {
+      target: { selector: ".ecard", text: "Unknown MCP agent" },
+      action: "click",
+      title: "No owner. No permissions. Fails safe.",
+      body: "It tried twice — customer account numbers, then a private key. Blocked both times, with sealed records proving nothing left.",
+      say: "No owner, no permissions — so everything it tries fails safe. It tried twice, and both attempts are blocked and on sealed record.",
+      waitFor: { within: ".drawer", selector: "dl.kv" },
+      hold: 900,
+    },
 
-    // ── 9 · BREAK GLASS — the 2 a.m. story ──────────────────────────────────
+    // ── Q5 · 2 A.M. — PRODUCTION IS DOWN (steps 11–16) ──────────────────────
     {
       route: "breakglass",
-      target: ".card",
-      title: "Real emergency? Break Glass.",
-      body: "One system, twenty minutes, written reason, leadership notified, every override flagged in Evidence. It never lifts the Safety Kernel.",
-      say: "Two A-M emergency? Break Glass: one system, twenty minutes, written reason, leadership notified. And it never lifts the Safety Kernel.",
-      waitFor: { selector: ".page-head", text: "Break Glass" },
-      pad: 6,
-      hold: 900,
+      target: { selector: ".field", text: "Reason (required)" },
+      action: "type",
+      text: "SEV-1: checkout down, hotfix must ship now",
+      title: "Break Glass demands a reason.",
+      body: "Checkout is down and the fix can't wait for sign-off. The override won't start without a written reason.",
+      say: "Last question. It's two A-M, checkout is down, and the fix can't wait for sign-off. Break Glass — but it won't start without a written reason.",
+      placement: "top",
     },
-
-    // ── 10 · SAFETY KERNEL — the floor ──────────────────────────────────────
     {
-      route: "safety",
-      target: ".kernel-impact",
-      title: "The kernel is the floor.",
-      body: "Built-in rules, shipped like virus definitions. Every update is replayed against your own history before it enforces. Nothing switches on blind.",
-      say: "That kernel is the floor: built-in rules, replayed against your own history before they enforce. Nothing switches on blind.",
-      hold: 900,
+      target: { selector: ".field", text: "Covers only" },
+      action: "select",
+      value: "1",
+      title: "One system. Twenty minutes.",
+      body: "Emergency authority covers only the production account the fix ships to. It can't be extended.",
+      say: "One system only, twenty minutes, no extensions.",
+      waitFor: { selector: ".grid.g2", text: "Covers only" },
+      placement: "bottom",
     },
-
-    // ── 11 · POLICY SIMULATOR — foresight for your own rules ────────────────
     {
-      route: "simulator",
-      target: { selector: "label.rule-item", text: "Source code may go to approved AI" },
+      target: { selector: "button", text: "Activate break-glass" },
       action: "click",
-      title: "Preview any rule change against history.",
-      body: "Untick a rule — nothing live changes — and Wrapbox replays twenty recorded actions. One past review would have been lost. The red flag is automatic.",
-      say: "Your own rules get the same treatment. Untick one, and Wrapbox replays twenty real actions — one past review would have been lost. The red flag is automatic.",
-      waitFor: { selector: ".ecard", text: "3 of 4 on in preview" },
+      title: "Live — and loud.",
+      body: "Security is notified, the countdown is ticking, and every action it overrides is flagged in Evidence. Now: what can it still not do?",
+      say: "It's live — security notified, countdown ticking, the fix can ship. But what can the override still not do?",
+      waitFor: { selector: "section.card", text: "BREAK-GLASS ACTIVE" },
       hold: 900,
     },
-
-    // ── 12 · CORE BRAIN — one engine behind everything ──────────────────────
     {
-      route: "brain",
-      target: { selector: ".tab", text: "How it is built" },
+      route: "simlab",
+      target: { selector: "button.tab", text: "Gateway" },
       action: "click",
-      title: "One brain. Three places.",
-      body: "Fifteen facts about each action, fourteen checks, three places — device, network, gateway. One decision, hash-sealed into Evidence.",
-      say: "Behind everything, one Core Brain: fifteen facts per action, fourteen checks, three places. One decision, sealed into evidence.",
-      waitFor: { selector: ".section-title", text: "One brain, three arms" },
-      hold: 900,
+      title: "The deploy is already allowed.",
+      body: "Under the override, the checkout hotfix reads ALLOW instead of waiting for review.",
+      say: "Over at the gateway, the checkout deploy already reads allowed under the override.",
+      waitFor: { selector: ".stream-item", text: "Dangerous cloud IAM change" },
+    },
+    {
+      target: { selector: ".stream-item", text: "Dangerous cloud IAM change" },
+      action: "click",
+      title: "Now try something truly dangerous.",
+      body: "Same covered system: the agent tries to grant full admin power over AWS Production.",
+      say: "Now try something truly dangerous on the very same system — full admin power over production.",
+      waitFor: { selector: ".card", text: "AdministratorAccess" },
+    },
+    {
+      target: { selector: "button.btn-accent", text: "Run", exact: true },
+      action: "click",
+      title: "Still blocked. The kernel never lifts.",
+      body: "The Safety Kernel sits under every override. No emergency can switch it off.",
+      say: "Still blocked. The Safety Kernel sits underneath every override — no emergency can switch it off.",
+      waitFor: { selector: ".pipe-stage", text: "Decision: BLOCK" },
+      hold: 1400,
     },
 
-    // ── 13 · CLOSE ───────────────────────────────────────────────────────────
+    // ── CLOSE (step 17) ─────────────────────────────────────────────────────
     {
       route: "control",
       target: ".metricband",
-      title: "Wrapbox. Runtime authorization for AI agents.",
-      body: "Your agents are already working. Wrapbox decides what they're allowed to do — at the moment they act. wrapbox.io",
-      say: "Your agents are already working. Wrapbox decides what they're allowed to do. Wrapbox dot I-O.",
+      title: "Five questions. One brain.",
+      body: "Every agent action — device, network, gateway — decided at the moment it happens, and on record. wrapbox.io",
+      say: "Five questions, one answer — one brain deciding every agent action, the moment it happens. Wrapbox dot I-O.",
       waitFor: ".metricband",
-      hold: 1000,
+      hold: 800,
     },
   ],
 };
