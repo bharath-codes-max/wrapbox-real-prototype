@@ -14,7 +14,7 @@ import { ORG, USERS, AGENTS, agentById, deviceForAction, resourceById, userById 
 import { ROLLOUT, type AgentKind } from "../model/rollout";
 import { canActivate, contractCoverage } from "../engine/coverage";
 import { BASELINE_KERNEL, enforceRule, installRelease, pendingRelease, type KernelState } from "../engine/kernel";
-import { SCENARIOS, jobById, scenarioById, type Scenario } from "../engine/scenarios";
+import { SCENARIOS, TASK_JOBS, jobById, scenarioById, type Scenario, type TaskJob } from "../engine/scenarios";
 import { runScenario, setSeq, getSeq, setTokenCounter, getTokenCounter } from "../engine/simulate";
 import { decide, INJECTION_WINDOW_MIN } from "../engine/brain";
 
@@ -58,6 +58,7 @@ export interface AppState {
   events: SimulationEvent[];
   contracts: IntentContract[];
   tasks: TaskEnvelope[];
+  customJobs: TaskJob[]; // task templates created from the UI (Tasks → New task template), alongside the built-in TASK_JOBS
   tokens: VaultToken[];
   restorations: RestoreRecord[]; // audit log of every token restore attempt
   standing: StandingPermission[];
@@ -166,6 +167,7 @@ function seedState(): AppState {
     events,
     contracts,
     tasks: [],
+    customJobs: [],
     tokens,
     restorations: [],
     standing,
@@ -192,6 +194,7 @@ function freshState(): AppState {
     events: [],
     contracts: [],
     tasks: [],
+    customJobs: [],
     tokens: [],
     restorations: [],
     standing: [],
@@ -342,7 +345,7 @@ function load(ws: Workspace = currentWorkspace()): AppState {
       const contracts = ws === "demo" && !parsed.contracts.some((c) => c.id === MCP_TOOL_CONTRACT.id)
         ? [...parsed.contracts, structuredClone(MCP_TOOL_CONTRACT)]
         : parsed.contracts;
-      return { ...parsed, contracts, stops: parsed.stops ?? [], taints: parsed.taints ?? [], workspace: ws, org: parsed.org ?? (ws === "fresh" ? { ...DEMO_ORG, idp: "" } : DEMO_ORG), onboarding: { ...baseOnboarding, ...parsed.onboarding, employee: { ...baseOnboarding.employee, ...parsed.onboarding?.employee } }, events, kernel: parsed.kernel ?? BASELINE_KERNEL, restorations: parsed.restorations ?? [], standing: parsed.standing?.every((p) => p.resource) ? parsed.standing : standingSeed().map((seed) => ({ ...seed, status: parsed.standing?.find((x) => x.id === seed.id)?.status ?? seed.status })), autopilot: autopilotSeed().map((seed) => ({ ...seed, ...(parsed.autopilot ?? []).find((x) => x.id === seed.id), proposes: seed.proposes, recommendation: seed.recommendation })), demoStep: -1 }; // demo mode never persists across reloads
+      return { ...parsed, contracts, stops: parsed.stops ?? [], taints: parsed.taints ?? [], customJobs: parsed.customJobs ?? [], workspace: ws, org: parsed.org ?? (ws === "fresh" ? { ...DEMO_ORG, idp: "" } : DEMO_ORG), onboarding: { ...baseOnboarding, ...parsed.onboarding, employee: { ...baseOnboarding.employee, ...parsed.onboarding?.employee } }, events, kernel: parsed.kernel ?? BASELINE_KERNEL, restorations: parsed.restorations ?? [], standing: parsed.standing?.every((p) => p.resource) ? parsed.standing : standingSeed().map((seed) => ({ ...seed, status: parsed.standing?.find((x) => x.id === seed.id)?.status ?? seed.status })), autopilot: autopilotSeed().map((seed) => ({ ...seed, ...(parsed.autopilot ?? []).find((x) => x.id === seed.id), proposes: seed.proposes, recommendation: seed.recommendation })), demoStep: -1 }; // demo mode never persists across reloads
     }
   } catch {
     /* corrupted state → reseed */
@@ -662,9 +665,16 @@ export function resolveReview(
 
 let taskCounter = 0;
 
+/** A built-in job (TASK_JOBS, written into the source) or one created from the
+ *  Tasks screen (state.customJobs) — both run through the identical engine path. */
+export function jobByIdAny(id: string | undefined): TaskJob {
+  if (id) { const custom = state.customJobs.find((j) => j.id === id); if (custom) return custom; }
+  return jobById(id);
+}
+
 /** Start a team's job: the agent gets that team's permission slip (envelope). */
 export function startTask(jobId?: string): TaskEnvelope {
-  const t = jobById(jobId);
+  const t = jobByIdAny(jobId);
   taskCounter += 1;
   const envelope: TaskEnvelope = {
     taskId: `task-${Date.now().toString(36)}-${taskCounter}`,
@@ -702,7 +712,7 @@ export function startTask(jobId?: string): TaskEnvelope {
 export function advanceTask(taskId: string): void {
   const task = state.tasks.find((t) => t.taskId === taskId);
   if (!task || task.status !== "active") return;
-  const t = jobById(task.jobId);
+  const t = jobByIdAny(task.jobId);
   let tasks = state.tasks;
   let events = state.events;
   let lastHash = state.lastHash;
@@ -785,6 +795,132 @@ export function advanceTask(taskId: string): void {
   updated.status = allDone ? "completed" : anyParked ? "parked" : anyPending ? "active" : "stopped";
   tasks = tasks.map((x) => (x.taskId === taskId ? updated : x));
   set({ tasks, events, lastHash, tokens });
+}
+
+// ---------------------------------------------------------------------------
+// Create a task — the admin writes a new job (scope + ordered steps) from the
+// Tasks screen instead of it being hardcoded in TASK_JOBS. Every field maps
+// straight onto TaskJob / EnvelopeTemplate / TaskScenarioStep — the same shape
+// startTask() and advanceTask() already read — so a custom job runs through
+// exactly the same engine path as the four built-in ones, no second code path.
+// ---------------------------------------------------------------------------
+
+export const TASK_TEAMS = ["Engineering", "Finance", "Support", "Operations"] as const;
+export const TASK_SENSITIVITIES = ["disposable", "internal", "sensitive", "customer-impacting"] as const;
+/** Verbs sensible for a step an agent actually performs (not permission/security
+ *  changes, which only ever appear as built-in Safety Kernel scenarios). */
+export const TASK_STEP_ACTIONS: ActionVerb[] = ["READ", "WRITE", "EXECUTE", "DELETE", "DEPLOY", "DATA_EXPORT", "NETWORK_SEND"];
+
+export interface TaskStepDraft {
+  label: string;
+  action: ActionVerb;
+  resource: string; // a resource id (RESOURCES) or a free path like "src/" or "CHANGELOG.md"
+  environment: Environment;
+  sensitivity: (typeof TASK_SENSITIVITIES)[number];
+  dependsOn: number[]; // indices of earlier steps in this same draft that must finish first
+}
+export interface TaskJobDraft {
+  title: string;
+  team: (typeof TASK_TEAMS)[number];
+  agent: string;
+  user: string;
+  approver: string;
+  approverRole: string;
+  allowedResources: string[];
+  allowedActions: ActionVerb[];
+  environment: Environment; // the envelope's home environment (most steps run here)
+  forbidden: string[]; // substrings checked against a step's resource name and its environment
+  durationMin: number;
+  fileBudget: number;
+  steps: TaskStepDraft[];
+}
+
+/** Why a draft can't become a task yet — the same validate-before-create shape
+ *  as standingGrantError. Returns null when the draft is ready. */
+export function taskJobError(d: TaskJobDraft): string | null {
+  if (!d.title.trim()) return "Give the task a title.";
+  if (!AGENTS.some((a) => a.id === d.agent && !a.discovered)) return "Pick a registered agent.";
+  if (!USERS.some((u) => u.id === d.user)) return "Pick who asks for this.";
+  if (!USERS.some((u) => u.id === d.approver)) return "Pick who approves the risky step.";
+  if (d.approver === d.user) return "The approver can't be the same person who asks — a permission slip only means something if someone else signs it.";
+  if (d.allowedResources.length === 0) return "Pick at least one system this task may touch.";
+  if (d.allowedActions.length === 0) return "Pick at least one thing the agent may do.";
+  if (!Number.isFinite(d.durationMin) || d.durationMin < 5 || d.durationMin > 180) return "The time window must be between 5 and 180 minutes.";
+  if (!Number.isFinite(d.fileBudget) || d.fileBudget < 1 || d.fileBudget > 200) return "The file budget must be between 1 and 200.";
+  if (d.steps.length < 2) return "Add at least two steps — a single step is just an ordinary action, not a task.";
+  for (let i = 0; i < d.steps.length; i++) {
+    const s = d.steps[i];
+    if (!s.label.trim()) return `Step ${i + 1} needs a label.`;
+    if (!s.resource.trim()) return `Step ${i + 1} needs a resource.`;
+    if (s.dependsOn.some((x) => x < 0 || x >= i)) return `Step ${i + 1} can only depend on a step that comes before it.`;
+  }
+  return null;
+}
+
+/** What each step of a draft task would decide right now, against the draft's own
+ *  envelope and the live rules — nothing recorded. The same real engine the task
+ *  runs on later (runScenario), so this preview can never show something the task
+ *  wouldn't actually do once created. */
+export function previewTaskSteps(d: TaskJobDraft): { decision: Decision; decidedBy?: string }[] {
+  const seqBefore = getSeq();
+  const tokBefore = getTokenCounter();
+  const envelope: TaskEnvelope = {
+    taskId: "preview", jobId: "preview", title: d.title || "Untitled task", agent: d.agent, user: d.user,
+    allowedResources: d.allowedResources, allowedActions: d.allowedActions, environment: d.environment,
+    forbidden: d.forbidden, durationMin: d.durationMin, startedAt: Date.now(), fileBudget: d.fileBudget,
+    filesUsed: 0, status: "active", steps: [],
+  };
+  const out = d.steps.map((s, i) => {
+    const sc: Scenario = {
+      id: `preview-step-${i}`, group: "TASK", title: s.label || `Step ${i + 1}`, narrative: s.label, expected: "",
+      plane: s.environment === "production" ? "GATEWAY" : "ENDPOINT",
+      action: s.action, actionRaw: `${s.action} ${s.resource}`, agent: d.agent, user: d.user,
+      application: "Terminal", resource: s.resource || "(resource)", environment: s.environment, sensitivity: s.sensitivity,
+    };
+    const res = runScenario(sc, state.contracts, "shadow", { kernel: state.kernel, envelope, stops: activeStops(), taint: taintOf(d.agent) });
+    if (res.event.decision === "ALLOW" && s.action === "WRITE") envelope.filesUsed += 1;
+    return { decision: res.event.decision, decidedBy: res.event.decidedBy?.label };
+  });
+  setSeq(seqBefore);
+  setTokenCounter(tokBefore);
+  return out;
+}
+
+/** Commits a validated draft as a real TaskJob — it appears in "Start a task"
+ *  immediately, next to the four built-in jobs, and runs the identical engine path. */
+export function createTaskJob(d: TaskJobDraft): TaskJob | string {
+  const err = taskJobError(d);
+  if (err) return err;
+  const job: TaskJob = {
+    id: `job-custom-${Date.now().toString(36)}`,
+    team: d.team,
+    title: d.title.trim(),
+    agent: d.agent,
+    user: d.user,
+    approver: d.approver,
+    approverRole: d.approverRole.trim() || userById(d.approver)?.role || "",
+    envelope: {
+      name: d.title.trim(),
+      allowedResources: [...d.allowedResources],
+      allowedActions: [...d.allowedActions],
+      environment: d.environment,
+      forbidden: [...d.forbidden],
+      durationMin: d.durationMin,
+      fileBudget: d.fileBudget,
+    },
+    steps: d.steps.map((s) => ({
+      label: s.label.trim(),
+      action: s.action,
+      actionRaw: `${s.action} ${s.resource}`,
+      resource: s.resource.trim(),
+      environment: s.environment,
+      dependsOn: [...s.dependsOn],
+      sensitivity: s.sensitivity,
+      plane: s.environment === "production" ? "GATEWAY" : undefined,
+    })),
+  };
+  set({ customJobs: [...state.customJobs, job] });
+  return job;
 }
 
 function resumeParkedStep(taskId: string, eventId: string, resolution: string, reviewer: string) {

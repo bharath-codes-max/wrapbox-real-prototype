@@ -1,14 +1,27 @@
 // Tasks — Task Envelope visualization + Safe Continuation (park/resume).
 // The 10-step "Fix checkout and deploy" workflow runs through the real brain:
 // step 6 (production deploy) parks; independent steps continue; approval resumes.
-import { useAppState, startTask, advanceTask } from "../state/store";
+import {
+  useAppState, startTask, advanceTask,
+  createTaskJob, taskJobError, previewTaskSteps,
+  TASK_TEAMS, TASK_SENSITIVITIES, TASK_STEP_ACTIONS,
+  type TaskJobDraft, type TaskStepDraft,
+} from "../state/store";
 import { TASK_JOBS } from "../engine/scenarios";
-import { PageHead, SectionHead, MetricBar, Chip, DecisionChip, SimNote, AgentMark, Avatar, PageTabs, usePaged, Pager, Progress, EntityCard, CardGrid, FilterBar, useCardFilters } from "../ui/kit";
+import { PageHead, SectionHead, MetricBar, Chip, DecisionChip, SimNote, AgentMark, Avatar, PageTabs, usePaged, Pager, Progress, EntityCard, CardGrid, FilterBar, useCardFilters, Select } from "../ui/kit";
 import { EventDetail } from "../ui/event-detail";
-import { useState } from "react";
-import { agentById, resourceById, userById } from "../model/org";
-import type { TaskEnvelope } from "../model/types";
-import { Boxes, ShieldOff, Timer, FileStack, Play, PauseOctagon, Sunrise, ArrowRight } from "lucide-react";
+import { Modal } from "../ui/setup";
+import { DESKTOP_SHELL } from "../ui/shell";
+import { useMemo, useState } from "react";
+import { AGENTS, USERS, RESOURCES, agentById, resourceById, userById } from "../model/org";
+import type { ActionVerb, Environment, TaskEnvelope } from "../model/types";
+import { Boxes, ShieldOff, Timer, FileStack, Play, PauseOctagon, Sunrise, ArrowRight, Plus, X, Check, Trash2 } from "lucide-react";
+
+const TASK_ENVIRONMENTS: Environment[] = ["development", "test", "staging", "production", "local"];
+// Secrets and unregistered servers are never a task's default scope — same rule as Standing Permissions.
+const TASK_RESOURCES = RESOURCES.filter((r) => r.kind !== "secret" && r.kind !== "mcp");
+const SCOPE_PRESETS = ["src/", "tests/", "tmp/", "docs/", "CHANGELOG.md"];
+const FORBIDDEN_PRESETS = ["production", ".env", "credentials"];
 
 /** In progress = still running or parked for approval; everything else has finished (completed, stopped, expired). */
 const isInProgress = (t: TaskEnvelope) => t.status === "active" || t.status === "parked";
@@ -244,23 +257,270 @@ function EnvelopeCard({ t, nav }: { t: TaskEnvelope; nav: (r: string) => void })
   );
 }
 
-/** The console's action surface — four real team jobs, each with its slip + separate approver.
- *  Renders without a section wrapper so it can sit directly inside a tab panel. */
-function Launcher({ run, busyMorning }: { run: (jobId?: string) => void; busyMorning: () => void }) {
+/** Write a new job from scratch: who asks, who approves, the permission slip (scope,
+ *  forbidden, time window, file budget), and the ordered steps. Every field maps
+ *  straight onto the same TaskJob shape the four built-in jobs use, so a created
+ *  task runs through the identical engine path — startTask() can't tell them apart.
+ *  Each step shows its real ALLOW / REVIEW / BLOCK, computed live by the same brain
+ *  that will decide it once the task actually runs. */
+function CreateTaskModal({ onClose, onCreated }: { onClose: () => void; onCreated: (jobId: string) => void }) {
+  const askers = USERS;
+  const agents = AGENTS.filter((a) => !a.discovered);
+  const [title, setTitle] = useState("");
+  const [team, setTeam] = useState<(typeof TASK_TEAMS)[number]>("Engineering");
+  const [agent, setAgent] = useState(agents[0].id);
+  const [user, setUser] = useState(askers[0].id);
+  const [approver, setApprover] = useState(askers[1]?.id ?? askers[0].id);
+  const [environment, setEnvironment] = useState<Environment>("development");
+  const [allowedResources, setAllowedResources] = useState<string[]>([]);
+  const [allowedActions, setAllowedActions] = useState<ActionVerb[]>(["READ", "WRITE"]);
+  const [forbidden, setForbidden] = useState<string[]>(["production"]);
+  const [durationMin, setDurationMin] = useState(30);
+  const [fileBudget, setFileBudget] = useState(25);
+  const [steps, setSteps] = useState<TaskStepDraft[]>([]);
+  const [scopeText, setScopeText] = useState("");
+  const [forbidText, setForbidText] = useState("");
+  const [failed, setFailed] = useState<string | null>(null);
+
+  // One step being composed below the list; cleared on "Add step".
+  const [sLabel, setSLabel] = useState("");
+  const [sAction, setSAction] = useState<ActionVerb>("READ");
+  const [sResource, setSResource] = useState("");
+  const [sEnv, setSEnv] = useState<Environment>("development");
+  const [sSensitivity, setSSensitivity] = useState<(typeof TASK_SENSITIVITIES)[number]>("internal");
+  const [sDeps, setSDeps] = useState<number[]>([]);
+
+  const addChip = (list: string[], setList: (v: string[]) => void, v: string) => {
+    const t = v.trim();
+    if (t && !list.includes(t)) setList([...list, t]);
+  };
+  const removeChip = (list: string[], setList: (v: string[]) => void, v: string) => setList(list.filter((x) => x !== v));
+  const flipAction = (v: ActionVerb) => setAllowedActions((l) => (l.includes(v) ? l.filter((x) => x !== v) : [...l, v]));
+  const flipDep = (i: number) => setSDeps((l) => (l.includes(i) ? l.filter((x) => x !== i) : [...l, i]));
+
+  const addStep = () => {
+    if (!sLabel.trim() || !sResource.trim()) return;
+    setSteps([...steps, { label: sLabel.trim(), action: sAction, resource: sResource.trim(), environment: sEnv, sensitivity: sSensitivity, dependsOn: [...sDeps] }]);
+    setSLabel(""); setSResource(""); setSDeps([]);
+  };
+  const removeStep = (i: number) => {
+    // Drop the step and renumber any later dependsOn references so the chain stays valid.
+    setSteps(steps.filter((_, k) => k !== i).map((s) => ({ ...s, dependsOn: s.dependsOn.filter((d) => d !== i).map((d) => (d > i ? d - 1 : d)) })));
+  };
+
+  const draft: TaskJobDraft = { title, team, agent, user, approver, approverRole: userById(approver)?.role ?? "", allowedResources, allowedActions, environment, forbidden, durationMin, fileBudget, steps };
+  const error = taskJobError(draft);
+  // Only preview once the shape is sound — a half-built draft would just show noise.
+  const preview = useMemo(() => (steps.length > 0 && !error ? previewTaskSteps(draft) : []), [JSON.stringify(draft), error]); // eslint-disable-line react-hooks/exhaustive-deps
+  const stepError = steps.length === 0 ? null : taskJobError({ ...draft, steps: steps.length >= 2 ? steps : [...steps, steps[0]] });
+
+  const submit = () => {
+    const out = createTaskJob(draft);
+    if (typeof out === "string") { setFailed(out); return; }
+    onCreated(out.id);
+  };
+
+  return (
+    <Modal onClose={onClose} width={760}>
+      <div className="grant task-create">
+        <div className="grant-title">Write a new task</div>
+        <p className="grant-sub">
+          A task is a permission slip for a whole job, not one action: pick the scope, the time window and the file budget once,
+          then list the steps in order. Wrapbox checks every step against this same slip while it runs.
+        </p>
+
+        <div className="grid g2" style={{ gap: 14 }}>
+          <div className="field">
+            <label className="field-label">Title</label>
+            <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Sync Friday's customer list" />
+          </div>
+          <div className="field">
+            <label className="field-label">Team</label>
+            <Select value={team} onChange={(v) => setTeam(v as (typeof TASK_TEAMS)[number])} allLabel={null} options={TASK_TEAMS.map((t) => ({ value: t, label: t }))} />
+          </div>
+        </div>
+
+        <div className="grid g3" style={{ gap: 14, marginTop: 14 }}>
+          <div className="field">
+            <label className="field-label">Agent</label>
+            <Select value={agent} onChange={setAgent} allLabel={null} options={agents.map((a) => ({ value: a.id, label: a.name }))} />
+          </div>
+          <div className="field">
+            <label className="field-label">Asked by</label>
+            <Select value={user} onChange={(v) => { setUser(v); if (v === approver) setApprover(askers.find((u) => u.id !== v)!.id); }} allLabel={null} options={askers.map((u) => ({ value: u.id, label: u.name }))} />
+          </div>
+          <div className="field">
+            <label className="field-label">Approves the risky step</label>
+            <Select value={approver} onChange={setApprover} allLabel={null} options={askers.filter((u) => u.id !== user).map((u) => ({ value: u.id, label: `${u.name} (${u.role})` }))} />
+          </div>
+        </div>
+        <span className="small faint">The approver can never be the person who asks — that's what makes the slip mean something.</span>
+
+        <div className="field" style={{ marginTop: 14 }}>
+          <label className="field-label">Allowed scope — systems and paths every step must stay inside</label>
+          <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+            {allowedResources.map((r) => (
+              <button key={r} type="button" className="grant-pick on" onClick={() => removeChip(allowedResources, setAllowedResources, r)}>
+                <X size={11} />{resourceById(r)?.name ?? r}
+              </button>
+            ))}
+          </div>
+          <div className="row" style={{ gap: 6, marginTop: 8 }}>
+            <input className="input" style={{ flex: 1 }} value={scopeText} onChange={(e) => setScopeText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addChip(allowedResources, setAllowedResources, scopeText); setScopeText(""); } }}
+              placeholder="type a path or system, press Enter — e.g. src/ or checkout-service" />
+            <button className="btn btn-sm" onClick={() => { addChip(allowedResources, setAllowedResources, scopeText); setScopeText(""); }}><Plus size={12} /> Add</button>
+          </div>
+          <div className="row" style={{ gap: 5, marginTop: 7, flexWrap: "wrap" }}>
+            {[...TASK_RESOURCES.map((r) => r.id), ...SCOPE_PRESETS].filter((v) => !allowedResources.includes(v)).slice(0, 9).map((v) => (
+              <button key={v} type="button" className="grant-pick" onClick={() => addChip(allowedResources, setAllowedResources, v)}>{resourceById(v)?.name ?? v}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid g2" style={{ gap: 14, marginTop: 14 }}>
+          <div className="field">
+            <label className="field-label">May</label>
+            <div className="row" style={{ gap: 5, flexWrap: "wrap" }}>
+              {TASK_STEP_ACTIONS.map((v) => (
+                <button key={v} type="button" aria-pressed={allowedActions.includes(v)} className={`grant-pick${allowedActions.includes(v) ? " on" : ""}`} onClick={() => flipAction(v)}>
+                  {allowedActions.includes(v) && <Check size={11} />}{v}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="field">
+            <label className="field-label">Home environment</label>
+            <Select value={environment} onChange={(v) => setEnvironment(v as Environment)} allLabel={null} options={TASK_ENVIRONMENTS.map((e) => ({ value: e, label: e }))} />
+          </div>
+        </div>
+
+        <div className="field" style={{ marginTop: 14 }}>
+          <label className="field-label">Forbidden — any step touching these needs a yes from the approver</label>
+          <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+            {forbidden.map((f) => (
+              <button key={f} type="button" className="grant-pick deny on" onClick={() => removeChip(forbidden, setForbidden, f)}><X size={11} />{f}</button>
+            ))}
+          </div>
+          <div className="row" style={{ gap: 6, marginTop: 8 }}>
+            <input className="input" style={{ flex: 1 }} value={forbidText} onChange={(e) => setForbidText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addChip(forbidden, setForbidden, forbidText); setForbidText(""); } }}
+              placeholder="type something and press Enter — e.g. .env or credentials" />
+            <button className="btn btn-sm" onClick={() => { addChip(forbidden, setForbidden, forbidText); setForbidText(""); }}><Plus size={12} /> Add</button>
+          </div>
+          <div className="row" style={{ gap: 5, marginTop: 7 }}>
+            {FORBIDDEN_PRESETS.filter((v) => !forbidden.includes(v)).map((v) => (
+              <button key={v} type="button" className="grant-pick" onClick={() => addChip(forbidden, setForbidden, v)}>{v}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grant-row" style={{ marginTop: 14 }}>
+          <div className="field" style={{ width: 170 }}>
+            <label className="field-label">Time window</label>
+            <input className="input" type="number" min={5} max={180} value={durationMin} onChange={(e) => setDurationMin(Number(e.target.value))} />
+            <span className="small faint">minutes — the whole job must finish inside this</span>
+          </div>
+          <div className="field" style={{ width: 170 }}>
+            <label className="field-label">File budget</label>
+            <input className="input" type="number" min={1} max={200} value={fileBudget} onChange={(e) => setFileBudget(Number(e.target.value))} />
+            <span className="small faint">files changed, across every step combined</span>
+          </div>
+        </div>
+
+        {/* ---- Steps ---- */}
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
+          <div className="field-label" style={{ marginBottom: 8 }}>Steps, in order ({steps.length})</div>
+
+          {steps.length > 0 && (
+            <div className="task-step-list">
+              {steps.map((s, i) => {
+                const p = preview[i];
+                return (
+                  <div key={i} className="task-step-item">
+                    <span className="task-step-n">{i + 1}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+                        <b>{s.label}</b>
+                        <span className="chip c-neutral chip-mono">{s.action}</span>
+                        <span className="small dim">{s.resource}</span>
+                        <span className="small faint">· {s.environment}</span>
+                      </div>
+                      {s.dependsOn.length > 0 && <div className="small faint" style={{ marginTop: 2 }}>after step{s.dependsOn.length > 1 ? "s" : ""} {s.dependsOn.map((d) => d + 1).join(", ")}</div>}
+                    </div>
+                    {p && <DecisionChip d={p.decision} small />}
+                    <button className="btn btn-sm btn-ghost" onClick={() => removeStep(i)} aria-label="Remove step"><Trash2 size={13} /></button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="task-step-add">
+            <div className="grid g2" style={{ gap: 10 }}>
+              <input className="input" value={sLabel} onChange={(e) => setSLabel(e.target.value)} placeholder="Step label — e.g. Patch rounding bug" />
+              <input className="input" value={sResource} onChange={(e) => setSResource(e.target.value)} placeholder="Resource — e.g. src/checkout.ts" list="task-scope-hints" />
+              <datalist id="task-scope-hints">{allowedResources.map((r) => <option key={r} value={r} />)}</datalist>
+            </div>
+            <div className="grid g4" style={{ gap: 10, marginTop: 10 }}>
+              <Select value={sAction} onChange={(v) => setSAction(v as ActionVerb)} allLabel={null} options={(allowedActions.length ? allowedActions : TASK_STEP_ACTIONS).map((a) => ({ value: a, label: a }))} />
+              <Select value={sEnv} onChange={(v) => setSEnv(v as Environment)} allLabel={null} options={TASK_ENVIRONMENTS.map((e) => ({ value: e, label: e }))} />
+              <Select value={sSensitivity} onChange={(v) => setSSensitivity(v as (typeof TASK_SENSITIVITIES)[number])} allLabel={null} options={TASK_SENSITIVITIES.map((s) => ({ value: s, label: s }))} />
+              <button className="btn btn-sm" disabled={!sLabel.trim() || !sResource.trim()} onClick={addStep}><Plus size={12} /> Add step</button>
+            </div>
+            {steps.length > 0 && (
+              <div className="row" style={{ gap: 6, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <span className="small faint">Runs after:</span>
+                {steps.map((s, i) => (
+                  <button key={i} type="button" aria-pressed={sDeps.includes(i)} className={`grant-pick${sDeps.includes(i) ? " on" : ""}`} onClick={() => flipDep(i)}>
+                    {sDeps.includes(i) && <Check size={11} />}{i + 1}. {s.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {stepError && steps.length > 0 && <div className="small" style={{ color: "var(--block)", marginTop: 8 }}>{stepError}</div>}
+        </div>
+
+        {failed && <div className="small" style={{ color: "var(--block)", marginTop: 10 }}>{failed}</div>}
+        <div className="grant-foot">
+          <span className="small faint">Every step runs through the same engine the four built-in jobs use.</span>
+          <span className="row" style={{ gap: 8, marginLeft: "auto" }}>
+            <button className="btn" onClick={onClose}>Cancel</button>
+            <button className="btn btn-primary" disabled={!!error} onClick={submit}><Check size={13} /> Create task</button>
+          </span>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/** The console's action surface — the built-in jobs plus any this admin has written,
+ *  each with its slip + separate approver. Renders without a section wrapper so it
+ *  can sit directly inside a tab panel. */
+function Launcher({ jobs, newJobId, run, busyMorning, onCreate }: {
+  jobs: typeof TASK_JOBS; newJobId: string | null; run: (jobId?: string) => void; busyMorning: () => void; onCreate?: () => void;
+}) {
   return (
     <>
       <SectionHead
         title="Start a task"
-        sub="Four real jobs from four teams. Each agent gets its team's permission slip; its risky step goes to a different person to approve."
-        right={<button className="btn btn-primary btn-sm" onClick={busyMorning}><Sunrise size={13} /> Busy morning — start all 4</button>}
+        sub="Each agent gets its job's permission slip; its risky step goes to a different person to approve."
+        right={
+          <span className="row" style={{ gap: 8 }}>
+            {DESKTOP_SHELL && onCreate && <button className="btn btn-sm" onClick={onCreate}><Plus size={13} /> Write a new task</button>}
+            <button className="btn btn-primary btn-sm" onClick={busyMorning}><Sunrise size={13} /> Busy morning — start all {jobs.length}</button>
+          </span>
+        }
       />
       <CardGrid>
-        {TASK_JOBS.map((j) => (
+        {jobs.map((j) => (
           <EntityCard
             key={j.id}
             icon={<AgentMark agentId={j.agent} size={26} />}
-            eyebrow={j.team}
+            eyebrow={j.id === newJobId ? "Just created" : j.team}
             title={j.title}
+            selected={j.id === newJobId}
             action={<button className="btn btn-sm" onClick={() => run(j.id)}><Play size={13} /> Start</button>}
             fields={[
               { label: "Agent", value: <><AgentMark agentId={j.agent} size={15} /> {agentById(j.agent)?.name}</> },
@@ -372,8 +632,9 @@ export function TasksPage({ nav }: { nav: (r: string) => void }) {
   const completed = s.tasks.filter((t) => t.status === "completed").length;
   const parkedTasks = s.tasks.filter((t) => t.steps.some((x) => x.state === "parked")).length;
   const stopped = s.tasks.filter((t) => t.status === "stopped").length;
+  const jobs = [...TASK_JOBS, ...s.customJobs];
   const run = (jobId?: string) => { const t = startTask(jobId); advanceTask(t.taskId); };
-  const busyMorning = () => TASK_JOBS.forEach((j) => run(j.id));
+  const busyMorning = () => jobs.forEach((j) => run(j.id));
 
   // Status split for the tabs; filters (team, status, agent) narrow the list inside a tab.
   const newestFirst = [...s.tasks].reverse();
@@ -383,6 +644,8 @@ export function TasksPage({ nav }: { nav: (r: string) => void }) {
 
   // Master/detail selection — remembered per tab; falls back to the newest task in the list.
   const [picked, setPicked] = useState<{ progress?: string; finished?: string }>({});
+  const [creating, setCreating] = useState(false);
+  const [newJobId, setNewJobId] = useState<string | null>(null);
 
   const browse = (key: "progress" | "finished", list: TaskEnvelope[], title: string, sub: string, emptyLine: string) => (
     <TaskBrowser
@@ -410,13 +673,13 @@ export function TasksPage({ nav }: { nav: (r: string) => void }) {
       {s.tasks.length === 0 ? (
         <>
           <div className="section">
-            <Launcher run={run} busyMorning={busyMorning} />
+            <Launcher jobs={jobs} newJobId={newJobId} run={run} busyMorning={busyMorning} onCreate={() => setCreating(true)} />
           </div>
           <div className="card empty" style={{ marginTop: 24 }}>
             <Boxes size={26} className="dim" />
             <div style={{ fontWeight: 600, fontSize: 15, marginTop: 10 }}>No tasks yet</div>
             <div className="small dim" style={{ maxWidth: 520, margin: "8px auto 0", lineHeight: 1.55 }}>
-              Start one of the jobs above — or press <b>Busy morning</b> to see all four teams working at once.
+              Start one of the jobs above, write your own with <b>Write a new task</b>, or press <b>Busy morning</b> to see every team working at once.
             </div>
           </div>
         </>
@@ -473,13 +736,19 @@ export function TasksPage({ nav }: { nav: (r: string) => void }) {
                         </div>
                       </div>
                     )}
-                    <Launcher run={run} busyMorning={busyMorning} />
+                    <Launcher jobs={jobs} newJobId={newJobId} run={run} busyMorning={busyMorning} onCreate={() => setCreating(true)} />
                   </>
                 ),
               },
             ]}
           />
         </>
+      )}
+      {creating && (
+        <CreateTaskModal
+          onClose={() => setCreating(false)}
+          onCreated={(jobId) => { setCreating(false); setNewJobId(jobId); }}
+        />
       )}
     </div>
   );
