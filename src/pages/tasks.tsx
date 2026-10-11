@@ -8,6 +8,7 @@ import {
   type TaskJobDraft, type TaskStepDraft,
 } from "../state/store";
 import { TASK_JOBS } from "../engine/scenarios";
+import { draftTask } from "../engine/task-drafter";
 import { PageHead, SectionHead, MetricBar, Chip, DecisionChip, SimNote, AgentMark, Avatar, PageTabs, usePaged, Pager, Progress, EntityCard, CardGrid, FilterBar, useCardFilters, Select } from "../ui/kit";
 import { EventDetail } from "../ui/event-detail";
 import { Modal } from "../ui/setup";
@@ -282,6 +283,13 @@ function CreateTaskModal({ onClose, onCreated }: { onClose: () => void; onCreate
   const [forbidText, setForbidText] = useState("");
   const [failed, setFailed] = useState<string | null>(null);
 
+  // Describe → Build: write the job in plain English, Compile turns it into the same
+  // structured fields below — nothing is created from the text directly, so what you
+  // see in Build is always exactly what will be checked.
+  const [mode, setMode] = useState<"plain" | "build">("plain");
+  const [draftText, setDraftText] = useState("");
+  const [compiled, setCompiled] = useState<{ unresolved: string[]; stepCount: number } | null>(null);
+
   // One step being composed below the list; cleared on "Add step".
   const [sLabel, setSLabel] = useState("");
   const [sAction, setSAction] = useState<ActionVerb>("READ");
@@ -320,6 +328,27 @@ function CreateTaskModal({ onClose, onCreated }: { onClose: () => void; onCreate
     onCreated(out.id);
   };
 
+  // Describe → Build: apply whatever the drafter found onto the real field setters,
+  // then switch to Build so the compiled result is visible in the actual inputs —
+  // never a separate, simplified copy of the task.
+  const compile = () => {
+    const { patch, steps: draftedSteps, unresolved } = draftTask(draftText);
+    if (patch.title !== undefined) setTitle(patch.title);
+    if (patch.team !== undefined) setTeam(patch.team);
+    if (patch.agent !== undefined) setAgent(patch.agent);
+    if (patch.user !== undefined) setUser(patch.user);
+    if (patch.approver !== undefined) setApprover(patch.approver);
+    if (patch.environment !== undefined) setEnvironment(patch.environment);
+    if (patch.allowedResources !== undefined) setAllowedResources(patch.allowedResources);
+    if (patch.allowedActions !== undefined) setAllowedActions(patch.allowedActions);
+    if (patch.forbidden !== undefined) setForbidden(patch.forbidden);
+    if (patch.durationMin !== undefined) setDurationMin(patch.durationMin);
+    if (patch.fileBudget !== undefined) setFileBudget(patch.fileBudget);
+    if (draftedSteps.length > 0) setSteps(draftedSteps);
+    setCompiled({ unresolved, stepCount: draftedSteps.length });
+    setMode("build");
+  };
+
   return (
     <Modal onClose={onClose} width={760}>
       <div className="grant task-create">
@@ -329,6 +358,41 @@ function CreateTaskModal({ onClose, onCreated }: { onClose: () => void; onCreate
           then list the steps in order. Wrapbox checks every step against this same slip while it runs.
         </p>
 
+        <div className="tabs" role="tablist" style={{ margin: "4px 0 16px" }}>
+          <button type="button" role="tab" aria-selected={mode === "plain"} className={`tab${mode === "plain" ? " active" : ""}`} onClick={() => setMode("plain")}>Plain English</button>
+          <button type="button" role="tab" aria-selected={mode === "build"} className={`tab${mode === "build" ? " active" : ""}`} onClick={() => setMode("build")}>Build</button>
+        </div>
+
+        {mode === "plain" && (
+          <div className="field" style={{ marginBottom: 16 }}>
+            <label className="field-label">Describe the task in plain English</label>
+            <textarea
+              className="input"
+              rows={7}
+              value={draftText}
+              onChange={(e) => setDraftText(e.target.value)}
+              placeholder={"e.g. Priya asks the release-bot to sync Friday's customer list. Approved by Daniel. Never touch production. Budget 20 files, 45 minutes.\n1. Read the customer export from src/exports\n2. Write the cleaned file to src/reports\n3. Send the summary to the finance channel"}
+            />
+            <div className="row" style={{ marginTop: 10, gap: 10 }}>
+              <button type="button" className="btn btn-primary btn-sm" disabled={!draftText.trim()} onClick={compile}>Compile</button>
+              <SimNote>Deterministic pattern compiler — fills in the Build tab below, nothing is created yet</SimNote>
+            </div>
+            {compiled && (
+              <div className="small" style={{ marginTop: 12 }}>
+                <div style={{ color: "var(--fg-3)", marginBottom: 4 }}>
+                  Compiled {compiled.stepCount} step{compiled.stepCount === 1 ? "" : "s"} into the Build tab — check it over before creating.
+                </div>
+                {compiled.unresolved.length > 0 && (
+                  <ul style={{ margin: "6px 0 0", paddingLeft: 18, color: "var(--block)" }}>
+                    {compiled.unresolved.map((u, i) => <li key={i}>{u}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {mode === "build" && <>
         <div className="grid g2" style={{ gap: 14 }}>
           <div className="field">
             <label className="field-label">Title</label>
@@ -481,6 +545,7 @@ function CreateTaskModal({ onClose, onCreated }: { onClose: () => void; onCreate
           </div>
           {stepError && steps.length > 0 && <div className="small" style={{ color: "var(--block)", marginTop: 8 }}>{stepError}</div>}
         </div>
+        </>}
 
         {failed && <div className="small" style={{ color: "var(--block)", marginTop: 10 }}>{failed}</div>}
         <div className="grant-foot">
