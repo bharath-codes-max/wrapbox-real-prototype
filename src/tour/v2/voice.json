@@ -1344,6 +1344,36 @@
     "ms": 12312
    }
   ],
+  "write-task": [
+   {
+    "file": "write-task/0-333d10d324.mp3",
+    "ms": 10848
+   },
+   {
+    "file": "write-task/1-7a6fd376e9.mp3",
+    "ms": 7752
+   },
+   {
+    "file": "write-task/2-38c2801405.mp3",
+    "ms": 11208
+   },
+   {
+    "file": "write-task/3-966b36b966.mp3",
+    "ms": 12912
+   },
+   {
+    "file": "write-task/4-680faebbf8.mp3",
+    "ms": 10560
+   },
+   {
+    "file": "write-task/5-7785cab50c.mp3",
+    "ms": 9120
+   },
+   {
+    "file": "write-task/6-3ba072d891.mp3",
+    "ms": 7056
+   }
+  ],
   "yc-demo": [
    {
     "file": "yc-demo/0-5a32ad6a01.mp3",

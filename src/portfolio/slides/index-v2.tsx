@@ -3,7 +3,7 @@
 import type { SlideDef, SlideProps } from "../deck";
 import type { Phase } from ".";
 import { CORE_AFTER, CORE_BEFORE } from ".";
-import { CASES } from "../../tour/cases";
+import { CASES } from "../../tour/v2/cases";
 import { LiveCaseSlide, LiveIntro } from "../tour-slides";
 
 const LIVE: SlideDef[] = CASES.length
