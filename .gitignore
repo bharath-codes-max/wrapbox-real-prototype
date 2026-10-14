@@ -9,3 +9,8 @@ docs/video/.tmp/
 
 # Final MP4s are big and generated per build — keep them out of git.
 docs/video/*.mp4
+
+# Preview gate credentials — never commit
+.gate-credentials.local
+.env*
+.vercel

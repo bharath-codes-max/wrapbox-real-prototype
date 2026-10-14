@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Wrapbox Real Prototype \u2014 isolated high-fidelity interactive product simulation of the 8-week Wrapbox blueprint. All integrations are simulated; product behavior is real.",
+  "description": "Wrapbox Real Prototype — isolated high-fidelity interactive product simulation of the 8-week Wrapbox blueprint. All integrations are simulated; product behavior is real.",
   "scripts": {
     "dev": "vite --port 5980 --strictPort",
     "build": "tsc --noEmit && vite build",
@@ -19,6 +19,7 @@
     "film:video": "node docs/_record-yc.mjs"
   },
   "dependencies": {
+    "@vercel/functions": "^3.10.1",
     "framer-motion": "^11.18.2",
     "lucide-react": "^1.48.0",
     "react": "^18.3.1",
